@@ -472,7 +472,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
       const parsed = JSON.parse(clean);
       setScanResult(parsed);
     } catch (e) {
-      setScanError("שגיאה בקריאת החשבונית — נסה שנית או הכנס ידנית");
+      setScanError("שגיאה: " + e.message);
     }
     setScanning(false);
   };
