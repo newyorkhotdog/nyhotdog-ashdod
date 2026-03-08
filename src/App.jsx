@@ -119,7 +119,7 @@ export default function App() {
       <div style={{ padding: 24 }}>
         {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} />}
-        {tab === "invoices" && <Invoices invoices={invoices} setInvoices={setInvoices} suppliers={suppliers} products={products} settings={settings} />}
+        {tab === "invoices" && <Invoices invoices={invoices} setInvoices={setInvoices} suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} settings={settings} />}
         {tab === "sales" && <Sales sales={sales} setSales={setSales} />}
         {tab === "employees" && <Employees employees={employees} setEmployees={setEmployees} />}
         {tab === "hours" && <Hours hours={hours} setHours={setHours} employees={employees} sales={sales} settings={settings} />}
@@ -419,10 +419,79 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
   );
 }
 
-function Invoices({ invoices, setInvoices, suppliers, products, settings }) {
+function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, setProducts, settings }) {
   const [form, setForm] = useState({ supplierId: "", date: today(), invoiceNum: "", items: [] });
   const [newItem, setNewItem] = useState({ productId: "", price: "", qty: "1" });
   const [showForm, setShowForm] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [scanError, setScanError] = useState("");
+
+  const scanInvoice = async (file) => {
+    setScanning(true);
+    setScanResult(null);
+    setScanError("");
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(",")[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const isPdf = file.type === "application/pdf";
+      const mediaType = isPdf ? "application/pdf" : file.type;
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: [
+              { type: isPdf ? "document" : "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+              { type: "text", text: `קרא את החשבונית הזו והחזר JSON בלבד ללא markdown ללא backticks:\n{\n  "supplierName": "שם הספק",\n  "date": "YYYY-MM-DD",\n  "invoiceNum": "מספר חשבונית",\n  "items": [{ "name": "שם פריט", "unit": "יחידת מידה", "qty": 1.0, "price": 0.0 }],\n  "total": 0.0\n}\nחשוב: price הוא מחיר ליחידה. total הוא הסכום הכולל.` }
+            ]
+          }]
+        })
+      });
+      const data = await response.json();
+      const text = data.content?.find(b => b.type === "text")?.text || "";
+      const clean = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      setScanResult(parsed);
+    } catch (e) {
+      setScanError("שגיאה בקריאת החשבונית — נסה שנית או הכנס ידנית");
+    }
+    setScanning(false);
+  };
+
+  const applyScanResult = () => {
+    if (!scanResult) return;
+    let currentSuppliers = [...suppliers];
+    let currentProducts = [...products];
+    let sup = currentSuppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
+    if (!sup) {
+      sup = { id: Date.now().toString(), name: scanResult.supplierName };
+      currentSuppliers = [...currentSuppliers, sup];
+      setSuppliers(currentSuppliers);
+    }
+    const invoiceItems = [];
+    let currentProds = [...currentProducts];
+    for (const item of scanResult.items || []) {
+      let prod = currentProds.find(p => p.supplierId === sup.id && p.name.trim() === item.name?.trim());
+      if (!prod) {
+        prod = { id: (Date.now() + Math.random() * 1000).toString(), supplierId: sup.id, name: item.name, unit: item.unit || "יחידה", basePrice: parseFloat(item.price) || 0 };
+        currentProds = [...currentProds, prod];
+      }
+      invoiceItems.push({ id: (Date.now() + Math.random() * 1000).toString(), productId: prod.id, price: String(item.price), qty: String(item.qty) });
+    }
+    setProducts(currentProds);
+    const total = invoiceItems.reduce((a, i) => a + parseFloat(i.price) * parseFloat(i.qty), 0);
+    setInvoices(p => [...p, { id: Date.now().toString(), supplierId: sup.id, date: scanResult.date || today(), invoiceNum: scanResult.invoiceNum || "", items: invoiceItems, total }]);
+    setScanResult(null);
+    alert("✅ חשבונית נשמרה! ספק: " + sup.name + " | " + invoiceItems.length + " פריטים | סהכ: ₪" + fmt(total));
+  };
 
   const supProducts = products.filter((p) => p.supplierId === form.supplierId);
   const addItem = () => {
@@ -447,10 +516,50 @@ function Invoices({ invoices, setInvoices, suppliers, products, settings }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div style={{ color: "#888", fontSize: 13 }}>{invoices.length} חשבוניות במערכת</div>
-        <Btn onClick={() => setShowForm(!showForm)} style={showForm ? { background: "#666" } : {}}>{showForm ? "✕ סגור" : "+ חשבונית חדשה"}</Btn>
+        <div style={{ display: "flex", gap: 8 }}>
+          <label style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", opacity: scanning ? 0.6 : 1 }}>
+            {scanning ? "⏳ סורק..." : "📸 סרוק חשבונית"}
+            <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={e => e.target.files[0] && scanInvoice(e.target.files[0])} disabled={scanning} />
+          </label>
+          <Btn onClick={() => setShowForm(!showForm)} style={showForm ? { background: "#666" } : {}}>{showForm ? "✕ סגור" : "+ הכנסה ידנית"}</Btn>
+        </div>
       </div>
+
+      {scanError && <div style={{ background: "#1a0505", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", color: "#f87171", fontSize: 13 }}>❌ {scanError}</div>}
+
+      {scanResult && (
+        <Card title="📋 תוצאת סריקה — בדוק ואשר">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
+            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div><div style={{ fontWeight: 700, color: "#22d3ee" }}>{scanResult.supplierName}</div></div>
+            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div><div style={{ fontWeight: 700 }}>{scanResult.date}</div></div>
+            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ חשבונית</div><div style={{ fontWeight: 700 }}>{scanResult.invoiceNum || "—"}</div></div>
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר ליחידה</Th><Th>סה״כ שורה</Th></tr></thead>
+            <tbody>
+              {(scanResult.items || []).map((item, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid #1e293b" }}>
+                  <Td>{item.name}</Td>
+                  <Td>{item.qty}</Td>
+                  <Td style={{ color: "#94a3b8" }}>{item.unit}</Td>
+                  <Td style={{ color: "#22d3ee" }}>₪{fmt(item.price)}</Td>
+                  <Td style={{ color: "#a78bfa", fontWeight: 700 }}>₪{fmt(item.price * item.qty)}</Td>
+                </tr>
+              ))}
+              <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
+                <Td colSpan={4} style={{ color: "#94a3b8" }}>סה״כ</Td>
+                <Td style={{ color: "#22c55e" }}>₪{fmt(scanResult.total)}</Td>
+              </tr>
+            </tbody>
+          </table>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn onClick={applyScanResult} style={{ background: "#22c55e" }}>✅ אשר ושמור חשבונית</Btn>
+            <Btn onClick={() => setScanResult(null)} style={{ background: "#475569" }}>✕ בטל</Btn>
+          </div>
+        </Card>
+      )}
 
       {showForm && (
         <Card title="הכנסת חשבונית חדשה" accent="#cc0000">
@@ -952,7 +1061,7 @@ function KpiCard({ label, value, sub, accent, raw }) {
         <span style={{ fontSize: 12, color: "#64748b" }}>{label}</span>
       </div>
       {raw ? value : <div style={{ fontSize: 22, fontWeight: 800, color: accent }}>{value}</div>}
-      {sub && <div style={{ fontSize: 11, color: "#475569", marginTop: 4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: "#e2e8f0", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
