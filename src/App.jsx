@@ -466,7 +466,9 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
           }]
         })
       });
-      const data = await response.json();
+      const rawText = await response.text();
+      console.log("API response:", rawText.substring(0, 500));
+      const data = JSON.parse(rawText);
       const text = data.content?.find(b => b.type === "text")?.text || "";
       const clean = text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
