@@ -7,17 +7,14 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   try {
-    // Parse body manually if needed
     let body = req.body;
-    if (typeof body === "string") {
-      body = JSON.parse(body);
-    }
+    if (typeof body === "string") body = JSON.parse(body);
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": "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",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify(body)
