@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
   sales: "nyh_sales",
   settings: "nyh_settings",
   pending: "nyh_pending",
+  expenses: "nyh_expenses",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30 };
@@ -56,6 +57,7 @@ const TABS = [
   { id: "sales", label: "💰 מכירות" },
   { id: "employees", label: "👷 עובדים" },
   { id: "hours", label: "⏱️ שעות" },
+  { id: "expenses", label: "🏢 הוצאות תפעול" },
   { id: "notifications", label: "🔔 התראות" },
   { id: "settings", label: "⚙️ הגדרות" },
 ];
@@ -70,6 +72,7 @@ export default function App() {
   const [hours, setHours] = useState([]);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [pending, setPending] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -82,6 +85,7 @@ export default function App() {
       setHours((await load(STORAGE_KEYS.hours)) || []);
       setSettings((await load(STORAGE_KEYS.settings)) || DEFAULT_SETTINGS);
       setPending((await load(STORAGE_KEYS.pending)) || []);
+      setExpenses((await load(STORAGE_KEYS.expenses)) || []);
       setLoaded(true);
     })();
   }, []);
@@ -94,6 +98,7 @@ export default function App() {
   useEffect(() => { if (loaded) save(STORAGE_KEYS.hours, hours); }, [hours, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.settings, settings); }, [settings, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.pending, pending); }, [pending, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.expenses, expenses); }, [expenses, loaded]);
 
   if (!loaded) return <div style={{ background: "#0a0a0f", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>טוען...</div>;
 
@@ -127,12 +132,13 @@ export default function App() {
       </div>
 
       <div style={{ padding: 24 }}>
-        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} />}
+        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} />}
         {tab === "invoices" && <Invoices invoices={invoices} setInvoices={setInvoices} suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} settings={settings} pending={pending} setPending={setPending} />}
         {tab === "sales" && <Sales sales={sales} setSales={setSales} />}
         {tab === "employees" && <Employees employees={employees} setEmployees={setEmployees} />}
         {tab === "hours" && <Hours hours={hours} setHours={setHours} employees={employees} sales={sales} settings={settings} />}
+        {tab === "expenses" && <Expenses expenses={expenses} setExpenses={setExpenses} />}
         {tab === "notifications" && <Notifications pending={pending} setPending={setPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={setInvoices} setSuppliers={setSuppliers} setProducts={setProducts} />}
         {tab === "settings" && <Settings settings={settings} setSettings={setSettings} />}
       </div>
@@ -140,7 +146,7 @@ export default function App() {
   );
 }
 
-function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees }) {
+function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses }) {
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const monthlySales = sales.filter((s) => s.date?.startsWith(monthKey));
@@ -160,6 +166,13 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   const totalLaborHours = monthlyHours.reduce((a, h) => a + (parseFloat(h.hours) || 0), 0);
   const laborCostPct = parseFloat(pct(totalLaborCost, totalSales));
   const primeCostPct = parseFloat((foodCostPct + laborCostPct).toFixed(1));
+
+  // Operational expenses this month
+  const monthlyExpenses = (expenses || []).filter(e => e.date?.startsWith(monthKey));
+  const totalExpenses = monthlyExpenses.reduce((a, e) => a + parseFloat(e.amount || 0), 0);
+  const netProfit = totalSales - totalCost - totalLaborCost - totalExpenses;
+  const netProfitPct = parseFloat(pct(netProfit, totalSales));
+  const netColor = netProfitPct >= 15 ? "#22c55e" : netProfitPct >= 5 ? "#f59e0b" : "#ef4444";
 
   const lcColor = laborCostPct <= settings.laborGreenMax ? "#22c55e" : laborCostPct <= settings.laborYellowMax ? "#f59e0b" : "#ef4444";
   const pcColor = primeCostPct <= 55 ? "#22c55e" : primeCostPct <= 65 ? "#f59e0b" : "#ef4444";
@@ -216,6 +229,46 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>לייבור קוסט</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: lcColor }}>{laborCostPct}%</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Net Profit banner */}
+      {totalSales > 0 && totalExpenses > 0 && (
+        <div style={{ background: "linear-gradient(135deg, #052e16, #0f172a)", border: `2px solid ${netColor}`, borderRadius: 12, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>רווח נקי — אחרי כל ההוצאות</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: netColor }}>₪{fmt(netProfit)}</div>
+            <div style={{ fontSize: 12, color: netColor, marginTop: 2 }}>
+              {netProfitPct >= 15 ? "✓ מצוין" : netProfitPct >= 5 ? "⚠ גבולי" : "✗ הפסד"}
+              {" | "}{netProfitPct}% מהמכירות
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>מכירות</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#22d3ee" }}>₪{fmt(totalSales)}</div>
+            </div>
+            <div style={{ color: "#334155", fontSize: 20, alignSelf: "center" }}>−</div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>פוד קוסט</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#a78bfa" }}>₪{fmt(totalCost)}</div>
+            </div>
+            <div style={{ color: "#334155", fontSize: 20, alignSelf: "center" }}>−</div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>עבודה</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#fb923c" }}>₪{fmt(totalLaborCost)}</div>
+            </div>
+            <div style={{ color: "#334155", fontSize: 20, alignSelf: "center" }}>−</div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>תפעול</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#f87171" }}>₪{fmt(totalExpenses)}</div>
+            </div>
+            <div style={{ color: "#334155", fontSize: 20, alignSelf: "center" }}>=</div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>רווח</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: netColor }}>₪{fmt(netProfit)}</div>
             </div>
           </div>
         </div>
@@ -1151,6 +1204,87 @@ function approvePendingItem(item, suppliers, products, setSuppliers, setProducts
   // Remove from pending
   setPending(p => p.filter(x => x.id !== item.id));
 }
+
+const EXPENSE_CATEGORIES = ["שכירות", "חשמל", "ארנונה", "מים", "גז", "טלפון/אינטרנט", "ביטוח", "תחזוקה", "שיווק/פרסום", "ציוד", "ניקיון", "אחר"];
+
+function Expenses({ expenses, setExpenses }) {
+  const [form, setForm] = useState({ date: today(), category: "שכירות", description: "", amount: "" });
+  const [showForm, setShowForm] = useState(false);
+
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthExpenses = expenses.filter(e => e.date?.startsWith(monthKey));
+  const totalMonth = monthExpenses.reduce((a, e) => a + parseFloat(e.amount || 0), 0);
+
+  const byCategory = EXPENSE_CATEGORIES.map(cat => ({
+    cat,
+    total: monthExpenses.filter(e => e.category === cat).reduce((a, e) => a + parseFloat(e.amount || 0), 0)
+  })).filter(x => x.total > 0);
+
+  const addExpense = () => {
+    if (!form.date || !form.amount) return;
+    setExpenses(p => [...p, { ...form, id: Date.now().toString() }]);
+    setForm({ date: today(), category: "שכירות", description: "", amount: "" });
+    setShowForm(false);
+  };
+
+  const delExpense = (id) => { if (window.confirm("למחוק הוצאה זו?")) setExpenses(p => p.filter(e => e.id !== id)); };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ color: "#888", fontSize: 13 }}>סה״כ הוצאות תפעול החודש: <span style={{ color: "#f87171", fontWeight: 700, fontSize: 16 }}>₪{fmt(totalMonth)}</span></div>
+        <Btn onClick={() => setShowForm(!showForm)} style={showForm ? { background: "#666" } : {}}>{showForm ? "✕ סגור" : "+ הוצאה חדשה"}</Btn>
+      </div>
+
+      {showForm && (
+        <Card title="הוספת הוצאה תפעולית">
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+            <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} style={{ ...inputStyle, flex: 1 }} />
+            <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} style={{ ...inputStyle, flex: 2 }}>
+              {EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+            </select>
+            <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="תיאור (אופציונלי)" style={{ ...inputStyle, flex: 2 }} />
+            <input type="number" value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} placeholder="סכום ₪" style={{ ...inputStyle, flex: 1, minWidth: 100 }} />
+            <Btn onClick={addExpense} style={{ background: "#22c55e" }}>💾 שמור</Btn>
+          </div>
+        </Card>
+      )}
+
+      {byCategory.length > 0 && (
+        <Card title="סיכום לפי קטגוריה — חודש נוכחי">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {byCategory.map(({ cat, total }) => (
+              <div key={cat} style={{ background: "#1e293b", borderRadius: 8, padding: "10px 16px", minWidth: 140 }}>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>{cat}</div>
+                <div style={{ fontWeight: 700, color: "#f87171", fontSize: 15 }}>₪{fmt(total)}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card title="כל ההוצאות">
+        {expenses.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>אין הוצאות עדיין</div>}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {[...expenses].reverse().map(e => (
+            <div key={e.id} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontWeight: 700 }}>{e.category} {e.description ? `— ${e.description}` : ""}</div>
+                <div style={{ fontSize: 12, color: "#94a3b8" }}>{e.date}</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ color: "#f87171", fontWeight: 800, fontSize: 15 }}>₪{fmt(e.amount)}</span>
+                <button onClick={() => delExpense(e.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 
 function Notifications({ pending, setPending, suppliers, products, invoices, setInvoices, setSuppliers, setProducts }) {
   const approve = (item) => {
