@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   pending: "nyh_pending",
   expenses: "nyh_expenses",
   deliveries: "nyh_deliveries",
+  inventory: "nyh_inventory",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
@@ -59,6 +60,7 @@ const TABS = [
   { id: "sales", label: "💰 מכירות" },
   { id: "employees", label: "👷 עובדים" },
   { id: "hours", label: "⏱️ שעות" },
+  { id: "inventory", label: "📦 מלאי" },
   { id: "expenses", label: "🏢 הוצאות תפעול" },
   { id: "notifications", label: "🔔 התראות" },
   { id: "settings", label: "⚙️ הגדרות" },
@@ -76,6 +78,7 @@ export default function App() {
   const [pending, setPending] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
+  const [inventory, setInventory] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -90,6 +93,7 @@ export default function App() {
       setPending((await load(STORAGE_KEYS.pending)) || []);
       setExpenses((await load(STORAGE_KEYS.expenses)) || []);
       setDeliveries((await load(STORAGE_KEYS.deliveries)) || []);
+      setInventory((await load(STORAGE_KEYS.inventory)) || []);
       setLoaded(true);
     })();
   }, []);
@@ -104,6 +108,7 @@ export default function App() {
   useEffect(() => { if (loaded) save(STORAGE_KEYS.pending, pending); }, [pending, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.expenses, expenses); }, [expenses, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.deliveries, deliveries); }, [deliveries, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.inventory, inventory); }, [inventory, loaded]);
 
   if (!loaded) return <div style={{ background: "#0a0a0f", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>טוען...</div>;
 
@@ -144,6 +149,7 @@ export default function App() {
         {tab === "employees" && <Employees employees={employees} setEmployees={setEmployees} />}
         {tab === "hours" && <Hours hours={hours} setHours={setHours} employees={employees} sales={sales} settings={settings} />}
         {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={setDeliveries} suppliers={suppliers} products={products} setSuppliers={setSuppliers} setProducts={setProducts} pending={pending} setPending={setPending} invoices={invoices} setInvoices={setInvoices} />}
+        {tab === "inventory" && <Inventory inventory={inventory} setInventory={setInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} />}
         {tab === "expenses" && <Expenses expenses={expenses} setExpenses={setExpenses} />}
         {tab === "notifications" && <Notifications pending={pending} setPending={setPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={setInvoices} setSuppliers={setSuppliers} setProducts={setProducts} />}
         {tab === "settings" && <Settings settings={settings} setSettings={setSettings} />}
@@ -1213,6 +1219,203 @@ function approvePendingItem(item, suppliers, products, setSuppliers, setProducts
   // Remove from pending
   setPending(p => p.filter(x => x.id !== item.id));
 }
+function Inventory({ inventory, setInventory, products, invoices, deliveries, suppliers }) {
+  const [countDate, setCountDate] = useState(today());
+  const [countType, setCountType] = useState("סגירה");
+  const [counts, setCounts] = useState({});
+  const [showCount, setShowCount] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+
+  // Get all products with their unit type
+  const allProducts = products;
+
+  // Calculate entries for a product in a date range (from invoices + deliveries)
+  const getEntries = (productId, monthKey) => {
+    const fromInvoices = invoices
+      .filter(i => i.date?.startsWith(monthKey))
+      .flatMap(i => i.items || [])
+      .filter(item => item.productId === productId)
+      .reduce((a, item) => a + parseFloat(item.qty || 0), 0);
+    const fromDeliveries = deliveries
+      .filter(d => d.date?.startsWith(monthKey))
+      .flatMap(d => d.items || [])
+      .filter(item => item.productId === productId)
+      .reduce((a, item) => a + parseFloat(item.qty || 0), 0);
+    return fromInvoices + fromDeliveries;
+  };
+
+  // Get last count of a specific type for a product
+  const getLastCount = (productId, type) => {
+    const sorted = [...inventory]
+      .filter(c => c.productId === productId && c.type === type)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    return sorted[0] || null;
+  };
+
+  const saveCount = () => {
+    const entries = Object.entries(counts).filter(([, v]) => v !== "").map(([productId, qty]) => ({
+      id: (Date.now() + Math.random() * 1000).toString(),
+      productId,
+      date: countDate,
+      type: countType,
+      qty: parseFloat(qty) || 0
+    }));
+    if (entries.length === 0) return;
+    setInventory(p => [...p, ...entries]);
+    setCounts({});
+    setShowCount(false);
+    alert(`✅ ${countType} נשמרה — ${entries.length} מוצרים`);
+  };
+
+  // Build monthly report
+  const monthReport = allProducts.map(prod => {
+    const opening = inventory
+      .filter(c => c.productId === prod.id && c.type === "פתיחה" && c.date?.startsWith(selectedMonth))
+      .reduce((a, c) => a + c.qty, 0);
+    const closing = inventory
+      .filter(c => c.productId === prod.id && c.type === "סגירה" && c.date?.startsWith(selectedMonth))
+      .reduce((a, c) => a + c.qty, 0);
+    const entries = getEntries(prod.id, selectedMonth);
+    const theoretical = opening + entries;
+    const waste = closing > 0 ? theoretical - closing : null;
+    const wastePct = theoretical > 0 && waste !== null ? (waste / theoretical * 100).toFixed(1) : null;
+    return { ...prod, opening, entries, theoretical, closing, waste, wastePct };
+  }).filter(p => p.entries > 0 || p.opening > 0 || p.closing > 0);
+
+  const sup = (supplierId) => suppliers.find(s => s.id === supplierId)?.name || "";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <div style={{ color: "#888", fontSize: 13 }}>ניהול מלאי — ספירות ודוחות</div>
+        <Btn onClick={() => setShowCount(!showCount)} style={showCount ? { background: "#666" } : {}}>
+          {showCount ? "✕ סגור" : "📝 ספירת מלאי"}
+        </Btn>
+      </div>
+
+      {/* Count form */}
+      {showCount && (
+        <Card title="📝 ספירת מלאי">
+          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+            <input type="date" value={countDate} onChange={e => setCountDate(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+            <select value={countType} onChange={e => setCountType(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
+              <option>פתיחה</option>
+              <option>סגירה</option>
+            </select>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+            {allProducts.map(prod => (
+              <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#0f172a", borderRadius: 8, padding: "10px 14px" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{prod.name}</div>
+                  <div style={{ fontSize: 11, color: "#64748b" }}>{sup(prod.supplierId)} | {prod.unit}</div>
+                </div>
+                <input
+                  type="number"
+                  placeholder={`כמות ב${prod.unit}`}
+                  value={counts[prod.id] || ""}
+                  onChange={e => setCounts(p => ({ ...p, [prod.id]: e.target.value }))}
+                  style={{ ...inputStyle, width: 120, textAlign: "center" }}
+                />
+              </div>
+            ))}
+          </div>
+          <Btn onClick={saveCount} style={{ background: "#22c55e" }}>💾 שמור ספירה</Btn>
+        </Card>
+      )}
+
+      {/* Month selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ color: "#94a3b8", fontSize: 13 }}>חודש לדוח:</span>
+        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
+          style={{ ...inputStyle, width: "auto" }} />
+      </div>
+
+      {/* Monthly report */}
+      {monthReport.length > 0 ? (
+        <Card title={`📊 דוח מלאי — ${selectedMonth}`}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}>
+                <Th>מוצר</Th>
+                <Th>ספק</Th>
+                <Th>יחידה</Th>
+                <Th>פתיחה</Th>
+                <Th>+ כניסות</Th>
+                <Th>= תיאורטי</Th>
+                <Th>ספירת סגירה</Th>
+                <Th>בזבוז/הפרש</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthReport.map(p => {
+                const wasteColor = p.wastePct === null ? "#475569"
+                  : parseFloat(p.wastePct) <= 3 ? "#22c55e"
+                  : parseFloat(p.wastePct) <= 8 ? "#f59e0b" : "#ef4444";
+                return (
+                  <tr key={p.id} style={{ borderBottom: "1px solid #1e293b" }}>
+                    <Td style={{ fontWeight: 700 }}>{p.name}</Td>
+                    <Td style={{ color: "#64748b", fontSize: 12 }}>{sup(p.supplierId)}</Td>
+                    <Td style={{ color: "#94a3b8" }}>{p.unit}</Td>
+                    <Td>{p.opening > 0 ? p.opening : "—"}</Td>
+                    <Td style={{ color: "#22d3ee" }}>+{p.entries.toFixed(2)}</Td>
+                    <Td style={{ color: "#a78bfa", fontWeight: 700 }}>{p.theoretical.toFixed(2)}</Td>
+                    <Td style={{ color: p.closing > 0 ? "#e2e8f0" : "#475569" }}>
+                      {p.closing > 0 ? p.closing : "טרם נספר"}
+                    </Td>
+                    <Td>
+                      {p.waste !== null ? (
+                        <span style={{ color: wasteColor, fontWeight: 700 }}>
+                          {p.waste.toFixed(2)} {p.unit}
+                          {p.wastePct && ` (${p.wastePct}%)`}
+                          {parseFloat(p.wastePct) <= 3 ? " ✓" : parseFloat(p.wastePct) <= 8 ? " ⚠️" : " 🔴"}
+                        </span>
+                      ) : <span style={{ color: "#475569" }}>—</span>}
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+      ) : (
+        <Card title="📊 דוח מלאי">
+          <div style={{ color: "#475569", textAlign: "center", padding: 30, fontSize: 13 }}>
+            אין נתונים לחודש זה — הכנס חשבוניות/תעודות משלוח ובצע ספירת מלאי
+          </div>
+        </Card>
+      )}
+
+      {/* Count history */}
+      {inventory.length > 0 && (
+        <Card title="היסטוריית ספירות">
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {[...new Set(inventory.map(c => c.date))].sort().reverse().slice(0, 10).map(date => {
+              const dayItems = inventory.filter(c => c.date === date);
+              const type = dayItems[0]?.type;
+              return (
+                <div key={date} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{type} — {date}</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{dayItems.length} מוצרים נספרו</div>
+                  </div>
+                  <button onClick={() => { if (window.confirm("למחוק ספירה זו?")) setInventory(p => p.filter(c => c.date !== date || c.type !== type)); }}
+                    style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 
 function Deliveries({ deliveries, setDeliveries, suppliers, products, setSuppliers, setProducts, pending, setPending, invoices, setInvoices }) {
   const [form, setForm] = useState({ supplierId: "", date: today(), deliveryNum: "", items: [] });
