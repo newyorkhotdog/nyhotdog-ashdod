@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   settings: "nyh_settings",
   pending: "nyh_pending",
   expenses: "nyh_expenses",
+  deliveries: "nyh_deliveries",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
@@ -54,6 +55,7 @@ const TABS = [
   { id: "dashboard", label: "📊 דשבורד" },
   { id: "suppliers", label: "🏭 ספקים" },
   { id: "invoices", label: "🧾 חשבוניות" },
+  { id: "deliveries", label: "🚚 תעודות משלוח" },
   { id: "sales", label: "💰 מכירות" },
   { id: "employees", label: "👷 עובדים" },
   { id: "hours", label: "⏱️ שעות" },
@@ -73,6 +75,7 @@ export default function App() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [pending, setPending] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [deliveries, setDeliveries] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -86,6 +89,7 @@ export default function App() {
       setSettings((await load(STORAGE_KEYS.settings)) || DEFAULT_SETTINGS);
       setPending((await load(STORAGE_KEYS.pending)) || []);
       setExpenses((await load(STORAGE_KEYS.expenses)) || []);
+      setDeliveries((await load(STORAGE_KEYS.deliveries)) || []);
       setLoaded(true);
     })();
   }, []);
@@ -99,6 +103,7 @@ export default function App() {
   useEffect(() => { if (loaded) save(STORAGE_KEYS.settings, settings); }, [settings, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.pending, pending); }, [pending, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.expenses, expenses); }, [expenses, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.deliveries, deliveries); }, [deliveries, loaded]);
 
   if (!loaded) return <div style={{ background: "#0a0a0f", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>טוען...</div>;
 
@@ -138,6 +143,7 @@ export default function App() {
         {tab === "sales" && <Sales sales={sales} setSales={setSales} />}
         {tab === "employees" && <Employees employees={employees} setEmployees={setEmployees} />}
         {tab === "hours" && <Hours hours={hours} setHours={setHours} employees={employees} sales={sales} settings={settings} />}
+        {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={setDeliveries} suppliers={suppliers} products={products} setSuppliers={setSuppliers} setProducts={setProducts} pending={pending} setPending={setPending} invoices={invoices} setInvoices={setInvoices} />}
         {tab === "expenses" && <Expenses expenses={expenses} setExpenses={setExpenses} />}
         {tab === "notifications" && <Notifications pending={pending} setPending={setPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={setInvoices} setSuppliers={setSuppliers} setProducts={setProducts} />}
         {tab === "settings" && <Settings settings={settings} setSettings={setSettings} />}
@@ -1207,6 +1213,211 @@ function approvePendingItem(item, suppliers, products, setSuppliers, setProducts
   // Remove from pending
   setPending(p => p.filter(x => x.id !== item.id));
 }
+
+function Deliveries({ deliveries, setDeliveries, suppliers, products, setSuppliers, setProducts, pending, setPending, invoices, setInvoices }) {
+  const [form, setForm] = useState({ supplierId: "", date: today(), deliveryNum: "", items: [] });
+  const [newItem, setNewItem] = useState({ productId: "", qty: "1", price: "" });
+  const [showForm, setShowForm] = useState(false);
+  const [selectedSup, setSelectedSup] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [scanError, setScanError] = useState("");
+
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const supProducts = products.filter(p => p.supplierId === form.supplierId);
+
+  const addItem = () => {
+    if (!newItem.productId || !newItem.price || !newItem.qty) return;
+    setForm(f => ({ ...f, items: [...f.items, { ...newItem, id: Date.now().toString() }] }));
+    setNewItem({ productId: "", qty: "1", price: "" });
+  };
+
+  const saveDelivery = () => {
+    if (!form.supplierId || !form.date || form.items.length === 0) return;
+    const total = form.items.reduce((a, i) => a + parseFloat(i.price) * parseFloat(i.qty), 0);
+    setDeliveries(p => [...p, { ...form, id: Date.now().toString(), total }]);
+    setForm({ supplierId: "", date: today(), deliveryNum: "", items: [] });
+    setShowForm(false);
+  };
+
+  // Group deliveries by supplier for summary
+  const supplierSummary = suppliers.map(sup => {
+    const supDeliveries = deliveries.filter(d => d.supplierId === sup.id && d.date?.startsWith(monthKey));
+    const total = supDeliveries.reduce((a, d) => a + parseFloat(d.total || 0), 0);
+    const supInvoiceTotal = invoices
+      .filter(i => i.supplierId === sup.id && i.date?.startsWith(monthKey))
+      .reduce((a, i) => a + parseFloat(i.total || 0), 0);
+    return { ...sup, deliveryCount: supDeliveries.length, deliveryTotal: total, invoiceTotal: supInvoiceTotal };
+  }).filter(s => s.deliveryCount > 0);
+
+  const filteredDeliveries = selectedSup
+    ? deliveries.filter(d => d.supplierId === selectedSup)
+    : deliveries;
+
+  const scanDelivery = async (file) => {
+    setScanning(true); setScanResult(null); setScanError("");
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(",")[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const isPdf = file.type === "application/pdf";
+      const response = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: [
+            { type: isPdf ? "document" : "image", source: { type: "base64", media_type: file.type, data: base64 } },
+            { type: "text", text: 'קרא את תעודת המשלוח הזו והחזר JSON בלבד:\n{"supplierName":"שם הספק","date":"YYYY-MM-DD","deliveryNum":"מספר תעודה","items":[{"name":"שם פריט","unit":"יחידת מידה","qty":1.0,"price":0.0}],"total":0.0}' }
+          ]}]
+        })
+      });
+      const rawText = await response.text();
+      const data = JSON.parse(rawText);
+      const text = data.content?.find(b => b.type === "text")?.text || "";
+      const clean = text.replace(/```json|```/g, "").trim();
+      setScanResult(JSON.parse(clean));
+    } catch (e) { setScanError("שגיאה: " + e.message); }
+    setScanning(false);
+  };
+
+  const applyScan = () => {
+    if (!scanResult) return;
+    let currentSuppliers = [...suppliers];
+    let currentProducts = [...products];
+    let sup = currentSuppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
+    if (!sup) {
+      sup = { id: Date.now().toString(), name: scanResult.supplierName };
+      currentSuppliers = [...currentSuppliers, sup];
+      setSuppliers(currentSuppliers);
+    }
+    const items = [];
+    for (const item of scanResult.items || []) {
+      let prod = currentProducts.find(p => p.supplierId === sup.id && p.name.trim() === item.name?.trim());
+      if (!prod) {
+        prod = { id: (Date.now() + Math.random() * 1000).toString(), supplierId: sup.id, name: item.name, unit: item.unit || "יחידה", basePrice: parseFloat(item.price) || 0 };
+        currentProducts = [...currentProducts, prod];
+      }
+      items.push({ id: (Date.now() + Math.random() * 1000).toString(), productId: prod.id, price: String(item.price), qty: String(item.qty) });
+    }
+    setProducts(currentProducts);
+    const total = items.reduce((a, i) => a + parseFloat(i.price) * parseFloat(i.qty), 0);
+    setDeliveries(p => [...p, { id: Date.now().toString(), supplierId: sup.id, date: scanResult.date || today(), deliveryNum: scanResult.deliveryNum || "", items, total }]);
+    setScanResult(null);
+    alert("✅ תעודת משלוח נשמרה! " + sup.name + " | ₪" + fmt(total));
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <div style={{ color: "#888", fontSize: 13 }}>{deliveries.length} תעודות משלוח במערכת</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <label style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: scanning ? 0.6 : 1 }}>
+            {scanning ? "⏳ סורק..." : "📸 סרוק תעודה"}
+            <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={e => e.target.files[0] && scanDelivery(e.target.files[0])} disabled={scanning} />
+          </label>
+          <Btn onClick={() => setShowForm(!showForm)} style={showForm ? { background: "#666" } : {}}>{showForm ? "✕ סגור" : "+ הכנסה ידנית"}</Btn>
+        </div>
+      </div>
+
+      {scanError && <div style={{ background: "#1a0505", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", color: "#f87171", fontSize: 13 }}>❌ {scanError}</div>}
+
+      {scanResult && (
+        <Card title="📋 תעודת משלוח — בדוק ואשר">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
+            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div><input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, color: "#22d3ee", fontWeight: 700 }} /></div>
+            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div><input type="date" value={scanResult.date || ""} onChange={e => setScanResult(p => ({ ...p, date: e.target.value }))} style={inputStyle} /></div>
+            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ תעודה</div><input value={scanResult.deliveryNum || ""} onChange={e => setScanResult(p => ({ ...p, deliveryNum: e.target.value }))} style={inputStyle} /></div>
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th></tr></thead>
+            <tbody>
+              {(scanResult.items || []).map((item, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid #1e293b" }}>
+                  <Td><input value={item.name || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: e.target.value } : it) }))} style={{ ...inputStyle, width: "100%" }} /></Td>
+                  <Td><input type="number" value={item.qty || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70 }} /></Td>
+                  <Td><select value={item.unit || "יחידה"} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, unit: e.target.value } : it) }))} style={inputStyle}>{['ק"ג', "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}</select></Td>
+                  <Td><input type="number" value={item.price || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, color: "#22d3ee" }} /></Td>
+                  <Td style={{ color: "#a78bfa", fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
+                  <Td><button onClick={() => setScanResult(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
+                </tr>
+              ))}
+              <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
+                <Td colSpan={4} style={{ color: "#94a3b8" }}>סה״כ</Td>
+                <Td style={{ color: "#22c55e" }}>₪{fmt((scanResult.items || []).reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0))}</Td>
+                <Td></Td>
+              </tr>
+            </tbody>
+          </table>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn onClick={applyScan} style={{ background: "#22c55e" }}>✅ שמור תעודה</Btn>
+            <Btn onClick={() => setScanResult(null)} style={{ background: "#475569" }}>✕ בטל</Btn>
+          </div>
+        </Card>
+      )}
+
+      {/* Monthly summary per supplier */}
+      {supplierSummary.length > 0 && (
+        <Card title={`📊 השוואה חודשית — ${monthKey}`}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>ספק</Th><Th>תעודות</Th><Th>סה״כ תעודות</Th><Th>חשבונית שהתקבלה</Th><Th>הפרש</Th></tr></thead>
+            <tbody>
+              {supplierSummary.map(s => {
+                const diff = s.invoiceTotal - s.deliveryTotal;
+                const diffColor = Math.abs(diff) < 1 ? "#22c55e" : Math.abs(diff) < 50 ? "#f59e0b" : "#ef4444";
+                return (
+                  <tr key={s.id} style={{ borderBottom: "1px solid #1e293b" }}>
+                    <Td style={{ fontWeight: 700 }}>{s.name}</Td>
+                    <Td style={{ color: "#94a3b8" }}>{s.deliveryCount}</Td>
+                    <Td style={{ color: "#22d3ee", fontWeight: 700 }}>₪{fmt(s.deliveryTotal)}</Td>
+                    <Td style={{ color: s.invoiceTotal > 0 ? "#a78bfa" : "#475569" }}>{s.invoiceTotal > 0 ? `₪${fmt(s.invoiceTotal)}` : "טרם התקבלה"}</Td>
+                    <Td style={{ color: diffColor, fontWeight: 700 }}>{s.invoiceTotal > 0 ? (diff > 0 ? `+₪${fmt(diff)}` : diff < -0.5 ? `-₪${fmt(Math.abs(diff))}` : "✓ תואם") : "—"}</Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {/* Filter + list */}
+      <Card title="כל תעודות המשלוח">
+        <div style={{ marginBottom: 12 }}>
+          <select value={selectedSup} onChange={e => setSelectedSup(e.target.value)} style={{ ...inputStyle, width: "auto", minWidth: 200 }}>
+            <option value="">כל הספקים</option>
+            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        {filteredDeliveries.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>אין תעודות משלוח עדיין</div>}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {[...filteredDeliveries].reverse().map(d => {
+            const sup = suppliers.find(s => s.id === d.supplierId);
+            return (
+              <div key={d.id} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{sup?.name || "ספק לא ידוע"}</div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>{d.date} | תעודה {d.deliveryNum || "—"} | {(d.items || []).length} פריטים</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ color: "#22d3ee", fontWeight: 800, fontSize: 15 }}>₪{fmt(d.total)}</span>
+                  <button onClick={() => { if (window.confirm("למחוק תעודה זו?")) setDeliveries(p => p.filter(x => x.id !== d.id)); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 
 const EXPENSE_CATEGORIES = ["שכירות", "חשמל", "ארנונה", "מים", "גז", "טלפון/אינטרנט", "ביטוח", "תחזוקה", "שיווק/פרסום", "ציוד", "ניקיון", "אחר"];
 
