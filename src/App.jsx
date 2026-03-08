@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   invoices: "nyh_invoices",
   sales: "nyh_sales",
   settings: "nyh_settings",
+  pending: "nyh_pending",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30 };
@@ -55,6 +56,7 @@ const TABS = [
   { id: "sales", label: "💰 מכירות" },
   { id: "employees", label: "👷 עובדים" },
   { id: "hours", label: "⏱️ שעות" },
+  { id: "notifications", label: "🔔 התראות" },
   { id: "settings", label: "⚙️ הגדרות" },
 ];
 
@@ -67,6 +69,7 @@ export default function App() {
   const [employees, setEmployees] = useState([]);
   const [hours, setHours] = useState([]);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [pending, setPending] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -78,6 +81,7 @@ export default function App() {
       setEmployees((await load(STORAGE_KEYS.employees)) || []);
       setHours((await load(STORAGE_KEYS.hours)) || []);
       setSettings((await load(STORAGE_KEYS.settings)) || DEFAULT_SETTINGS);
+      setPending((await load(STORAGE_KEYS.pending)) || []);
       setLoaded(true);
     })();
   }, []);
@@ -89,6 +93,7 @@ export default function App() {
   useEffect(() => { if (loaded) save(STORAGE_KEYS.employees, employees); }, [employees, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.hours, hours); }, [hours, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.settings, settings); }, [settings, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.pending, pending); }, [pending, loaded]);
 
   if (!loaded) return <div style={{ background: "#0a0a0f", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>טוען...</div>;
 
@@ -111,18 +116,24 @@ export default function App() {
             color: tab === t.id ? "#fff" : "#94a3b8",
             border: "none", borderRadius: "8px 8px 0 0", padding: "8px 16px",
             cursor: "pointer", fontSize: 13, fontWeight: tab === t.id ? 700 : 400,
-            whiteSpace: "nowrap", transition: "all 0.2s"
-          }}>{t.label}</button>
+            whiteSpace: "nowrap", transition: "all 0.2s", position: "relative"
+          }}>
+            {t.label}
+            {t.id === "notifications" && pending.length > 0 && (
+              <span style={{ position: "absolute", top: 4, left: 4, background: "#ef4444", color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>{pending.length}</span>
+            )}
+          </button>
         ))}
       </div>
 
       <div style={{ padding: 24 }}>
         {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} />}
-        {tab === "invoices" && <Invoices invoices={invoices} setInvoices={setInvoices} suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} settings={settings} />}
+        {tab === "invoices" && <Invoices invoices={invoices} setInvoices={setInvoices} suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} settings={settings} pending={pending} setPending={setPending} />}
         {tab === "sales" && <Sales sales={sales} setSales={setSales} />}
         {tab === "employees" && <Employees employees={employees} setEmployees={setEmployees} />}
         {tab === "hours" && <Hours hours={hours} setHours={setHours} employees={employees} sales={sales} settings={settings} />}
+        {tab === "notifications" && <Notifications pending={pending} setPending={setPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={setInvoices} setSuppliers={setSuppliers} setProducts={setProducts} />}
         {tab === "settings" && <Settings settings={settings} setSettings={setSettings} />}
       </div>
     </div>
@@ -419,7 +430,7 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
   );
 }
 
-function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, setProducts, settings }) {
+function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, setProducts, settings, pending, setPending }) {
   const [form, setForm] = useState({ supplierId: "", date: today(), invoiceNum: "", items: [] });
   const [newItem, setNewItem] = useState({ productId: "", price: "", qty: "1" });
   const [showForm, setShowForm] = useState(false);
@@ -468,30 +479,58 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
 
   const applyScanResult = () => {
     if (!scanResult) return;
-    let currentSuppliers = [...suppliers];
-    let currentProducts = [...products];
-    let sup = currentSuppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
-    if (!sup) {
-      sup = { id: Date.now().toString(), name: scanResult.supplierName };
-      currentSuppliers = [...currentSuppliers, sup];
-      setSuppliers(currentSuppliers);
-    }
-    const invoiceItems = [];
-    let currentProds = [...currentProducts];
-    for (const item of scanResult.items || []) {
-      let prod = currentProds.find(p => p.supplierId === sup.id && p.name.trim() === item.name?.trim());
-      if (!prod) {
-        prod = { id: (Date.now() + Math.random() * 1000).toString(), supplierId: sup.id, name: item.name, unit: item.unit || "יחידה", basePrice: parseFloat(item.price) || 0 };
-        currentProds = [...currentProds, prod];
-      }
-      invoiceItems.push({ id: (Date.now() + Math.random() * 1000).toString(), productId: prod.id, price: String(item.price), qty: String(item.qty) });
-    }
-    setProducts(currentProds);
-    const total = invoiceItems.reduce((a, i) => a + parseFloat(i.price) * parseFloat(i.qty), 0);
-    setInvoices(p => [...p, { id: Date.now().toString(), supplierId: sup.id, date: scanResult.date || today(), invoiceNum: scanResult.invoiceNum || "", items: invoiceItems, total }]);
+    const existingSupplier = suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
+    const isNewSupplier = !existingSupplier;
+    const supId = existingSupplier?.id || Date.now().toString();
+    const supName = scanResult.supplierName;
+
+    // Check for new products and price alerts
+    const itemsAnalysis = (scanResult.items || []).map(item => {
+      const existingProd = products.find(p => p.supplierId === supId && p.name.trim() === item.name?.trim());
+      const isNew = !existingProd;
+      const priceDiff = existingProd ? ((parseFloat(item.price) - existingProd.basePrice) / existingProd.basePrice) * 100 : 0;
+      const hasAlert = !isNew && priceDiff > 5;
+      return { ...item, isNew, hasAlert, priceDiff, existingProd };
+    });
+
+    const needsApproval = isNewSupplier || itemsAnalysis.some(i => i.isNew || i.hasAlert);
+
+    // Build the pending item
+    const pendingItem = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      scanResult,
+      supId,
+      supName,
+      isNewSupplier,
+      itemsAnalysis,
+      needsApproval,
+      status: "pending"
+    };
+
+    setPending(p => [...p, pendingItem]);
     setScanResult(null);
-    alert("✅ חשבונית נשמרה! ספק: " + sup.name + " | " + invoiceItems.length + " פריטים | סהכ: ₪" + fmt(total));
+
+    if (needsApproval) {
+      alert("⏳ החשבונית נשלחה לאישור אוהד!
+" + 
+        (isNewSupplier ? "• ספק חדש: " + supName + "
+" : "") +
+        (itemsAnalysis.filter(i => i.isNew).length > 0 ? "• " + itemsAnalysis.filter(i => i.isNew).length + " מוצרים חדשים
+" : "") +
+        (itemsAnalysis.filter(i => i.hasAlert).length > 0 ? "• " + itemsAnalysis.filter(i => i.hasAlert).length + " חריגות מחיר
+" : "") +
+        "
+לחץ על טאב 🔔 התראות לאישור"
+      );
+    } else {
+      // No approval needed - save directly
+      approvePendingItem(pendingItem, suppliers, products, setSuppliers, setProducts, setInvoices, setPending);
+    }
   };
+
+  // Also update the Invoices component to pass setPending
+  const handleScanResult = (result) => { setScanResult(result); };
 
   const supProducts = products.filter((p) => p.supplierId === form.supplierId);
   const addItem = () => {
@@ -1000,6 +1039,140 @@ function Hours({ hours, setHours, employees, sales, settings }) {
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+function approvePendingItem(item, suppliers, products, setSuppliers, setProducts, setInvoices, setPending) {
+  let currentSuppliers = [...suppliers];
+  let currentProducts = [...products];
+
+  // Create supplier if new
+  let sup = currentSuppliers.find(s => s.id === item.supId || s.name.trim() === item.supName?.trim());
+  if (!sup) {
+    sup = { id: item.supId, name: item.supName };
+    currentSuppliers = [...currentSuppliers, sup];
+    setSuppliers(currentSuppliers);
+  }
+
+  // Create products if new
+  const invoiceItems = [];
+  for (const itemData of item.itemsAnalysis || []) {
+    let prod = currentProducts.find(p => p.supplierId === sup.id && p.name.trim() === itemData.name?.trim());
+    if (!prod) {
+      prod = { id: (Date.now() + Math.random() * 1000).toString(), supplierId: sup.id, name: itemData.name, unit: itemData.unit || "יחידה", basePrice: parseFloat(itemData.price) || 0 };
+      currentProducts = [...currentProducts, prod];
+    }
+    invoiceItems.push({ id: (Date.now() + Math.random() * 1000).toString(), productId: prod.id, price: String(itemData.price), qty: String(itemData.qty) });
+  }
+  setProducts(currentProducts);
+
+  const total = invoiceItems.reduce((a, i) => a + parseFloat(i.price) * parseFloat(i.qty), 0);
+  setInvoices(p => [...p, {
+    id: Date.now().toString(),
+    supplierId: sup.id,
+    date: item.scanResult?.date || new Date().toISOString().split("T")[0],
+    invoiceNum: item.scanResult?.invoiceNum || "",
+    items: invoiceItems,
+    total
+  }]);
+
+  // Remove from pending
+  setPending(p => p.filter(x => x.id !== item.id));
+}
+
+function Notifications({ pending, setPending, suppliers, products, invoices, setInvoices, setSuppliers, setProducts }) {
+  const approve = (item) => {
+    approvePendingItem(item, suppliers, products, setSuppliers, setProducts, setInvoices, setPending);
+  };
+
+  const reject = (id) => {
+    if (window.confirm("לדחות את החשבונית הזו?")) {
+      setPending(p => p.filter(x => x.id !== id));
+    }
+  };
+
+  if (pending.length === 0) {
+    return (
+      <Card title="🔔 התראות ממתינות לאישור">
+        <div style={{ textAlign: "center", color: "#475569", padding: 40 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+          <div style={{ fontSize: 16 }}>אין התראות — הכל מאושר!</div>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ background: "#1a0505", border: "1px solid #ef4444", borderRadius: 10, padding: "12px 18px", color: "#f87171", fontWeight: 700, fontSize: 14 }}>
+        🔔 {pending.length} חשבונית/ות ממתינות לאישורך
+      </div>
+
+      {pending.map((item) => {
+        const newProds = item.itemsAnalysis?.filter(i => i.isNew) || [];
+        const alertProds = item.itemsAnalysis?.filter(i => i.hasAlert) || [];
+        const total = (item.itemsAnalysis || []).reduce((a, i) => a + parseFloat(i.price) * parseFloat(i.qty), 0);
+
+        return (
+          <Card key={item.id} title={`📋 חשבונית — ${item.supName} | ${item.scanResult?.date || ""}`}>
+            {/* Flags */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+              {item.isNewSupplier && (
+                <span style={{ background: "#1e1b4b", color: "#a78bfa", border: "1px solid #6366f1", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+                  🆕 ספק חדש: {item.supName}
+                </span>
+              )}
+              {newProds.map((p, i) => (
+                <span key={i} style={{ background: "#052e16", color: "#22c55e", border: "1px solid #16a34a", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+                  🆕 מוצר חדש: {p.name}
+                </span>
+              ))}
+              {alertProds.map((p, i) => (
+                <span key={i} style={{ background: "#1a0505", color: "#f87171", border: "1px solid #ef4444", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+                  ⚠️ חריגת מחיר: {p.name} (+{p.priceDiff?.toFixed(1)}%)
+                </span>
+              ))}
+            </div>
+
+            {/* Items table */}
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
+              <thead>
+                <tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}>
+                  <Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th><Th>סטטוס</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {(item.itemsAnalysis || []).map((p, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #1e293b", background: p.isNew ? "#031a0e" : p.hasAlert ? "#1a0505" : "transparent" }}>
+                    <Td style={{ fontWeight: p.isNew || p.hasAlert ? 700 : 400 }}>{p.name}</Td>
+                    <Td>{p.qty}</Td>
+                    <Td style={{ color: "#94a3b8" }}>{p.unit}</Td>
+                    <Td style={{ color: p.hasAlert ? "#f87171" : "#22d3ee" }}>₪{fmt(p.price)}</Td>
+                    <Td style={{ color: "#a78bfa" }}>₪{fmt(p.price * p.qty)}</Td>
+                    <Td>
+                      {p.isNew && <span style={{ color: "#22c55e", fontSize: 11, fontWeight: 700 }}>🆕 חדש</span>}
+                      {p.hasAlert && <span style={{ color: "#ef4444", fontSize: 11, fontWeight: 700 }}>⚠️ +{p.priceDiff?.toFixed(1)}%</span>}
+                      {!p.isNew && !p.hasAlert && <span style={{ color: "#475569", fontSize: 11 }}>✓ תקין</span>}
+                    </Td>
+                  </tr>
+                ))}
+                <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
+                  <Td colSpan={4} style={{ color: "#94a3b8" }}>סה״כ חשבונית</Td>
+                  <Td style={{ color: "#22c55e" }}>₪{fmt(total)}</Td>
+                  <Td></Td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn onClick={() => approve(item)} style={{ background: "#22c55e" }}>✅ אשר ושמור</Btn>
+              <Btn onClick={() => reject(item.id)} style={{ background: "#ef4444" }}>❌ דחה</Btn>
+            </div>
+          </Card>
+        );
+      })}
     </div>
   );
 }
