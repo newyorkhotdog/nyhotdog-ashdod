@@ -512,17 +512,13 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
     setScanResult(null);
 
     if (needsApproval) {
-      alert("⏳ החשבונית נשלחה לאישור אוהד!
-" + 
-        (isNewSupplier ? "• ספק חדש: " + supName + "
-" : "") +
-        (itemsAnalysis.filter(i => i.isNew).length > 0 ? "• " + itemsAnalysis.filter(i => i.isNew).length + " מוצרים חדשים
-" : "") +
-        (itemsAnalysis.filter(i => i.hasAlert).length > 0 ? "• " + itemsAnalysis.filter(i => i.hasAlert).length + " חריגות מחיר
-" : "") +
-        "
-לחץ על טאב 🔔 התראות לאישור"
-      );
+      const msg = ["⏳ החשבונית נשלחה לאישור אוהד!",
+        isNewSupplier ? "• ספק חדש: " + supName : "",
+        itemsAnalysis.filter(i => i.isNew).length > 0 ? "• " + itemsAnalysis.filter(i => i.isNew).length + " מוצרים חדשים" : "",
+        itemsAnalysis.filter(i => i.hasAlert).length > 0 ? "• " + itemsAnalysis.filter(i => i.hasAlert).length + " חריגות מחיר" : "",
+        "", "לחץ על טאב 🔔 התראות לאישור"
+      ].filter(Boolean).join("\n");
+      alert(msg);
     } else {
       // No approval needed - save directly
       approvePendingItem(pendingItem, suppliers, products, setSuppliers, setProducts, setInvoices, setPending);
