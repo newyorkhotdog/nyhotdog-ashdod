@@ -14,7 +14,7 @@ const STORAGE_KEYS = {
   expenses: "nyh_expenses",
 };
 
-const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30 };
+const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
 
 const BRANCH_ID = "ashdod"; // כל סניף יכול לקבל ID שלו
 
@@ -173,6 +173,8 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   const netProfit = totalSales - totalCost - totalLaborCost - totalExpenses;
   const netProfitPct = parseFloat(pct(netProfit, totalSales));
   const netColor = netProfitPct >= 15 ? "#22c55e" : netProfitPct >= 5 ? "#f59e0b" : "#ef4444";
+  const expensePct = parseFloat(pct(totalExpenses, totalSales));
+  const expenseColor = expensePct <= (settings.expenseGreenMax ?? 20) ? "#22c55e" : expensePct <= (settings.expenseYellowMax ?? 28) ? "#f59e0b" : "#ef4444";
 
   const lcColor = laborCostPct <= settings.laborGreenMax ? "#22c55e" : laborCostPct <= settings.laborYellowMax ? "#f59e0b" : "#ef4444";
   const pcColor = primeCostPct <= 55 ? "#22c55e" : primeCostPct <= 65 ? "#f59e0b" : "#ef4444";
@@ -263,7 +265,8 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
             <div style={{ color: "#334155", fontSize: 20, alignSelf: "center" }}>−</div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>תפעול</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#f87171" }}>₪{fmt(totalExpenses)}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: expenseColor }}>₪{fmt(totalExpenses)}</div>
+              <div style={{ fontSize: 11, color: expenseColor }}>{expensePct}%</div>
             </div>
             <div style={{ color: "#334155", fontSize: 20, alignSelf: "center" }}>=</div>
             <div style={{ textAlign: "center" }}>
@@ -1413,6 +1416,21 @@ function Settings({ settings, setSettings }) {
           </div>
           <div style={{ color: "#64748b", fontSize: 12, background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #1e293b" }}>
             🔴 אדום — מעל {form.laborYellowMax || "—"}%
+          </div>
+        </div>
+      </Card>
+      <Card title="🏢 סף הוצאות הנהלה וכלליות">
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 4 }}>🟢 ירוק — עד (%)</label>
+            <input type="number" value={form.expenseGreenMax ?? 20} onChange={(e) => setForm((f) => ({ ...f, expenseGreenMax: parseFloat(e.target.value) }))} style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 4 }}>🟡 צהוב — עד (%)</label>
+            <input type="number" value={form.expenseYellowMax ?? 28} onChange={(e) => setForm((f) => ({ ...f, expenseYellowMax: parseFloat(e.target.value) }))} style={inputStyle} />
+          </div>
+          <div style={{ color: "#64748b", fontSize: 12, background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #1e293b" }}>
+            🔴 אדום — מעל {form.expenseYellowMax ?? 28}%
           </div>
         </div>
       </Card>
