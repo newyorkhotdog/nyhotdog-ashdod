@@ -1224,6 +1224,7 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
   const [countType, setCountType] = useState("סגירה");
   const [counts, setCounts] = useState({});
   const [showCount, setShowCount] = useState(false);
+  const [editCount, setEditCount] = useState(null); // { date, type, items: [{productId, qty}] }
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -1391,24 +1392,115 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
         </Card>
       )}
 
+      {/* Edit count panel */}
+      {editCount && (
+        <Card title={`✏️ עריכת ספירת ${editCount.type} — ${editCount.date}`}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div>
+              <input type="date" value={editCount.date} onChange={e => setEditCount(p => ({ ...p, date: e.target.value }))} style={{ ...inputStyle }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>סוג ספירה</div>
+              <select value={editCount.type} onChange={e => setEditCount(p => ({ ...p, type: e.target.value }))} style={inputStyle}>
+                <option>פתיחה</option>
+                <option>סגירה</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+            {allProducts.map(prod => {
+              const item = editCount.items.find(i => i.productId === prod.id);
+              return (
+                <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#0f172a", borderRadius: 8, padding: "10px 14px" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{prod.name}</div>
+                    <div style={{ fontSize: 11, color: "#64748b" }}>{sup(prod.supplierId)} | {prod.unit}</div>
+                  </div>
+                  <input
+                    type="number"
+                    placeholder={`כמות ב${prod.unit}`}
+                    value={item?.qty ?? ""}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setEditCount(p => {
+                        const exists = p.items.find(i => i.productId === prod.id);
+                        if (exists) return { ...p, items: p.items.map(i => i.productId === prod.id ? { ...i, qty: val } : i) };
+                        return { ...p, items: [...p.items, { productId: prod.id, qty: val }] };
+                      });
+                    }}
+                    style={{ ...inputStyle, width: 120, textAlign: "center" }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn onClick={() => {
+              // Remove old entries for this count, add updated ones
+              setInventory(p => {
+                const filtered = p.filter(c => !(c.date === editCount.originalDate && c.type === editCount.originalType));
+                const newEntries = editCount.items
+                  .filter(i => i.qty !== "" && i.qty !== undefined)
+                  .map(i => ({ id: (Date.now() + Math.random() * 1000).toString(), productId: i.productId, date: editCount.date, type: editCount.type, qty: parseFloat(i.qty) || 0 }));
+                return [...filtered, ...newEntries];
+              });
+              setEditCount(null);
+            }} style={{ background: "#22c55e" }}>💾 שמור שינויים</Btn>
+            <Btn onClick={() => setEditCount(null)} style={{ background: "#475569" }}>✕ ביטול</Btn>
+          </div>
+        </Card>
+      )}
+
       {/* Count history */}
       {inventory.length > 0 && (
         <Card title="היסטוריית ספירות">
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {[...new Set(inventory.map(c => c.date))].sort().reverse().slice(0, 10).map(date => {
-              const dayItems = inventory.filter(c => c.date === date);
-              const type = dayItems[0]?.type;
-              return (
-                <div key={date} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>{type} — {date}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{dayItems.length} מוצרים נספרו</div>
+            {[...new Map(inventory.map(c => [`${c.date}_${c.type}`, c])).values()]
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .slice(0, 20)
+              .map(({ date, type }) => {
+                const dayItems = inventory.filter(c => c.date === date && c.type === type);
+                const isEditing = editCount?.originalDate === date && editCount?.originalType === type;
+                return (
+                  <div key={`${date}_${type}`} style={{ background: "#0f172a", border: `1px solid ${isEditing ? "#6366f1" : "#1e293b"}`, borderRadius: 8, overflow: "hidden" }}>
+                    <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>
+                          <span style={{ color: type === "פתיחה" ? "#22d3ee" : "#a78bfa" }}>{type}</span>
+                          {" — "}{date}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#94a3b8" }}>{dayItems.length} מוצרים נספרו</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <button
+                          onClick={() => setEditCount({
+                            date, type,
+                            originalDate: date, originalType: type,
+                            items: dayItems.map(c => ({ productId: c.productId, qty: String(c.qty) }))
+                          })}
+                          style={{ background: "#1e293b", border: "1px solid #334155", color: "#6366f1", cursor: "pointer", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>
+                          ✏️ ערוך
+                        </button>
+                        <button
+                          onClick={() => { if (window.confirm("למחוק ספירה זו?")) setInventory(p => p.filter(c => !(c.date === date && c.type === type))); }}
+                          style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
+                      </div>
+                    </div>
+                    {/* Inline item summary */}
+                    <div style={{ borderTop: "1px solid #1e293b", padding: "8px 16px", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {dayItems.map(c => {
+                        const prod = allProducts.find(p => p.id === c.productId);
+                        return prod ? (
+                          <span key={c.productId} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 6, padding: "2px 10px", fontSize: 12, color: "#94a3b8" }}>
+                            {prod.name}: <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{c.qty} {prod.unit}</span>
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
                   </div>
-                  <button onClick={() => { if (window.confirm("למחוק ספירה זו?")) setInventory(p => p.filter(c => c.date !== date || c.type !== type)); }}
-                    style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </Card>
       )}
