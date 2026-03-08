@@ -434,6 +434,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
   const [form, setForm] = useState({ supplierId: "", date: today(), invoiceNum: "", items: [] });
   const [newItem, setNewItem] = useState({ productId: "", price: "", qty: "1" });
   const [showForm, setShowForm] = useState(false);
+  const [editInvoice, setEditInvoice] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState("");
@@ -696,20 +697,78 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
               const prod = products.find((p) => p.id === item.productId);
               return prod && prod.basePrice > 0 && ((parseFloat(item.price) - prod.basePrice) / prod.basePrice) * 100 > 5;
             });
+            const isEditing = editInvoice?.id === inv.id;
             return (
-              <div key={inv.id} style={{
-                background: "#0f172a", border: "1px solid #1e293b",
-                borderRadius: 8, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center"
-              }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>{sup?.name || "ספק לא ידוע"}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8" }}>{inv.date} | חשבונית {inv.invoiceNum || "—"} | {(inv.items || []).length} פריטים</div>
+              <div key={inv.id} style={{ background: "#0f172a", border: `1px solid ${isEditing ? "#6366f1" : "#1e293b"}`, borderRadius: 8, overflow: "hidden" }}>
+                {/* Row */}
+                <div style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+                  onClick={() => setEditInvoice(isEditing ? null : { ...inv, items: inv.items.map(i => ({ ...i })) })}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{sup?.name || "ספק לא ידוע"}</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{inv.date} | חשבונית {inv.invoiceNum || "—"} | {(inv.items || []).length} פריטים</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    {itemAlerts.length > 0 && <span style={{ background: "#1a0505", color: "#f87171", border: "1px solid #ef4444", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>⚠️ {itemAlerts.length} חריגות</span>}
+                    <span style={{ color: "#22d3ee", fontWeight: 800, fontSize: 15 }}>₪{fmt(inv.total)}</span>
+                    <span style={{ color: "#6366f1", fontSize: 12 }}>{isEditing ? "▲ סגור" : "✏️ ערוך"}</span>
+                    <button onClick={(e) => { e.stopPropagation(); if (window.confirm("למחוק חשבונית זו?")) setInvoices((p) => p.filter((i) => i.id !== inv.id)); }}
+                      style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
+                  </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  {itemAlerts.length > 0 && <span style={{ background: "#1a0505", color: "#f87171", border: "1px solid #ef4444", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>⚠️ {itemAlerts.length} חריגות</span>}
-                  <span style={{ color: "#22d3ee", fontWeight: 800, fontSize: 15 }}>₪{fmt(inv.total)}</span>
-                  <button onClick={() => setInvoices((p) => p.filter((i) => i.id !== inv.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
-                </div>
+
+                {/* Edit panel */}
+                {isEditing && (
+                  <div style={{ borderTop: "1px solid #1e293b", padding: 16 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div>
+                        <select value={editInvoice.supplierId} onChange={e => setEditInvoice(p => ({ ...p, supplierId: e.target.value }))} style={{ ...inputStyle, width: "100%" }}>
+                          {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div>
+                        <input type="date" value={editInvoice.date} onChange={e => setEditInvoice(p => ({ ...p, date: e.target.value }))} style={{ ...inputStyle, width: "100%" }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ חשבונית</div>
+                        <input value={editInvoice.invoiceNum || ""} onChange={e => setEditInvoice(p => ({ ...p, invoiceNum: e.target.value }))} style={{ ...inputStyle, width: "100%" }} />
+                      </div>
+                    </div>
+
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 12 }}>
+                      <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>פריט</Th><Th>כמות</Th><Th>מחיר ליחידה</Th><Th>סה״כ</Th><Th></Th></tr></thead>
+                      <tbody>
+                        {editInvoice.items.map((item, idx) => {
+                          const prod = products.find(p => p.id === item.productId);
+                          return (
+                            <tr key={item.id} style={{ borderBottom: "1px solid #1e293b" }}>
+                              <Td style={{ color: "#e2e8f0" }}>{prod?.name || "—"}</Td>
+                              <Td><input type="number" value={item.qty} onChange={e => setEditInvoice(p => ({ ...p, items: p.items.map((it, i) => i === idx ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70, textAlign: "center" }} /></Td>
+                              <Td><input type="number" value={item.price} onChange={e => setEditInvoice(p => ({ ...p, items: p.items.map((it, i) => i === idx ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, textAlign: "center", color: "#22d3ee" }} /></Td>
+                              <Td style={{ color: "#a78bfa" }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
+                              <Td><button onClick={() => setEditInvoice(p => ({ ...p, items: p.items.filter((_, i) => i !== idx) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
+                            </tr>
+                          );
+                        })}
+                        <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
+                          <Td colSpan={3} style={{ color: "#94a3b8" }}>סה״כ</Td>
+                          <Td style={{ color: "#22c55e" }}>₪{fmt(editInvoice.items.reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0))}</Td>
+                          <Td></Td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <Btn onClick={() => {
+                        const total = editInvoice.items.reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0);
+                        setInvoices(p => p.map(i => i.id === editInvoice.id ? { ...editInvoice, total } : i));
+                        setEditInvoice(null);
+                      }} style={{ background: "#22c55e" }}>💾 שמור שינויים</Btn>
+                      <Btn onClick={() => setEditInvoice(null)} style={{ background: "#475569" }}>✕ ביטול</Btn>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
