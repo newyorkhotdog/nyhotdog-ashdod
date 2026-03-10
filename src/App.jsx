@@ -498,6 +498,35 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
   );
 }
 
+// Compress image before upload — reduces mobile photo size from ~5MB to ~500KB
+async function compressImage(file, maxWidthPx = 1600, quality = 0.82) {
+  if (file.type === "application/pdf") {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res({ base64: r.result.split(",")[1], mediaType: "application/pdf" });
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+  return new Promise((res, rej) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxWidthPx / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      const base64 = canvas.toDataURL("image/jpeg", quality).split(",")[1];
+      res({ base64, mediaType: "image/jpeg" });
+    };
+    img.onerror = rej;
+    img.src = url;
+  });
+}
+
+
 function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, setProducts, settings, pending, setPending }) {
   const [form, setForm] = useState({ supplierId: "", date: today(), invoiceNum: "", items: [] });
   const [newItem, setNewItem] = useState({ productId: "", price: "", qty: "1" });
@@ -512,14 +541,8 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
     setScanResult(null);
     setScanError("");
     try {
-      const base64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result.split(",")[1]);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
-      const isPdf = file.type === "application/pdf";
-      const mediaType = isPdf ? "application/pdf" : file.type;
+      const { base64, mediaType } = await compressImage(file);
+      const isPdf = mediaType === "application/pdf";
       const response = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1568,7 +1591,7 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
           messages: [{ role: "user", content: [
-            { type: isPdf ? "document" : "image", source: { type: "base64", media_type: file.type, data: base64 } },
+            { type: isPdf ? "document" : "image", source: { type: "base64", media_type: fileMediaType, data: base64 } },
             { type: "text", text: 'קרא את תעודת המשלוח הזו והחזר JSON בלבד:\n{"supplierName":"שם הספק","date":"YYYY-MM-DD","deliveryNum":"מספר תעודה","items":[{"name":"שם פריט","unit":"יחידת מידה","qty":1.0,"price":0.0}],"total":0.0}' }
           ]}]
         })
