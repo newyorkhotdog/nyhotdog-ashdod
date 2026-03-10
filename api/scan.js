@@ -6,20 +6,23 @@ module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     const key = process.env.ANTHROPIC_API_KEY || "NOT SET";
     return res.status(200).json({ 
+      status: "ok",
       keySet: !!process.env.ANTHROPIC_API_KEY,
       keyStart: key.substring(0, 20),
-      keyEnd: key.substring(key.length - 6)
     });
   }
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).end();
 
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: "ANTHROPIC_API_KEY not set in environment" });
+  }
+
   try {
     let body = req.body;
     if (typeof body === "string") body = JSON.parse(body);
-
-    const apiKey = process.env.ANTHROPIC_API_KEY || "sk-ant-api03-0nugHI0BeGDgEJffUMvoWN7F0FtvRPDJqt10jIJIqBQVHz2EdSbJuYw7HcYe8h_-7JI234q_sdD6hrd0oGsZKQ-yFz_VQAA";
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -32,7 +35,7 @@ module.exports = async function handler(req, res) {
     });
 
     const text = await response.text();
-    res.status(200).send(text);
+    res.status(response.status).send(text);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
