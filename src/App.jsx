@@ -82,20 +82,34 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      setSuppliers((await load(STORAGE_KEYS.suppliers)) || []);
-      setProducts((await load(STORAGE_KEYS.products)) || []);
-      setInvoices((await load(STORAGE_KEYS.invoices)) || []);
-      setSales((await load(STORAGE_KEYS.sales)) || []);
-      setEmployees((await load(STORAGE_KEYS.employees)) || []);
-      setHours((await load(STORAGE_KEYS.hours)) || []);
-      setSettings((await load(STORAGE_KEYS.settings)) || DEFAULT_SETTINGS);
-      setPending((await load(STORAGE_KEYS.pending)) || []);
-      setExpenses((await load(STORAGE_KEYS.expenses)) || []);
-      setDeliveries((await load(STORAGE_KEYS.deliveries)) || []);
-      setInventory((await load(STORAGE_KEYS.inventory)) || []);
-      setLoaded(true);
-    })();
+    // Real-time listeners — כל שינוי ב-Firebase מתעדכן מיד בכל המכשירים
+    const setters = {
+      [STORAGE_KEYS.suppliers]: setSuppliers,
+      [STORAGE_KEYS.products]: setProducts,
+      [STORAGE_KEYS.invoices]: setInvoices,
+      [STORAGE_KEYS.sales]: setSales,
+      [STORAGE_KEYS.employees]: setEmployees,
+      [STORAGE_KEYS.hours]: setHours,
+      [STORAGE_KEYS.settings]: (v) => setSettings(v || DEFAULT_SETTINGS),
+      [STORAGE_KEYS.pending]: setPending,
+      [STORAGE_KEYS.expenses]: setExpenses,
+      [STORAGE_KEYS.deliveries]: setDeliveries,
+      [STORAGE_KEYS.inventory]: setInventory,
+    };
+    let loadedCount = 0;
+    const total = Object.keys(setters).length;
+    const unsubs = Object.entries(setters).map(([key, setter]) => {
+      const ref = doc(db, "branches", BRANCH_ID, "data", key);
+      return onSnapshot(ref, (snap) => {
+        setter(snap.exists() ? (snap.data().value || []) : (key === STORAGE_KEYS.settings ? DEFAULT_SETTINGS : []));
+        loadedCount++;
+        if (loadedCount >= total) setLoaded(true);
+      }, () => {
+        loadedCount++;
+        if (loadedCount >= total) setLoaded(true);
+      });
+    });
+    return () => unsubs.forEach(u => u());
   }, []);
 
   useEffect(() => { if (loaded) save(STORAGE_KEYS.suppliers, suppliers); }, [suppliers, loaded]);
