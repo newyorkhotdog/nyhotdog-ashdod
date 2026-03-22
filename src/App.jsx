@@ -173,6 +173,10 @@ export default function App() {
 }
 
 function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses }) {
+  const [aiMessages, setAiMessages] = useState([]);
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAI, setShowAI] = useState(false);
   const parseXlsxSales = async (file) => {
     setImporting(true);
     setImportError("");
@@ -312,6 +316,78 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   }).filter((e) => e.hrs > 0);
 
   const lcSettings = { greenMax: settings.laborGreenMax, yellowMax: settings.laborYellowMax };
+
+  const buildContext = () => {
+    const allSales = [...sales].sort((a,b) => a.date.localeCompare(b.date));
+    const monthlySalesData = allSales.filter(s => s.date?.startsWith(monthKey));
+    const dayOfWeekStats = {};
+    monthlySalesData.forEach(s => {
+      const d = new Date(s.date);
+      const day = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][d.getDay()];
+      if (!dayOfWeekStats[day]) dayOfWeekStats[day] = { total: 0, count: 0 };
+      dayOfWeekStats[day].total += (parseFloat(s.kupa)||0) + (parseFloat(s.wolt)||0);
+      dayOfWeekStats[day].count++;
+    });
+    const dayStats = Object.entries(dayOfWeekStats).map(([d,v]) => `${d}: ממוצע ₪${(v.total/v.count).toFixed(0)}`).join(", ");
+    const topSuppliers = supplierStats.slice(0,5).map(s => `${s.name}: ₪${s.cost.toFixed(0)} (${s.pct}%)`).join(", ");
+    const priceAlerts = alerts.slice(0,5).map(a => `${a.prod.name} אצל ${suppliers.find(s=>s.id===a.inv.supplierId)?.name||"?"}: +${a.diff.toFixed(1)}%`).join(", ");
+    const empData = empStats.map(e => `${e.name}: ${e.hrs}ש, ₪${e.cost.toFixed(0)}`).join(", ");
+    const expenseData = (expenses||[]).filter(e=>e.date?.startsWith(monthKey)).reduce((a,e)=>a+parseFloat(e.amount||0),0);
+
+    return `אתה יועץ עסקי מומחה למסעדות מזון מהיר וניהול עלויות. אתה מנתח את עסק "New York Hotdog" בסניף אשדוד — רשת נקניקיות גורמה כשרה.
+
+תפריט העסק: נקניקיות ניו-יורק (קלאסי ₪37, מנהטן ₪42, ברודווי ₪40, ברוקלין ₪40, הארלם ₪42), טוסט נקניק ₪37, נקניקיית נשנוש ₪13, ילדים ₪18, נאצ'וס ₪15. גם מכירות ב-Wolt.
+
+נתוני החודש הנוכחי (${monthKey}):
+- סה"כ מכירות: ₪${totalSales.toFixed(0)} (קופה: ₪${totalKupa.toFixed(0)} | וולט: ₪${totalWolt.toFixed(0)})
+- עלות מזון (פוד קוסט): ₪${totalCost.toFixed(0)} = ${foodCostPct}% | יעד: עד ${settings.greenMax}%
+- עלות עבודה (לייבור): ₪${totalLaborCost.toFixed(0)} = ${laborCostPct}% | יעד: עד ${settings.laborGreenMax}%
+- פריים קוסט: ${primeCostPct}% | יעד: עד 55%
+- הוצאות תפעול: ₪${totalExpenses.toFixed(0)} = ${expensePct.toFixed(1)}%
+- רווח נקי: ₪${netProfit.toFixed(0)} = ${netProfitPct}%
+- ימי מכירה מוזנים: ${monthlySalesData.length}
+
+ספקים עיקריים החודש: ${topSuppliers || "אין עדיין"}
+חריגות מחיר: ${priceAlerts || "אין חריגות"}
+עובדים פעילים: ${empData || "אין נתונים"}
+הוצאות תפעול החודש: ₪${expenseData.toFixed(0)}
+מכירות לפי יום בשבוע: ${dayStats || "אין מספיק נתונים"}
+
+ענה בעברית, תהיה ספציפי לנתונים האמיתיים, תזהה בעיות ותתן המלצות מעשיות. אל תאמר "אני לא יכול לדעת" — נתח את מה שיש. השתמש בנתונים המספריים הספציפיים בתשובתך.`;
+  };
+
+  const sendAIMessage = async () => {
+    const msg = aiInput.trim();
+    if (!msg || aiLoading) return;
+    setAiInput("");
+    const userMsg = { role: "user", content: msg };
+    setAiMessages(prev => [...prev, userMsg]);
+    setAiLoading(true);
+    try {
+      const systemPrompt = buildContext();
+      const history = [...aiMessages, userMsg].slice(-10);
+      const response = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: history.map(m => ({ role: m.role, content: m.content }))
+        })
+      });
+      const data = await response.json();
+      const text = data.content?.find(b => b.type === "text")?.text || "שגיאה בקבלת תשובה";
+      setAiMessages(prev => [...prev, { role: "assistant", content: text }]);
+      setTimeout(() => {
+        const el = document.getElementById("ai-messages");
+        if (el) el.scrollTop = el.scrollHeight;
+      }, 100);
+    } catch(e) {
+      setAiMessages(prev => [...prev, { role: "assistant", content: "❌ שגיאה: " + e.message }]);
+    }
+    setAiLoading(false);
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -499,6 +575,82 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
           <div style={{ fontSize: 16 }}>התחל בהכנסת ספקים, מחירי בסיס, מכירות וחשבוניות</div>
         </div>
       )}
+
+      {/* AI Agent */}
+      <div style={{ border: "2px solid #6366f1", borderRadius: 14, overflow: "hidden", background: "#0a0a14" }}>
+        <div onClick={() => setShowAI(p => !p)} style={{ padding: "14px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg,#1e1b4b,#0f172a)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 24 }}>🤖</span>
+            <div>
+              <div style={{ fontWeight: 800, color: "#a78bfa", fontSize: 15 }}>סוכן AI — יועץ עסקי</div>
+              <div style={{ fontSize: 11, color: "#64748b" }}>מנתח את הנתונים שלך בזמן אמת | מתמחה במסעדות מזון מהיר</div>
+            </div>
+          </div>
+          <span style={{ color: "#6366f1", fontSize: 18 }}>{showAI ? "▲" : "▼ לחץ לפתיחה"}</span>
+        </div>
+
+        {showAI && (
+          <div style={{ padding: 16 }}>
+            {/* Quick action buttons */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+              {[
+                "נתח את הפוד קוסט שלי החודש",
+                "איפה אני מפסיד כסף?",
+                "מה ה-Prime Cost שלי ואיך לשפר?",
+                "נתח את הספקים היקרים ביותר",
+                "מה ימי המכירה החזקים/חלשים?",
+                "תן לי 3 המלצות לשיפור הרווחיות",
+              ].map(q => (
+                <button key={q} onClick={() => { setAiInput(q); }} style={{ background: "#1e1b4b", border: "1px solid #6366f1", color: "#a78bfa", borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                  {q}
+                </button>
+              ))}
+            </div>
+
+            {/* Messages */}
+            {aiMessages.length > 0 && (
+              <div style={{ maxHeight: 420, overflowY: "auto", marginBottom: 12, display: "flex", flexDirection: "column", gap: 10 }} id="ai-messages">
+                {aiMessages.map((m, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+                    <div style={{
+                      maxWidth: "85%", padding: "10px 14px", borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                      background: m.role === "user" ? "#3730a3" : "#1e293b",
+                      color: "#e2e8f0", fontSize: 13, lineHeight: 1.6,
+                      border: m.role === "assistant" ? "1px solid #334155" : "none",
+                      whiteSpace: "pre-wrap"
+                    }}>
+                      {m.role === "assistant" && <div style={{ fontSize: 11, color: "#6366f1", marginBottom: 4, fontWeight: 700 }}>🤖 יועץ AI</div>}
+                      {m.content}
+                    </div>
+                  </div>
+                ))}
+                {aiLoading && (
+                  <div style={{ display: "flex", justifyContent: "flex-start" }}>
+                    <div style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "14px 14px 14px 4px", padding: "10px 16px", color: "#6366f1", fontSize: 13 }}>
+                      ⏳ מנתח את הנתונים...
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Input */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                value={aiInput}
+                onChange={e => setAiInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAIMessage(); } }}
+                placeholder="שאל אותי כל שאלה על העסק..."
+                style={{ ...inputStyle, flex: 1, fontSize: 13 }}
+              />
+              <Btn onClick={sendAIMessage} style={{ background: aiLoading ? "#475569" : "#6366f1", minWidth: 70 }} disabled={aiLoading}>
+                {aiLoading ? "⏳" : "שלח ➤"}
+              </Btn>
+              {aiMessages.length > 0 && <Btn onClick={() => setAiMessages([])} style={{ background: "#1e293b", color: "#64748b", fontSize: 11 }}>נקה</Btn>}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
