@@ -173,6 +173,85 @@ export default function App() {
 }
 
 function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses }) {
+  const parseXlsxSales = async (file) => {
+    setImporting(true);
+    setImportError("");
+    setImportPreview(null);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8 = new Uint8Array(arrayBuffer);
+      // Use SheetJS (XLSX) if available, otherwise parse CSV
+      if (typeof window.XLSX === "undefined") {
+        throw new Error("ספריית XLSX לא נטענה — נסה לרענן");
+      }
+      const wb = window.XLSX.read(uint8, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+      // Find header row (contains תאריך מכירה)
+      let headerRow = -1;
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i].some(c => String(c||"").includes("תאריך"))) { headerRow = i; break; }
+      }
+      if (headerRow === -1) throw new Error("לא נמצאה שורת כותרות בקובץ");
+
+      const headers = rows[headerRow];
+      const dateCol = headers.findIndex(h => String(h||"").includes("תאריך"));
+      const typeCol = headers.findIndex(h => String(h||"").includes("סוג"));
+      const amountCol = headers.findIndex(h => String(h||"").includes("סה") || String(h||"").includes("סכום"));
+      const customerCol = headers.findIndex(h => String(h||"").includes("לקוח"));
+
+      const byDate = {};
+      for (let i = headerRow + 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row[dateCol]) continue;
+        const rawDate = String(row[dateCol] || "");
+        // Parse DD/MM/YYYY
+        const parts = rawDate.split("/");
+        if (parts.length !== 3) continue;
+        const isoDate = `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
+        const type = String(row[typeCol] || "");
+        const amount = parseFloat(row[amountCol] || 0);
+        const customer = String(row[customerCol] || "");
+        if (!byDate[isoDate]) byDate[isoDate] = { kupa: 0, wolt: 0 };
+        if (type === "חיוב") {
+          byDate[isoDate].kupa += amount;
+        } else if (type === "תעודת משלוח") {
+          byDate[isoDate].wolt += amount;
+        }
+      }
+
+      const preview = Object.entries(byDate)
+        .filter(([, v]) => v.kupa > 0 || v.wolt > 0)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, v]) => ({ date, kupa: String(Math.round(v.kupa * 100) / 100), wolt: String(Math.round(v.wolt * 100) / 100) }));
+
+      if (preview.length === 0) throw new Error("לא נמצאו נתוני מכירות בקובץ");
+      setImportPreview(preview);
+    } catch(e) {
+      setImportError("שגיאה: " + e.message);
+    }
+    setImporting(false);
+  };
+
+  const confirmImport = () => {
+    if (!importPreview) return;
+    setSales(prev => {
+      let updated = [...prev];
+      for (const row of importPreview) {
+        const idx = updated.findIndex(s => s.date === row.date);
+        if (idx >= 0) {
+          updated[idx] = { ...updated[idx], kupa: row.kupa, wolt: row.wolt };
+        } else {
+          updated.push({ id: Date.now().toString() + Math.random(), date: row.date, kupa: row.kupa, wolt: row.wolt });
+        }
+      }
+      return updated;
+    });
+    setImportPreview(null);
+    alert(`✅ יובאו ${importPreview.length} ימי מכירה בהצלחה!`);
+  };
+
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const monthlySales = sales.filter((s) => s.date?.startsWith(monthKey));
@@ -887,6 +966,17 @@ function Sales({ sales, setSales }) {
   const [form, setForm] = useState({ date: today(), kupa: "", wolt: "" });
   const [editId, setEditId] = useState(null);
   const [editVals, setEditVals] = useState({ kupa: "", wolt: "" });
+  const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
+  const [importError, setImportError] = useState("");
+
+  useEffect(() => {
+    if (typeof window.XLSX === "undefined") {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      document.head.appendChild(s);
+    }
+  }, []);
 
   const addSale = () => {
     if (!form.date) return;
@@ -923,6 +1013,49 @@ function Sales({ sales, setSales }) {
         <KpiCard label="וולט — חודש נוכחי" value={`₪${fmt(totalWolt)}`} sub="הזמנות אונליין" accent="#a78bfa" />
         <KpiCard label="סה״כ מכירות" value={`₪${fmt(totalKupa + totalWolt)}`} sub={`${monthSales.length} ימים מוזנים`} accent="#22c55e" />
       </div>
+
+      {/* Import from Caspit */}
+      <Card title="📥 ייבוא מ-Caspit">
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <label style={{ background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1 }}>
+            {importing ? "⏳ מעבד..." : "📂 בחר קובץ Excel מ-Caspit"}
+            <input type="file" accept=".xlsx,.xls" style={{ display: "none" }}
+              onChange={e => e.target.files[0] && parseXlsxSales(e.target.files[0])}
+              disabled={importing} />
+          </label>
+          <div style={{ fontSize: 12, color: "#64748b" }}>קובץ "דוח מכירות תקופתי" מ-Caspit — קופה + תעודות משלוח</div>
+        </div>
+        {importError && <div style={{ marginTop: 10, color: "#f87171", fontSize: 13, background: "#1a0505", borderRadius: 8, padding: "8px 12px" }}>❌ {importError}</div>}
+        {importPreview && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>
+              נמצאו <strong style={{ color: "#22d3ee" }}>{importPreview.length}</strong> ימים |
+              קופה: <strong style={{ color: "#22d3ee" }}>₪{fmt(importPreview.reduce((a,r) => a+parseFloat(r.kupa||0),0))}</strong> |
+              תעודות: <strong style={{ color: "#a78bfa" }}>₪{fmt(importPreview.reduce((a,r) => a+parseFloat(r.wolt||0),0))}</strong> |
+              סה״כ: <strong style={{ color: "#22c55e" }}>₪{fmt(importPreview.reduce((a,r) => a+parseFloat(r.kupa||0)+parseFloat(r.wolt||0),0))}</strong>
+            </div>
+            <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 12, border: "1px solid #1e293b", borderRadius: 8 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead><tr style={{ background: "#1e293b", color: "#94a3b8" }}><Th>תאריך</Th><Th>קופה ₪</Th><Th>תעודות ₪</Th><Th>סה״כ ₪</Th></tr></thead>
+                <tbody>
+                  {importPreview.map(r => (
+                    <tr key={r.date} style={{ borderBottom: "1px solid #0f172a" }}>
+                      <Td style={{ color: "#94a3b8" }}>{r.date}</Td>
+                      <Td style={{ color: "#22d3ee" }}>₪{fmt(r.kupa)}</Td>
+                      <Td style={{ color: "#a78bfa" }}>₪{fmt(r.wolt)}</Td>
+                      <Td style={{ color: "#22c55e", fontWeight: 700 }}>₪{fmt(parseFloat(r.kupa||0)+parseFloat(r.wolt||0))}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn onClick={confirmImport} style={{ background: "#22c55e" }}>✅ אשר וייבא</Btn>
+              <Btn onClick={() => setImportPreview(null)} style={{ background: "#475569" }}>✕ ביטול</Btn>
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Card title="הכנסת מכירות יומיות">
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
