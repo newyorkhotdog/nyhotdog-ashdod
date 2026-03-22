@@ -1064,23 +1064,35 @@ function Sales({ sales, setSales }) {
     setImportPreview(null);
     try {
       const text = await file.text();
+      // Parse CSV properly handling quoted fields
+      const parseCSVLine = (line) => {
+        const result = [];
+        let cur = "", inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          if (line[i] === '"') { inQ = !inQ; }
+          else if (line[i] === ',' && !inQ) { result.push(cur.trim()); cur = ""; }
+          else { cur += line[i]; }
+        }
+        result.push(cur.trim());
+        return result;
+      };
       const lines = text.split("\n").filter(l => l.trim());
-      const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g,""));
+      const headers = parseCSVLine(lines[0]);
       const dateIdx = headers.findIndex(h => h.includes("שעת") || h.includes("תאריך"));
       const statusIdx = headers.findIndex(h => h.includes("מצב"));
       const priceIdx = headers.findIndex(h => h.includes("מחיר"));
       const byDate = {};
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(",").map(c => c.trim().replace(/^"|"$/g,""));
+        const cols = parseCSVLine(lines[i]);
         if (!cols[dateIdx]) continue;
-        const status = cols[statusIdx] || "";
+        const status = (cols[statusIdx] || "").trim();
         if (status !== "delivered") continue;
         const rawDate = cols[dateIdx];
         const match = rawDate.match(/(\d+)\.(\d+)\.(\d+)/);
         if (!match) continue;
         const isoDate = `${match[3]}-${match[2].padStart(2,"0")}-${match[1].padStart(2,"0")}`;
         const amount = parseFloat(cols[priceIdx] || 0);
-        byDate[isoDate] = (byDate[isoDate] || 0) + amount;
+        if (!isNaN(amount)) byDate[isoDate] = (byDate[isoDate] || 0) + amount;
       }
       const preview = Object.entries(byDate)
         .filter(([, v]) => v > 0)
