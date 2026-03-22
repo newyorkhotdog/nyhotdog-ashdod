@@ -1020,6 +1020,7 @@ function Sales({ sales, setSales }) {
       const dateCol = headers.findIndex(h => String(h||"").includes("תאריך"));
       const typeCol = headers.findIndex(h => String(h||"").includes("סוג"));
       const amountCol = headers.findIndex(h => String(h||"").includes("סה") || String(h||"").includes("סכום"));
+      const customerCol = headers.findIndex(h => String(h||"").includes("לקוח"));
       const byDate = {};
       for (let i = headerRow + 1; i < rows.length; i++) {
         const row = rows[i];
@@ -1029,33 +1030,89 @@ function Sales({ sales, setSales }) {
         const isoDate = `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
         const type = String(row[typeCol] || "");
         const amount = parseFloat(row[amountCol] || 0);
-        if (!byDate[isoDate]) byDate[isoDate] = { kupa: 0, wolt: 0 };
-        if (type === "חיוב") byDate[isoDate].kupa += amount;
-        else if (type === "תעודת משלוח") byDate[isoDate].wolt += amount;
+        const customer = String(row[customerCol] || "");
+        if (!byDate[isoDate]) byDate[isoDate] = { kupa: 0, taprit: 0, mishlocha: 0, other: 0 };
+        if (type === "חיוב") {
+          byDate[isoDate].kupa += amount;
+        } else if (type === "תעודת משלוח") {
+          // All delivery notes go to kupa total, but track by company
+          if (customer.includes("Menu") || customer.includes("Ashdod")) byDate[isoDate].taprit += amount;
+          else if (customer.includes("משלוחה") || customer.includes("111")) byDate[isoDate].mishlocha += amount;
+          else byDate[isoDate].other += amount;
+        }
       }
       const preview = Object.entries(byDate)
-        .filter(([, v]) => v.kupa > 0 || v.wolt > 0)
+        .filter(([, v]) => v.kupa > 0 || v.taprit > 0 || v.mishlocha > 0 || v.other > 0)
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, v]) => ({ date, kupa: String(Math.round(v.kupa*100)/100), wolt: String(Math.round(v.wolt*100)/100) }));
+        .map(([date, v]) => {
+          const deliveries = v.taprit + v.mishlocha + v.other;
+          const totalKupa = v.kupa + deliveries;
+          return { date, kupa: String(Math.round(totalKupa*100)/100), wolt: "0",
+            taprit: String(Math.round(v.taprit*100)/100),
+            mishlocha: String(Math.round(v.mishlocha*100)/100),
+            otherDelivery: String(Math.round(v.other*100)/100) };
+        });
       if (preview.length === 0) throw new Error("לא נמצאו נתוני מכירות בקובץ");
-      setImportPreview(preview);
+      setImportPreview({ type: "caspit", rows: preview });
+    } catch(e) { setImportError("שגיאה: " + e.message); }
+    setImporting(false);
+  };
+
+  const parseCsvWolt = async (file) => {
+    setImporting(true);
+    setImportError("");
+    setImportPreview(null);
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter(l => l.trim());
+      const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g,""));
+      const dateIdx = headers.findIndex(h => h.includes("שעת") || h.includes("תאריך"));
+      const statusIdx = headers.findIndex(h => h.includes("מצב"));
+      const priceIdx = headers.findIndex(h => h.includes("מחיר"));
+      const byDate = {};
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",").map(c => c.trim().replace(/^"|"$/g,""));
+        if (!cols[dateIdx]) continue;
+        const status = cols[statusIdx] || "";
+        if (status !== "delivered") continue;
+        const rawDate = cols[dateIdx];
+        const match = rawDate.match(/(\d+)\.(\d+)\.(\d+)/);
+        if (!match) continue;
+        const isoDate = `${match[3]}-${match[2].padStart(2,"0")}-${match[1].padStart(2,"0")}`;
+        const amount = parseFloat(cols[priceIdx] || 0);
+        byDate[isoDate] = (byDate[isoDate] || 0) + amount;
+      }
+      const preview = Object.entries(byDate)
+        .filter(([, v]) => v > 0)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, v]) => ({ date, kupa: "0", wolt: String(Math.round(v*100)/100) }));
+      if (preview.length === 0) throw new Error("לא נמצאו הזמנות וולט בקובץ");
+      setImportPreview({ type: "wolt", rows: preview });
     } catch(e) { setImportError("שגיאה: " + e.message); }
     setImporting(false);
   };
 
   const confirmImport = () => {
     if (!importPreview) return;
+    const rows = importPreview.rows;
     setSales(prev => {
       let updated = [...prev];
-      for (const row of importPreview) {
+      for (const row of rows) {
         const idx = updated.findIndex(s => s.date === row.date);
-        if (idx >= 0) updated[idx] = { ...updated[idx], kupa: row.kupa, wolt: row.wolt };
-        else updated.push({ id: Date.now().toString() + Math.random(), date: row.date, kupa: row.kupa, wolt: row.wolt });
+        if (importPreview.type === "caspit") {
+          const entry = { kupa: row.kupa, taprit: row.taprit||"0", mishlocha: row.mishlocha||"0", otherDelivery: row.otherDelivery||"0" };
+          if (idx >= 0) updated[idx] = { ...updated[idx], ...entry };
+          else updated.push({ id: Date.now().toString() + Math.random(), date: row.date, wolt: "0", ...entry });
+        } else {
+          if (idx >= 0) updated[idx] = { ...updated[idx], wolt: row.wolt };
+          else updated.push({ id: Date.now().toString() + Math.random(), date: row.date, kupa: "0", wolt: row.wolt });
+        }
       }
       return updated;
     });
+    const count = rows.length;
     setImportPreview(null);
-    alert(`✅ יובאו ${importPreview.length} ימי מכירה בהצלחה!`);
+    alert(`✅ יובאו ${count} ימי מכירה בהצלחה!`);
   };
 
   const now = new Date();
@@ -1063,50 +1120,90 @@ function Sales({ sales, setSales }) {
   const monthSales = sales.filter((s) => s.date?.startsWith(monthKey));
   const totalKupa = monthSales.reduce((a, s) => a + (parseFloat(s.kupa) || 0), 0);
   const totalWolt = monthSales.reduce((a, s) => a + (parseFloat(s.wolt) || 0), 0);
+  const totalTaprit = monthSales.reduce((a, s) => a + (parseFloat(s.taprit) || 0), 0);
+  const totalMishlocha = monthSales.reduce((a, s) => a + (parseFloat(s.mishlocha) || 0), 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
-        <KpiCard label="קופה — חודש נוכחי" value={`₪${fmt(totalKupa)}`} sub="מכירות ישירות" accent="#22d3ee" />
-        <KpiCard label="וולט — חודש נוכחי" value={`₪${fmt(totalWolt)}`} sub="הזמנות אונליין" accent="#a78bfa" />
-        <KpiCard label="סה״כ מכירות" value={`₪${fmt(totalKupa + totalWolt)}`} sub={`${monthSales.length} ימים מוזנים`} accent="#22c55e" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 16 }}>
+        <KpiCard label="🖥️ קופה (Caspit) — חודש נוכחי" value={`₪${fmt(totalKupa)}`}
+          sub={<span>מזה: תפריט <strong style={{color:"#a78bfa"}}>₪{fmt(totalTaprit)}</strong> | משלוחה <strong style={{color:"#f87171"}}>₪{fmt(totalMishlocha)}</strong></span>}
+          accent="#22d3ee" raw />
+        <KpiCard label="📱 Wolt — חודש נוכחי" value={`₪${fmt(totalWolt)}`} sub="הזמנות אונליין" accent="#a78bfa" />
+      </div>
+      <div style={{ background: "linear-gradient(135deg,#0f172a,#1e1b4b)", border: "1px solid #6366f1", borderRadius: 10, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <span style={{ color: "#94a3b8", fontSize: 13 }}>סה״כ מכירות החודש ({monthSales.length} ימים)</span>
+        <span style={{ color: "#22c55e", fontWeight: 900, fontSize: 22 }}>₪{fmt(totalKupa + totalWolt)}</span>
       </div>
 
-      {/* Import from Caspit */}
-      <Card title="📥 ייבוא מ-Caspit">
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <label style={{ background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1 }}>
-            {importing ? "⏳ מעבד..." : "📂 בחר קובץ Excel מ-Caspit"}
-            <input type="file" accept=".xlsx,.xls" style={{ display: "none" }}
-              onChange={e => e.target.files[0] && parseXlsxSales(e.target.files[0])}
-              disabled={importing} />
-          </label>
-          <div style={{ fontSize: 12, color: "#64748b" }}>קובץ "דוח מכירות תקופתי" מ-Caspit — קופה + תעודות משלוח</div>
+      {/* Import buttons */}
+      <Card title="📥 ייבוא נתוני מכירות">
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+          <div>
+            <label style={{ background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1, display: "inline-block" }}>
+              {importing ? "⏳ מעבד..." : "🖥️ ייבוא מ-Caspit (Excel)"}
+              <input type="file" accept=".xlsx,.xls" style={{ display: "none" }}
+                onChange={e => e.target.files[0] && parseXlsxSales(e.target.files[0])} disabled={importing} />
+            </label>
+            <div style={{ fontSize: 11, color: "#475569", marginTop: 4 }}>דוח מכירות תקופתי — קופה + תעודות משלוח</div>
+          </div>
+          <div>
+            <label style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1, display: "inline-block" }}>
+              {importing ? "⏳ מעבד..." : "📱 ייבוא מ-Wolt (CSV)"}
+              <input type="file" accept=".csv" style={{ display: "none" }}
+                onChange={e => e.target.files[0] && parseCsvWolt(e.target.files[0])} disabled={importing} />
+            </label>
+            <div style={{ fontSize: 11, color: "#475569", marginTop: 4 }}>קובץ purchases מ-Wolt — הזמנות delivered בלבד</div>
+          </div>
         </div>
-        {importError && <div style={{ marginTop: 10, color: "#f87171", fontSize: 13, background: "#1a0505", borderRadius: 8, padding: "8px 12px" }}>❌ {importError}</div>}
+        {importError && <div style={{ color: "#f87171", fontSize: 13, background: "#1a0505", borderRadius: 8, padding: "8px 12px" }}>❌ {importError}</div>}
         {importPreview && (
           <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>
-              נמצאו <strong style={{ color: "#22d3ee" }}>{importPreview.length}</strong> ימים |
-              קופה: <strong style={{ color: "#22d3ee" }}>₪{fmt(importPreview.reduce((a,r) => a+parseFloat(r.kupa||0),0))}</strong> |
-              תעודות: <strong style={{ color: "#a78bfa" }}>₪{fmt(importPreview.reduce((a,r) => a+parseFloat(r.wolt||0),0))}</strong> |
-              סה״כ: <strong style={{ color: "#22c55e" }}>₪{fmt(importPreview.reduce((a,r) => a+parseFloat(r.kupa||0)+parseFloat(r.wolt||0),0))}</strong>
-            </div>
-            <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 12, border: "1px solid #1e293b", borderRadius: 8 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead><tr style={{ background: "#1e293b", color: "#94a3b8" }}><Th>תאריך</Th><Th>קופה ₪</Th><Th>תעודות ₪</Th><Th>סה״כ ₪</Th></tr></thead>
-                <tbody>
-                  {importPreview.map(r => (
-                    <tr key={r.date} style={{ borderBottom: "1px solid #0f172a" }}>
-                      <Td style={{ color: "#94a3b8" }}>{r.date}</Td>
-                      <Td style={{ color: "#22d3ee" }}>₪{fmt(r.kupa)}</Td>
-                      <Td style={{ color: "#a78bfa" }}>₪{fmt(r.wolt)}</Td>
-                      <Td style={{ color: "#22c55e", fontWeight: 700 }}>₪{fmt(parseFloat(r.kupa||0)+parseFloat(r.wolt||0))}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {importPreview.type === "caspit" ? (
+              <>
+                <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>
+                  📊 Caspit — <strong style={{ color: "#22d3ee" }}>{importPreview.rows.length} ימים</strong> |
+                  סה״כ קופה: <strong style={{ color: "#22c55e" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.kupa||0),0))}</strong> |
+                  תפריט: <strong style={{ color: "#a78bfa" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.taprit||0),0))}</strong> |
+                  משלוחה: <strong style={{ color: "#f87171" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.mishlocha||0),0))}</strong>
+                </div>
+                <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 12, border: "1px solid #1e293b", borderRadius: 8 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead><tr style={{ background: "#1e293b" }}><Th>תאריך</Th><Th>סה״כ קופה</Th><Th>מזה: תפריט</Th><Th>מזה: משלוחה</Th></tr></thead>
+                    <tbody>
+                      {importPreview.rows.map(r => (
+                        <tr key={r.date} style={{ borderBottom: "1px solid #0f172a" }}>
+                          <Td style={{ color: "#94a3b8" }}>{r.date}</Td>
+                          <Td style={{ color: "#22c55e", fontWeight: 700 }}>₪{fmt(r.kupa)}</Td>
+                          <Td style={{ color: "#a78bfa" }}>{parseFloat(r.taprit||0)>0 ? `₪${fmt(r.taprit)}` : "—"}</Td>
+                          <Td style={{ color: "#f87171" }}>{parseFloat(r.mishlocha||0)>0 ? `₪${fmt(r.mishlocha)}` : "—"}</Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>
+                  📱 Wolt — <strong style={{ color: "#a78bfa" }}>{importPreview.rows.length} ימים</strong> |
+                  סה״כ: <strong style={{ color: "#a78bfa" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.wolt||0),0))}</strong>
+                </div>
+                <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 12, border: "1px solid #1e293b", borderRadius: 8 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead><tr style={{ background: "#1e293b" }}><Th>תאריך</Th><Th>וולט ₪</Th></tr></thead>
+                    <tbody>
+                      {importPreview.rows.map(r => (
+                        <tr key={r.date} style={{ borderBottom: "1px solid #0f172a" }}>
+                          <Td style={{ color: "#94a3b8" }}>{r.date}</Td>
+                          <Td style={{ color: "#a78bfa", fontWeight: 700 }}>₪{fmt(r.wolt)}</Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
             <div style={{ display: "flex", gap: 10 }}>
               <Btn onClick={confirmImport} style={{ background: "#22c55e" }}>✅ אשר וייבא</Btn>
               <Btn onClick={() => setImportPreview(null)} style={{ background: "#475569" }}>✕ ביטול</Btn>
