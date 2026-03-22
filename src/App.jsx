@@ -1000,6 +1000,64 @@ function Sales({ sales, setSales }) {
     setEditId(null);
   };
 
+  const parseXlsxSales = async (file) => {
+    setImporting(true);
+    setImportError("");
+    setImportPreview(null);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8 = new Uint8Array(arrayBuffer);
+      if (typeof window.XLSX === "undefined") throw new Error("ספריית XLSX לא נטענה — נסה לרענן");
+      const wb = window.XLSX.read(uint8, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
+      let headerRow = -1;
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i].some(c => String(c||"").includes("תאריך"))) { headerRow = i; break; }
+      }
+      if (headerRow === -1) throw new Error("לא נמצאה שורת כותרות בקובץ");
+      const headers = rows[headerRow];
+      const dateCol = headers.findIndex(h => String(h||"").includes("תאריך"));
+      const typeCol = headers.findIndex(h => String(h||"").includes("סוג"));
+      const amountCol = headers.findIndex(h => String(h||"").includes("סה") || String(h||"").includes("סכום"));
+      const byDate = {};
+      for (let i = headerRow + 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row[dateCol]) continue;
+        const parts = String(row[dateCol] || "").split("/");
+        if (parts.length !== 3) continue;
+        const isoDate = `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
+        const type = String(row[typeCol] || "");
+        const amount = parseFloat(row[amountCol] || 0);
+        if (!byDate[isoDate]) byDate[isoDate] = { kupa: 0, wolt: 0 };
+        if (type === "חיוב") byDate[isoDate].kupa += amount;
+        else if (type === "תעודת משלוח") byDate[isoDate].wolt += amount;
+      }
+      const preview = Object.entries(byDate)
+        .filter(([, v]) => v.kupa > 0 || v.wolt > 0)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, v]) => ({ date, kupa: String(Math.round(v.kupa*100)/100), wolt: String(Math.round(v.wolt*100)/100) }));
+      if (preview.length === 0) throw new Error("לא נמצאו נתוני מכירות בקובץ");
+      setImportPreview(preview);
+    } catch(e) { setImportError("שגיאה: " + e.message); }
+    setImporting(false);
+  };
+
+  const confirmImport = () => {
+    if (!importPreview) return;
+    setSales(prev => {
+      let updated = [...prev];
+      for (const row of importPreview) {
+        const idx = updated.findIndex(s => s.date === row.date);
+        if (idx >= 0) updated[idx] = { ...updated[idx], kupa: row.kupa, wolt: row.wolt };
+        else updated.push({ id: Date.now().toString() + Math.random(), date: row.date, kupa: row.kupa, wolt: row.wolt });
+      }
+      return updated;
+    });
+    setImportPreview(null);
+    alert(`✅ יובאו ${importPreview.length} ימי מכירה בהצלחה!`);
+  };
+
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const monthSales = sales.filter((s) => s.date?.startsWith(monthKey));
