@@ -660,10 +660,15 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
   const [selSup, setSelSup] = useState(null);
   const [newProd, setNewProd] = useState({ name: "", unit: "ק\"ג", basePrice: "" });
 
+  const [newSupContact, setNewSupContact] = useState("");
+  const [newSupPhone, setNewSupPhone] = useState("");
+  const [editSupId, setEditSupId] = useState(null);
+  const [editSupVals, setEditSupVals] = useState({ name: "", contact: "", phone: "" });
+
   const addSupplier = () => {
     if (!newSupName.trim()) return;
-    setSuppliers((p) => [...p, { id: Date.now().toString(), name: newSupName.trim() }]);
-    setNewSupName("");
+    setSuppliers((p) => [...p, { id: Date.now().toString(), name: newSupName.trim(), contact: newSupContact.trim(), phone: newSupPhone.trim() }]);
+    setNewSupName(""); setNewSupContact(""); setNewSupPhone("");
   };
   const addProduct = () => {
     if (!selSup || !newProd.name.trim() || !newProd.basePrice) return;
@@ -678,25 +683,40 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 20 }}>
       <Card title="רשימת ספקים">
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          <input value={newSupName} onChange={(e) => setNewSupName(e.target.value)} placeholder="שם ספק חדש"
-            onKeyDown={(e) => e.key === "Enter" && addSupplier()} style={inputStyle} />
-          <Btn onClick={addSupplier}>+</Btn>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+          <input value={newSupName} onChange={(e) => setNewSupName(e.target.value)} placeholder="שם ספק *" onKeyDown={(e) => e.key === "Enter" && addSupplier()} style={inputStyle} />
+          <input value={newSupContact} onChange={(e) => setNewSupContact(e.target.value)} placeholder="👤 שם איש קשר (אופציונלי)" style={inputStyle} />
+          <input value={newSupPhone} onChange={(e) => setNewSupPhone(e.target.value)} placeholder="📞 טלפון (אופציונלי)" style={inputStyle} />
+          <Btn onClick={addSupplier}>+ הוסף ספק</Btn>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {suppliers.length === 0 && <div style={{ color: "#475569", fontSize: 13, padding: 8 }}>אין ספקים עדיין</div>}
           {suppliers.map((s) => (
-            <div key={s.id} onClick={() => setSelSup(s.id)} style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "10px 12px", borderRadius: 8, cursor: "pointer",
-              background: selSup === s.id ? "#1e1b4b" : "#0f172a",
-              border: `1px solid ${selSup === s.id ? "#6366f1" : "#1e293b"}`, transition: "all 0.15s"
-            }}>
-              <span style={{ fontWeight: selSup === s.id ? 700 : 400 }}>{s.name}</span>
-              <span style={{ display: "flex", gap: 8, fontSize: 12 }}>
-                <span style={{ color: "#6366f1" }}>{products.filter((p) => p.supplierId === s.id).length} פריטים</span>
-                <button onClick={(e) => { e.stopPropagation(); delSupplier(s.id); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button>
-              </span>
+            <div key={s.id} style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${selSup === s.id ? "#6366f1" : "#1e293b"}`, marginBottom: 2 }}>
+              <div onClick={() => { setSelSup(s.id); setEditSupId(null); }} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "10px 12px", cursor: "pointer",
+                background: selSup === s.id ? "#1e1b4b" : "#0f172a", transition: "all 0.15s"
+              }}>
+                <div>
+                  <div style={{ fontWeight: selSup === s.id ? 700 : 400 }}>{s.name}</div>
+                  {s.contact && <div style={{ fontSize: 11, color: "#64748b" }}>👤 {s.contact}</div>}
+                  {s.phone && <div style={{ fontSize: 11, color: "#64748b" }}>📞 <a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{ color: "#22d3ee", textDecoration: "none" }}>{s.phone}</a></div>}
+                </div>
+                <span style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
+                  <span style={{ color: "#6366f1" }}>{products.filter((p) => p.supplierId === s.id).length} פריטים</span>
+                  <button onClick={(e) => { e.stopPropagation(); setEditSupId(editSupId === s.id ? null : s.id); setEditSupVals({ name: s.name, contact: s.contact||"", phone: s.phone||"" }); }} style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: 13 }}>✏️</button>
+                  <button onClick={(e) => { e.stopPropagation(); delSupplier(s.id); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button>
+                </span>
+              </div>
+              {editSupId === s.id && (
+                <div style={{ background: "#0f172a", padding: "10px 12px", borderTop: "1px solid #1e293b", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <input value={editSupVals.name} onChange={e => setEditSupVals(p=>({...p, name: e.target.value}))} placeholder="שם ספק" style={{ ...inputStyle, fontSize: 12 }} />
+                  <input value={editSupVals.contact} onChange={e => setEditSupVals(p=>({...p, contact: e.target.value}))} placeholder="👤 שם איש קשר" style={{ ...inputStyle, fontSize: 12 }} />
+                  <input value={editSupVals.phone} onChange={e => setEditSupVals(p=>({...p, phone: e.target.value}))} placeholder="📞 טלפון" style={{ ...inputStyle, fontSize: 12 }} />
+                  <Btn onClick={() => { setSuppliers(p => p.map(x => x.id===s.id ? {...x, ...editSupVals} : x)); setEditSupId(null); }} style={{ background: "#22c55e", fontSize: 12, padding: "5px 10px" }}>💾 שמור</Btn>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -780,11 +800,19 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState("");
+  const [originalImageUrl, setOriginalImageUrl] = useState(null);
+  const [showLightbox, setShowLightbox] = useState(false);
 
   const scanInvoice = async (file) => {
     setScanning(true);
     setScanResult(null);
     setScanError("");
+    // Save original image for viewing
+    if (file.type !== "application/pdf") {
+      setOriginalImageUrl(URL.createObjectURL(file));
+    } else {
+      setOriginalImageUrl(null);
+    }
     try {
       const { base64, mediaType } = await compressImage(file);
       const isPdf = mediaType === "application/pdf";
@@ -793,18 +821,35 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
+          max_tokens: 1500,
           messages: [{
             role: "user",
             content: [
               { type: isPdf ? "document" : "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-              { type: "text", text: `קרא את החשבונית הזו והחזר JSON בלבד ללא markdown ללא backticks:\n{\n  "supplierName": "שם הספק",\n  "date": "YYYY-MM-DD",\n  "invoiceNum": "מספר חשבונית",\n  "items": [{ "name": "שם פריט", "unit": "יחידת מידה", "qty": 1.0, "price": 0.0 }],\n  "total": 0.0\n}\nחשוב: price הוא מחיר ליחידה. total הוא הסכום הכולל.` }
+              { type: "text", text: `קרא את החשבונית הזו בקפידה. שים לב: בחשבוניות ישראליות, לרוב:
+- העמודה הראשונה היא שם הפריט
+- אחריה: כמות (לרוב מספר קטן כמו 1, 2, 5, 10, 45, 70...)
+- אחריה: מחיר ליחידה (לרוב מספר עם נקודה עשרונית)
+- אחריה: סה"כ שורה (כמות × מחיר)
+
+החזר JSON בלבד ללא markdown ללא backticks:
+{
+  "supplierName": "שם הספק",
+  "date": "YYYY-MM-DD",
+  "invoiceNum": "מספר חשבונית",
+  "items": [{ "name": "שם פריט", "unit": "יחידת מידה", "qty": 1.0, "price": 0.0 }],
+  "total": 0.0
+}
+חשוב מאוד:
+- qty = כמות (כמה יחידות/ק"ג נרכשו)
+- price = מחיר ליחידה אחת (לא סה"כ שורה)
+- total = הסכום הכולל של כל החשבונית
+אם qty×price ≠ סה"כ שורה, בדוק שוב את הערכים.` }
             ]
           }]
         })
       });
       const rawText = await response.text();
-      console.log("API response:", rawText.substring(0, 500));
       const data = JSON.parse(rawText);
       const text = data.content?.find(b => b.type === "text")?.text || "";
       const clean = text.replace(/```json|```/g, "").trim();
