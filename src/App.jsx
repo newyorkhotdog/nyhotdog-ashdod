@@ -1789,7 +1789,7 @@ function approvePendingItem(item, suppliers, products, setSuppliers, setProducts
 const INVENTORY_CATEGORIES = [
   { id: "naknikiyot", label: "🌭 נקניקיות — הנדלס", color: "#ef4444", supplierKeyword: "הנדלס" },
   { id: "shtiya_cola", label: "🥤 שתייה — קוקה קולה", color: "#22d3ee", supplierKeyword: "קוקה קולה" },
-  { id: "shtiya_agm", label: "🍺 שתייה — אג"מ סחר", color: "#60a5fa", supplierKeyword: "אגמ" },
+  { id: "shtiya_agm", label: 'שתייה — אג"מ סחר 🍺', color: "#60a5fa", supplierKeyword: "אגמ" },
   { id: "chad_pami", label: "🥡 חד פעמי", color: "#f59e0b", supplierKeyword: "חד פעמי" },
   { id: "levamot_naknik", label: "🍞 לחמניות נקניקייה", color: "#a78bfa", supplierKeyword: "לחמניות נקניקייה" },
   { id: "levamot_toast", label: "🥖 לחמניות טוסט", color: "#fb923c", supplierKeyword: "לחמניות טוסט" },
