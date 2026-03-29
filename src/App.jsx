@@ -62,7 +62,6 @@ const TABS = [
   { id: "employees", label: "👷 עובדים" },
   { id: "hours", label: "⏱️ שעות" },
   { id: "inventory", label: "📦 מלאי" },
-  { id: "invSettings", label: "📋 קטגוריות מלאי" },
   { id: "expenses", label: "🏢 הוצאות תפעול" },
   { id: "notifications", label: "🔔 התראות" },
   { id: "settings", label: "⚙️ הגדרות" },
@@ -168,10 +167,9 @@ export default function App() {
         {tab === "hours" && <Hours hours={hours} setHours={setHours} employees={employees} sales={sales} settings={settings} />}
         {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={setDeliveries} suppliers={suppliers} products={products} setSuppliers={setSuppliers} setProducts={setProducts} pending={pending} setPending={setPending} invoices={invoices} setInvoices={setInvoices} />}
         {tab === "inventory" && <Inventory inventory={inventory} setInventory={setInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} inventoryCategories={inventoryCategories} setSuppliers={setSuppliers} />}
-        {tab === "invSettings" && <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />}
         {tab === "expenses" && <Expenses expenses={expenses} setExpenses={setExpenses} />}
         {tab === "notifications" && <Notifications pending={pending} setPending={setPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={setInvoices} setSuppliers={setSuppliers} setProducts={setProducts} />}
-        {tab === "settings" && <Settings settings={settings} setSettings={setSettings} />}
+        {tab === "settings" && <Settings settings={settings} setSettings={setSettings} inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />}
       </div>
     </div>
   );
@@ -2600,7 +2598,7 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
   );
 }
 
-function Settings({ settings, setSettings }) {
+function Settings({ settings, setSettings, inventoryCategories, setInventoryCategories, suppliers, setSuppliers }) {
   const [form, setForm] = useState(settings);
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, maxWidth: 700 }}>
@@ -2651,6 +2649,9 @@ function Settings({ settings, setSettings }) {
       </Card>
       <div style={{ gridColumn: "1 / -1" }}>
         <Btn onClick={() => setSettings(form)} style={{ background: "#22c55e" }}>💾 שמור הגדרות</Btn>
+      </div>
+      <div style={{ gridColumn: "1 / -1" }}>
+        <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />
       </div>
     </div>
   );
