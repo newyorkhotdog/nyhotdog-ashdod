@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, setDoc, getDoc, collection, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
 
 const STORAGE_KEYS = {
   employees: "nyh_employees",
@@ -1801,7 +1801,9 @@ function approvePendingItem(item, suppliers, products, setSuppliers, setProducts
 
   // Remove from pending
   setPending(p => p.filter(x => x.id !== item.id));
-}function InvSettings({ inventoryCategories, setInventoryCategories, suppliers, setSuppliers }) {
+}
+
+function InvSettings({ inventoryCategories, setInventoryCategories, suppliers, setSuppliers }) {
   const DEFAULT_CATS = [
     { id: "naknikiyot", label: "נקניקיות", emoji: "🌭", color: "#ef4444" },
     { id: "shtiya_cola", label: "שתייה — קוקה קולה", emoji: "🥤", color: "#22d3ee" },
@@ -2601,7 +2603,8 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
 function Settings({ settings, setSettings, inventoryCategories, setInventoryCategories, suppliers, setSuppliers }) {
   const [form, setForm] = useState(settings);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, maxWidth: 700 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, maxWidth: 700 }}>
       <Card title="🍔 סף פוד קוסט">
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
@@ -2650,9 +2653,8 @@ function Settings({ settings, setSettings, inventoryCategories, setInventoryCate
       <div style={{ gridColumn: "1 / -1" }}>
         <Btn onClick={() => setSettings(form)} style={{ background: "#22c55e" }}>💾 שמור הגדרות</Btn>
       </div>
-      <div style={{ gridColumn: "1 / -1" }}>
-        <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />
       </div>
+      <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />
     </div>
   );
 }
