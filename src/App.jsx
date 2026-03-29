@@ -1786,66 +1786,65 @@ function approvePendingItem(item, suppliers, products, setSuppliers, setProducts
   // Remove from pending
   setPending(p => p.filter(x => x.id !== item.id));
 }
+const INVENTORY_CATEGORIES = [
+  { id: "naknikiyot", label: "🌭 נקניקיות — הנדלס", color: "#ef4444", supplierKeyword: "הנדלס" },
+  { id: "shtiya_cola", label: "🥤 שתייה — קוקה קולה", color: "#22d3ee", supplierKeyword: "קוקה קולה" },
+  { id: "shtiya_agm", label: "🍺 שתייה — אג"מ סחר", color: "#60a5fa", supplierKeyword: "אגמ" },
+  { id: "chad_pami", label: "🥡 חד פעמי", color: "#f59e0b", supplierKeyword: "חד פעמי" },
+  { id: "levamot_naknik", label: "🍞 לחמניות נקניקייה", color: "#a78bfa", supplierKeyword: "לחמניות נקניקייה" },
+  { id: "levamot_toast", label: "🥖 לחמניות טוסט", color: "#fb923c", supplierKeyword: "לחמניות טוסט" },
+  { id: "ratabim", label: "🫙 רטבים — גורן", color: "#22c55e", supplierKeyword: "גורן" },
+  { id: "other", label: "📦 שונות", color: "#94a3b8", supplierKeyword: "" },
+];
+
 function Inventory({ inventory, setInventory, products, invoices, deliveries, suppliers }) {
   const [countDate, setCountDate] = useState(today());
   const [countType, setCountType] = useState("סגירה");
   const [counts, setCounts] = useState({});
   const [showCount, setShowCount] = useState(false);
-  const [editCount, setEditCount] = useState(null); // { date, type, items: [{productId, qty}] }
+  const [openCats, setOpenCats] = useState({});
+  const [editCount, setEditCount] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
 
-  // Get all products with their unit type
   const allProducts = products;
+  const sup = (supplierId) => suppliers.find(s => s.id === supplierId)?.name || "";
 
-  // Calculate entries for a product in a date range (from invoices + deliveries)
+  // Assign product to category by supplier name
+  const getCatForProduct = (prod) => {
+    const supName = sup(prod.supplierId).toLowerCase();
+    for (const cat of INVENTORY_CATEGORIES) {
+      if (cat.supplierKeyword && supName.includes(cat.supplierKeyword.toLowerCase())) return cat.id;
+    }
+    return "other";
+  };
+
+  const toggleCat = (catId) => setOpenCats(p => ({ ...p, [catId]: !p[catId] }));
+
   const getEntries = (productId, monthKey) => {
-    const fromInvoices = invoices
-      .filter(i => i.date?.startsWith(monthKey))
-      .flatMap(i => i.items || [])
-      .filter(item => item.productId === productId)
-      .reduce((a, item) => a + parseFloat(item.qty || 0), 0);
-    const fromDeliveries = deliveries
-      .filter(d => d.date?.startsWith(monthKey))
-      .flatMap(d => d.items || [])
-      .filter(item => item.productId === productId)
-      .reduce((a, item) => a + parseFloat(item.qty || 0), 0);
+    const fromInvoices = invoices.filter(i => i.date?.startsWith(monthKey)).flatMap(i => i.items || []).filter(item => item.productId === productId).reduce((a, item) => a + parseFloat(item.qty || 0), 0);
+    const fromDeliveries = deliveries.filter(d => d.date?.startsWith(monthKey)).flatMap(d => d.items || []).filter(item => item.productId === productId).reduce((a, item) => a + parseFloat(item.qty || 0), 0);
     return fromInvoices + fromDeliveries;
   };
 
-  // Get last count of a specific type for a product
-  const getLastCount = (productId, type) => {
-    const sorted = [...inventory]
-      .filter(c => c.productId === productId && c.type === type)
-      .sort((a, b) => b.date.localeCompare(a.date));
-    return sorted[0] || null;
-  };
-
   const saveCount = () => {
-    const entries = Object.entries(counts).filter(([, v]) => v !== "").map(([productId, qty]) => ({
+    const entries = Object.entries(counts).filter(([, v]) => v !== "").map(([productId, val]) => ({
       id: (Date.now() + Math.random() * 1000).toString(),
-      productId,
-      date: countDate,
-      type: countType,
-      qty: parseFloat(qty) || 0
+      productId, date: countDate, type: countType,
+      qty: parseFloat(val) || 0
     }));
-    if (entries.length === 0) return;
+    if (entries.length === 0) return alert("לא הוזנו כמויות");
     setInventory(p => [...p, ...entries]);
     setCounts({});
     setShowCount(false);
-    alert(`✅ ${countType} נשמרה — ${entries.length} מוצרים`);
+    alert(`✅ ${countType} נשמרה — ${entries.length} פריטים`);
   };
 
-  // Build monthly report
   const monthReport = allProducts.map(prod => {
-    const opening = inventory
-      .filter(c => c.productId === prod.id && c.type === "פתיחה" && c.date?.startsWith(selectedMonth))
-      .reduce((a, c) => a + c.qty, 0);
-    const closing = inventory
-      .filter(c => c.productId === prod.id && c.type === "סגירה" && c.date?.startsWith(selectedMonth))
-      .reduce((a, c) => a + c.qty, 0);
+    const opening = inventory.filter(c => c.productId === prod.id && c.type === "פתיחה" && c.date?.startsWith(selectedMonth)).reduce((a, c) => a + c.qty, 0);
+    const closing = inventory.filter(c => c.productId === prod.id && c.type === "סגירה" && c.date?.startsWith(selectedMonth)).reduce((a, c) => a + c.qty, 0);
     const entries = getEntries(prod.id, selectedMonth);
     const theoretical = opening + entries;
     const waste = closing > 0 ? theoretical - closing : null;
@@ -1853,7 +1852,8 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
     return { ...prod, opening, entries, theoretical, closing, waste, wastePct };
   }).filter(p => p.entries > 0 || p.opening > 0 || p.closing > 0);
 
-  const sup = (supplierId) => suppliers.find(s => s.id === supplierId)?.name || "";
+  const countedItems = Object.values(counts).filter(v => v !== "").length;
+  const totalItems = allProducts.length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -1861,70 +1861,146 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div style={{ color: "#888", fontSize: 13 }}>ניהול מלאי — ספירות ודוחות</div>
-        <Btn onClick={() => setShowCount(!showCount)} style={showCount ? { background: "#666" } : {}}>
-          {showCount ? "✕ סגור" : "📝 ספירת מלאי"}
+        <Btn onClick={() => { setShowCount(!showCount); if (!showCount) setOpenCats(Object.fromEntries(INVENTORY_CATEGORIES.map(c => [c.id, true]))); }}
+          style={showCount ? { background: "#666" } : { background: "#6366f1" }}>
+          {showCount ? "✕ סגור ספירה" : "📝 ספירת מלאי חדשה"}
         </Btn>
       </div>
 
-      {/* Count form */}
+      {/* Count form — categories */}
       {showCount && (
-        <Card title="📝 ספירת מלאי">
-          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-            <input type="date" value={countDate} onChange={e => setCountDate(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
-            <select value={countType} onChange={e => setCountType(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* Date + type bar */}
+          <div style={{ background: "#1e1b4b", border: "1px solid #6366f1", borderRadius: 10, padding: "12px 16px", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <input type="date" value={countDate} onChange={e => setCountDate(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 140 }} />
+            <select value={countType} onChange={e => setCountType(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 120 }}>
               <option>פתיחה</option>
               <option>סגירה</option>
             </select>
+            <div style={{ color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>הוזנו: <strong style={{ color: "#22c55e" }}>{countedItems}</strong> / {totalItems} פריטים</div>
+            <Btn onClick={saveCount} style={{ background: "#22c55e", minWidth: 120 }}>💾 שמור ספירה</Btn>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-            {allProducts.map(prod => (
-              <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#0f172a", borderRadius: 8, padding: "10px 14px" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{prod.name}</div>
-                  <div style={{ fontSize: 11, color: "#64748b" }}>{sup(prod.supplierId)} | {prod.unit}</div>
+
+          {/* Categories */}
+          {INVENTORY_CATEGORIES.map(cat => {
+            const catProds = allProducts.filter(p => getCatForProduct(p) === cat.id);
+            if (catProds.length === 0) return null;
+            const catCounted = catProds.filter(p => counts[p.id] !== undefined && counts[p.id] !== "").length;
+            const isOpen = openCats[cat.id] !== false; // default open
+
+            return (
+              <div key={cat.id} style={{ border: `1px solid ${cat.color}33`, borderRadius: 10, overflow: "hidden" }}>
+                {/* Category header */}
+                <div onClick={() => toggleCat(cat.id)} style={{ background: `${cat.color}18`, padding: "12px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontWeight: 700, color: cat.color, fontSize: 14 }}>{cat.label}</span>
+                    <span style={{ background: catCounted === catProds.length ? "#052e16" : "#0f172a", color: catCounted === catProds.length ? "#22c55e" : "#64748b", border: `1px solid ${catCounted === catProds.length ? "#22c55e" : "#334155"}`, borderRadius: 12, padding: "1px 10px", fontSize: 11, fontWeight: 700 }}>
+                      {catCounted}/{catProds.length}
+                    </span>
+                  </div>
+                  <span style={{ color: cat.color, fontSize: 16 }}>{isOpen ? "▲" : "▼"}</span>
                 </div>
-                <input
-                  type="number"
-                  placeholder={`כמות ב${prod.unit}`}
-                  value={counts[prod.id] || ""}
-                  onChange={e => setCounts(p => ({ ...p, [prod.id]: e.target.value }))}
-                  style={{ ...inputStyle, width: 120, textAlign: "center" }}
-                />
+
+                {/* Products */}
+                {isOpen && (
+                  <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6, background: "#0a0a14" }}>
+                    {catProds.map(prod => (
+                      <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: counts[prod.id] ? "#052e16" : "#0f172a", borderRadius: 8, padding: "8px 12px", border: `1px solid ${counts[prod.id] ? "#22c55e33" : "#1e293b"}` }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: counts[prod.id] ? "#22c55e" : "#e2e8f0" }}>{prod.name}</div>
+                          <div style={{ fontSize: 11, color: "#475569" }}>{prod.unit}</div>
+                        </div>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          placeholder="0"
+                          value={counts[prod.id] || ""}
+                          onChange={e => setCounts(p => ({ ...p, [prod.id]: e.target.value }))}
+                          style={{ ...inputStyle, width: 90, textAlign: "center", fontSize: 16, fontWeight: 700, color: counts[prod.id] ? "#22c55e" : "#e2e8f0" }}
+                        />
+                        <div style={{ fontSize: 11, color: "#475569", minWidth: 30 }}>{prod.unit}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-          <Btn onClick={saveCount} style={{ background: "#22c55e" }}>💾 שמור ספירה</Btn>
-        </Card>
+            );
+          })}
+
+          <Btn onClick={saveCount} style={{ background: "#22c55e", fontSize: 15, padding: "12px 20px" }}>💾 שמור ספירה ({countedItems} פריטים)</Btn>
+        </div>
       )}
 
-      {/* Month selector */}
+      {/* Edit count panel */}
+      {editCount && (
+        <div style={{ border: "1px solid #6366f1", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ background: "#1e1b4b", padding: "12px 16px", fontWeight: 700, color: "#a78bfa" }}>
+            ✏️ עריכת ספירת {editCount.type} — {editCount.date}
+          </div>
+          <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <input type="date" value={editCount.date} onChange={e => setEditCount(p => ({ ...p, date: e.target.value }))} style={{ ...inputStyle, flex: 1 }} />
+              <select value={editCount.type} onChange={e => setEditCount(p => ({ ...p, type: e.target.value }))} style={{ ...inputStyle, flex: 1 }}>
+                <option>פתיחה</option><option>סגירה</option>
+              </select>
+            </div>
+            {INVENTORY_CATEGORIES.map(cat => {
+              const catProds = allProducts.filter(p => getCatForProduct(p) === cat.id);
+              if (catProds.length === 0) return null;
+              return (
+                <div key={cat.id} style={{ border: `1px solid ${cat.color}33`, borderRadius: 8, overflow: "hidden" }}>
+                  <div style={{ background: `${cat.color}18`, padding: "8px 12px", fontWeight: 700, color: cat.color, fontSize: 13 }}>{cat.label}</div>
+                  <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 5 }}>
+                    {catProds.map(prod => {
+                      const item = editCount.items.find(i => i.productId === prod.id);
+                      return (
+                        <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#0f172a", borderRadius: 6, padding: "6px 10px" }}>
+                          <div style={{ flex: 1, fontSize: 13 }}>{prod.name}</div>
+                          <input type="number" inputMode="decimal" placeholder="0" value={item?.qty ?? ""}
+                            onChange={e => setEditCount(p => {
+                              const exists = p.items.find(i => i.productId === prod.id);
+                              if (exists) return { ...p, items: p.items.map(i => i.productId === prod.id ? { ...i, qty: e.target.value } : i) };
+                              return { ...p, items: [...p.items, { productId: prod.id, qty: e.target.value }] };
+                            })}
+                            style={{ ...inputStyle, width: 90, textAlign: "center", fontWeight: 700 }} />
+                          <div style={{ fontSize: 11, color: "#475569", minWidth: 30 }}>{prod.unit}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn onClick={() => {
+                setInventory(p => {
+                  const filtered = p.filter(c => !(c.date === editCount.originalDate && c.type === editCount.originalType));
+                  const newEntries = editCount.items.filter(i => i.qty !== "" && i.qty !== undefined).map(i => ({ id: (Date.now() + Math.random() * 1000).toString(), productId: i.productId, date: editCount.date, type: editCount.type, qty: parseFloat(i.qty) || 0 }));
+                  return [...filtered, ...newEntries];
+                });
+                setEditCount(null);
+              }} style={{ background: "#22c55e" }}>💾 שמור שינויים</Btn>
+              <Btn onClick={() => setEditCount(null)} style={{ background: "#475569" }}>✕ ביטול</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Month selector + report */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ color: "#94a3b8", fontSize: 13 }}>חודש לדוח:</span>
-        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
-          style={{ ...inputStyle, width: "auto" }} />
+        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
       </div>
 
-      {/* Monthly report */}
       {monthReport.length > 0 ? (
         <Card title={`📊 דוח מלאי — ${selectedMonth}`}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}>
-                <Th>מוצר</Th>
-                <Th>ספק</Th>
-                <Th>יחידה</Th>
-                <Th>פתיחה</Th>
-                <Th>+ כניסות</Th>
-                <Th>= תיאורטי</Th>
-                <Th>ספירת סגירה</Th>
-                <Th>בזבוז/הפרש</Th>
-              </tr>
-            </thead>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}>
+              <Th>מוצר</Th><Th>ספק</Th><Th>יחידה</Th><Th>פתיחה</Th><Th>+ כניסות</Th><Th>= תיאורטי</Th><Th>סגירה</Th><Th>בזבוז</Th>
+            </tr></thead>
             <tbody>
               {monthReport.map(p => {
-                const wasteColor = p.wastePct === null ? "#475569"
-                  : parseFloat(p.wastePct) <= 3 ? "#22c55e"
-                  : parseFloat(p.wastePct) <= 8 ? "#f59e0b" : "#ef4444";
+                const wasteColor = p.wastePct === null ? "#475569" : parseFloat(p.wastePct) <= 3 ? "#22c55e" : parseFloat(p.wastePct) <= 8 ? "#f59e0b" : "#ef4444";
                 return (
                   <tr key={p.id} style={{ borderBottom: "1px solid #1e293b" }}>
                     <Td style={{ fontWeight: 700 }}>{p.name}</Td>
@@ -1933,18 +2009,8 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
                     <Td>{p.opening > 0 ? p.opening : "—"}</Td>
                     <Td style={{ color: "#22d3ee" }}>+{p.entries.toFixed(2)}</Td>
                     <Td style={{ color: "#a78bfa", fontWeight: 700 }}>{p.theoretical.toFixed(2)}</Td>
-                    <Td style={{ color: p.closing > 0 ? "#e2e8f0" : "#475569" }}>
-                      {p.closing > 0 ? p.closing : "טרם נספר"}
-                    </Td>
-                    <Td>
-                      {p.waste !== null ? (
-                        <span style={{ color: wasteColor, fontWeight: 700 }}>
-                          {p.waste.toFixed(2)} {p.unit}
-                          {p.wastePct && ` (${p.wastePct}%)`}
-                          {parseFloat(p.wastePct) <= 3 ? " ✓" : parseFloat(p.wastePct) <= 8 ? " ⚠️" : " 🔴"}
-                        </span>
-                      ) : <span style={{ color: "#475569" }}>—</span>}
-                    </Td>
+                    <Td style={{ color: p.closing > 0 ? "#e2e8f0" : "#475569" }}>{p.closing > 0 ? p.closing : "טרם נספר"}</Td>
+                    <Td>{p.waste !== null ? <span style={{ color: wasteColor, fontWeight: 700 }}>{p.waste.toFixed(2)} {p.unit} ({p.wastePct}%){parseFloat(p.wastePct) <= 3 ? " ✓" : parseFloat(p.wastePct) <= 8 ? " ⚠️" : " 🔴"}</span> : <span style={{ color: "#475569" }}>—</span>}</Td>
                   </tr>
                 );
               })}
@@ -1953,69 +2019,7 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
         </Card>
       ) : (
         <Card title="📊 דוח מלאי">
-          <div style={{ color: "#475569", textAlign: "center", padding: 30, fontSize: 13 }}>
-            אין נתונים לחודש זה — הכנס חשבוניות/תעודות משלוח ובצע ספירת מלאי
-          </div>
-        </Card>
-      )}
-
-      {/* Edit count panel */}
-      {editCount && (
-        <Card title={`✏️ עריכת ספירת ${editCount.type} — ${editCount.date}`}>
-          <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div>
-              <input type="date" value={editCount.date} onChange={e => setEditCount(p => ({ ...p, date: e.target.value }))} style={{ ...inputStyle }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>סוג ספירה</div>
-              <select value={editCount.type} onChange={e => setEditCount(p => ({ ...p, type: e.target.value }))} style={inputStyle}>
-                <option>פתיחה</option>
-                <option>סגירה</option>
-              </select>
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-            {allProducts.map(prod => {
-              const item = editCount.items.find(i => i.productId === prod.id);
-              return (
-                <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#0f172a", borderRadius: 8, padding: "10px 14px" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{prod.name}</div>
-                    <div style={{ fontSize: 11, color: "#64748b" }}>{sup(prod.supplierId)} | {prod.unit}</div>
-                  </div>
-                  <input
-                    type="number"
-                    placeholder={`כמות ב${prod.unit}`}
-                    value={item?.qty ?? ""}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setEditCount(p => {
-                        const exists = p.items.find(i => i.productId === prod.id);
-                        if (exists) return { ...p, items: p.items.map(i => i.productId === prod.id ? { ...i, qty: val } : i) };
-                        return { ...p, items: [...p.items, { productId: prod.id, qty: val }] };
-                      });
-                    }}
-                    style={{ ...inputStyle, width: 120, textAlign: "center" }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Btn onClick={() => {
-              // Remove old entries for this count, add updated ones
-              setInventory(p => {
-                const filtered = p.filter(c => !(c.date === editCount.originalDate && c.type === editCount.originalType));
-                const newEntries = editCount.items
-                  .filter(i => i.qty !== "" && i.qty !== undefined)
-                  .map(i => ({ id: (Date.now() + Math.random() * 1000).toString(), productId: i.productId, date: editCount.date, type: editCount.type, qty: parseFloat(i.qty) || 0 }));
-                return [...filtered, ...newEntries];
-              });
-              setEditCount(null);
-            }} style={{ background: "#22c55e" }}>💾 שמור שינויים</Btn>
-            <Btn onClick={() => setEditCount(null)} style={{ background: "#475569" }}>✕ ביטול</Btn>
-          </div>
+          <div style={{ color: "#475569", textAlign: "center", padding: 30, fontSize: 13 }}>אין נתונים לחודש זה</div>
         </Card>
       )}
 
@@ -2024,46 +2028,20 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
         <Card title="היסטוריית ספירות">
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {[...new Map(inventory.map(c => [`${c.date}_${c.type}`, c])).values()]
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .slice(0, 20)
+              .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20)
               .map(({ date, type }) => {
                 const dayItems = inventory.filter(c => c.date === date && c.type === type);
-                const isEditing = editCount?.originalDate === date && editCount?.originalType === type;
                 return (
-                  <div key={`${date}_${type}`} style={{ background: "#0f172a", border: `1px solid ${isEditing ? "#6366f1" : "#1e293b"}`, borderRadius: 8, overflow: "hidden" }}>
-                    <div style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
-                        <div style={{ fontWeight: 700 }}>
-                          <span style={{ color: type === "פתיחה" ? "#22d3ee" : "#a78bfa" }}>{type}</span>
-                          {" — "}{date}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#94a3b8" }}>{dayItems.length} מוצרים נספרו</div>
-                      </div>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <button
-                          onClick={() => setEditCount({
-                            date, type,
-                            originalDate: date, originalType: type,
-                            items: dayItems.map(c => ({ productId: c.productId, qty: String(c.qty) }))
-                          })}
-                          style={{ background: "#1e293b", border: "1px solid #334155", color: "#6366f1", cursor: "pointer", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>
-                          ✏️ ערוך
-                        </button>
-                        <button
-                          onClick={() => { if (window.confirm("למחוק ספירה זו?")) setInventory(p => p.filter(c => !(c.date === date && c.type === type))); }}
-                          style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
-                      </div>
+                  <div key={`${date}_${type}`} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontWeight: 700 }}><span style={{ color: type === "פתיחה" ? "#22d3ee" : "#a78bfa" }}>{type}</span> — {date}</div>
+                      <div style={{ fontSize: 12, color: "#94a3b8" }}>{dayItems.length} פריטים נספרו</div>
                     </div>
-                    {/* Inline item summary */}
-                    <div style={{ borderTop: "1px solid #1e293b", padding: "8px 16px", display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {dayItems.map(c => {
-                        const prod = allProducts.find(p => p.id === c.productId);
-                        return prod ? (
-                          <span key={c.productId} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 6, padding: "2px 10px", fontSize: 12, color: "#94a3b8" }}>
-                            {prod.name}: <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{c.qty} {prod.unit}</span>
-                          </span>
-                        ) : null;
-                      })}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => setEditCount({ date, type, originalDate: date, originalType: type, items: dayItems.map(c => ({ productId: c.productId, qty: String(c.qty) })) })}
+                        style={{ background: "#1e293b", border: "1px solid #334155", color: "#6366f1", cursor: "pointer", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>✏️ ערוך</button>
+                      <button onClick={() => { if (window.confirm("למחוק?")) setInventory(p => p.filter(c => !(c.date === date && c.type === type))); }}
+                        style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
                     </div>
                   </div>
                 );
