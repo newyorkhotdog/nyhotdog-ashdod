@@ -124,12 +124,12 @@ export default function App() {
   useEffect(() => { if (loaded) save(STORAGE_KEYS.deliveries, deliveries); }, [deliveries, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.inventory, inventory); }, [inventory, loaded]);
 
-  if (!loaded) return <div style={{ background: "#0a0a0f", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>טוען...</div>;
+  if (!loaded) return <div style={{ background: "#f1f5f9", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#1e293b" }}>טוען...</div>;
 
   return (
-    <div dir="rtl" style={{ minHeight: "100vh", background: "#0a0a0f", fontFamily: "'Segoe UI', Tahoma, sans-serif", color: "#e2e8f0" }}>
+    <div dir="rtl" style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'Segoe UI', Tahoma, sans-serif", color: "#1e293b" }}>
       {/* HEADER */}
-      <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", borderBottom: "1px solid #334155", padding: "16px 24px", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", borderBottom: "1px solid #cbd5e1", padding: "16px 24px", display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ fontSize: 28 }}>🌭</span>
         <div>
           <div style={{ fontSize: 20, fontWeight: 800, color: "#f1f5f9", letterSpacing: 0.5 }}>New York Hotdog — מערכת ניהול פוד קוסט</div>
@@ -138,7 +138,7 @@ export default function App() {
       </div>
 
       {/* TABS */}
-      <div style={{ display: "flex", gap: 4, padding: "12px 24px 0", borderBottom: "1px solid #1e293b", overflowX: "auto" }}>
+      <div style={{ display: "flex", gap: 4, padding: "12px 24px 0", borderBottom: "1px solid #e2e8f0", overflowX: "auto" }}>
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             background: tab === t.id ? "#6366f1" : "transparent",
@@ -155,7 +155,7 @@ export default function App() {
         ))}
       </div>
 
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: 24, background: "#f1f5f9", minHeight: "calc(100vh - 120px)" }}>
         {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} />}
         {tab === "invoices" && <Invoices invoices={invoices} setInvoices={setInvoices} suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} settings={settings} pending={pending} setPending={setPending} />}
@@ -405,12 +405,12 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
           </div>
           <div style={{ display: "flex", gap: 24 }}>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>פוד קוסט</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>פוד קוסט</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: fcColor }}>{foodCostPct}%</div>
             </div>
             <div style={{ color: "#334155", fontSize: 24, alignSelf: "center" }}>+</div>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>לייבור קוסט</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>לייבור קוסט</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: lcColor }}>{laborCostPct}%</div>
             </div>
           </div>
@@ -430,28 +430,28 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
           </div>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>מכירות</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>מכירות</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: "#22d3ee" }}>₪{fmt(totalSales)}</div>
             </div>
             <div style={{ color: "#334155", fontSize: 20, alignSelf: "center" }}>−</div>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>פוד קוסט</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>פוד קוסט</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: "#a78bfa" }}>₪{fmt(totalCost)}</div>
             </div>
             <div style={{ color: "#334155", fontSize: 20, alignSelf: "center" }}>−</div>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>עבודה</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>עבודה</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: "#fb923c" }}>₪{fmt(totalLaborCost)}</div>
             </div>
             <div style={{ color: "#334155", fontSize: 20, alignSelf: "center" }}>−</div>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>תפעול</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>תפעול</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: expenseColor }}>₪{fmt(totalExpenses)}</div>
               <div style={{ fontSize: 11, color: expenseColor }}>{expensePct}%</div>
             </div>
             <div style={{ color: "#334155", fontSize: 20, alignSelf: "center" }}>=</div>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>רווח</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>רווח</div>
               <div style={{ fontSize: 18, fontWeight: 900, color: netColor }}>₪{fmt(netProfit)}</div>
             </div>
           </div>
@@ -473,7 +473,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
         <div style={{ marginBottom: 8, color: "#94a3b8", fontSize: 13 }}>
           יעד: עד {settings.greenMax}% | גבולי: {settings.greenMax}%–{settings.yellowMax}% | גבוה: מעל {settings.yellowMax}%
         </div>
-        <div style={{ background: "#1e293b", borderRadius: 8, height: 28, overflow: "hidden" }}>
+        <div style={{ background: "#f1f5f9", borderRadius: 8, height: 28, overflow: "hidden" }}>
           <div style={{ width: `${Math.min(foodCostPct, 100)}%`, height: "100%", background: fcColor, borderRadius: 8, transition: "width 0.6s ease", display: "flex", alignItems: "center", paddingRight: 10, fontSize: 13, fontWeight: 700, color: "#fff" }}>
             {foodCostPct > 5 ? `${foodCostPct}%` : ""}
           </div>
@@ -491,7 +491,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
           <div style={{ marginBottom: 8, color: "#94a3b8", fontSize: 13 }}>
             יעד: עד {settings.laborGreenMax}% | גבולי: {settings.laborGreenMax}%–{settings.laborYellowMax}% | גבוה: מעל {settings.laborYellowMax}%
           </div>
-          <div style={{ background: "#1e293b", borderRadius: 8, height: 28, overflow: "hidden" }}>
+          <div style={{ background: "#f1f5f9", borderRadius: 8, height: 28, overflow: "hidden" }}>
             <div style={{ width: `${Math.min(laborCostPct, 100)}%`, height: "100%", background: lcColor, borderRadius: 8, transition: "width 0.6s ease", display: "flex", alignItems: "center", paddingRight: 10, fontSize: 13, fontWeight: 700, color: "#fff" }}>
               {laborCostPct > 5 ? `${laborCostPct}%` : ""}
             </div>
@@ -503,10 +503,10 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
           </div>
           {empStats.length > 0 && (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 14 }}>
-              <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>עובד</Th><Th>שעות</Th><Th>₪/שעה</Th><Th>עלות</Th><Th>% ממכירות</Th></tr></thead>
+              <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>עובד</Th><Th>שעות</Th><Th>₪/שעה</Th><Th>עלות</Th><Th>% ממכירות</Th></tr></thead>
               <tbody>
                 {empStats.map((e) => (
-                  <tr key={e.id} style={{ borderBottom: "1px solid #1e293b" }}>
+                  <tr key={e.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                     <Td>{e.name}</Td>
                     <Td>{e.hrs.toFixed(1)}</Td>
                     <Td style={{ color: "#94a3b8" }}>₪{fmt(e.hourlyRate)}</Td>
@@ -514,7 +514,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
                     <Td>{pct(e.cost, totalSales)}%</Td>
                   </tr>
                 ))}
-                <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
+                <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
                   <Td style={{ color: "#94a3b8" }}>סה״כ</Td>
                   <Td>{totalLaborHours.toFixed(1)}</Td>
                   <Td></Td>
@@ -530,15 +530,15 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
       {supplierStats.length > 0 && (
         <Card title="פוד קוסט לפי ספק — חודש נוכחי">
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>ספק</Th><Th>עלות</Th><Th>% מהמכירות</Th><Th>סטטוס</Th></tr></thead>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>ספק</Th><Th>עלות</Th><Th>% מהמכירות</Th><Th>סטטוס</Th></tr></thead>
             <tbody>
               {supplierStats.map((s) => (
-                <tr key={s.id} style={{ borderBottom: "1px solid #1e293b" }}>
+                <tr key={s.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                   <Td>{s.name}</Td><Td>₪{fmt(s.cost)}</Td><Td>{s.pct}%</Td>
                   <Td><StatusBadge value={s.pct} settings={settings} /></Td>
                 </tr>
               ))}
-              <tr style={{ borderBottom: "1px solid #1e293b", fontWeight: 700 }}>
+              <tr style={{ borderBottom: "1px solid #e2e8f0", fontWeight: 700 }}>
                 <Td style={{ color: "#94a3b8" }}>סה״כ</Td><Td>₪{fmt(totalCost)}</Td><Td>{foodCostPct}%</Td>
                 <Td><StatusBadge value={foodCostPct} settings={settings} /></Td>
               </tr>
@@ -550,12 +550,12 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
       {alerts.length > 0 && (
         <Card title={`⚠️ התראות חריגת מחיר — דרוש זיכוי (${alerts.length})`}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>תאריך</Th><Th>ספק</Th><Th>פריט</Th><Th>מחיר בסיס</Th><Th>מחיר בחשבונית</Th><Th>חריגה</Th></tr></thead>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>תאריך</Th><Th>ספק</Th><Th>פריט</Th><Th>מחיר בסיס</Th><Th>מחיר בחשבונית</Th><Th>חריגה</Th></tr></thead>
             <tbody>
               {alerts.map((a, i) => {
                 const sup = suppliers.find((s) => s.id === a.inv.supplierId);
                 return (
-                  <tr key={i} style={{ borderBottom: "1px solid #1e293b", background: "#1a0505" }}>
+                  <tr key={i} style={{ borderBottom: "1px solid #e2e8f0", background: "#fff5f5" }}>
                     <Td>{a.inv.date}</Td><Td>{sup?.name || "—"}</Td>
                     <Td><strong>{a.prod.name}</strong></Td>
                     <Td>₪{fmt(a.prod.basePrice)}</Td>
@@ -570,20 +570,20 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
       )}
 
       {totalSales === 0 && supplierStats.length === 0 && (
-        <div style={{ textAlign: "center", color: "#475569", padding: 40 }}>
+        <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>🌭</div>
           <div style={{ fontSize: 16 }}>התחל בהכנסת ספקים, מחירי בסיס, מכירות וחשבוניות</div>
         </div>
       )}
 
       {/* AI Agent */}
-      <div style={{ border: "2px solid #6366f1", borderRadius: 14, overflow: "hidden", background: "#0a0a14" }}>
-        <div onClick={() => setShowAI(p => !p)} style={{ padding: "14px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg,#1e1b4b,#0f172a)" }}>
+      <div style={{ border: "2px solid #6366f1", borderRadius: 14, overflow: "hidden", background: "#f5f5f5" }}>
+        <div onClick={() => setShowAI(p => !p)} style={{ padding: "14px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg, #1a1a1a, #cc0000)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 24 }}>🤖</span>
             <div>
               <div style={{ fontWeight: 800, color: "#a78bfa", fontSize: 15 }}>סוכן AI — יועץ עסקי</div>
-              <div style={{ fontSize: 11, color: "#64748b" }}>מנתח את הנתונים שלך בזמן אמת | מתמחה במסעדות מזון מהיר</div>
+              <div style={{ fontSize: 11, color: "#94a3b8" }}>מנתח את הנתונים שלך בזמן אמת | מתמחה במסעדות מזון מהיר</div>
             </div>
           </div>
           <span style={{ color: "#6366f1", fontSize: 18 }}>{showAI ? "▲" : "▼ לחץ לפתיחה"}</span>
@@ -614,8 +614,8 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
                   <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
                     <div style={{
                       maxWidth: "85%", padding: "10px 14px", borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                      background: m.role === "user" ? "#3730a3" : "#1e293b",
-                      color: "#e2e8f0", fontSize: 13, lineHeight: 1.6,
+                      background: m.role === "user" ? "#cc0000" : "#f1f5f9",
+                      color: "#1e293b", fontSize: 13, lineHeight: 1.6,
                       border: m.role === "assistant" ? "1px solid #334155" : "none",
                       whiteSpace: "pre-wrap"
                     }}>
@@ -626,7 +626,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
                 ))}
                 {aiLoading && (
                   <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                    <div style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "14px 14px 14px 4px", padding: "10px 16px", color: "#6366f1", fontSize: 13 }}>
+                    <div style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "14px 14px 14px 4px", padding: "10px 16px", color: "#6366f1", fontSize: 13 }}>
                       ⏳ מנתח את הנתונים...
                     </div>
                   </div>
@@ -646,7 +646,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
               <Btn onClick={sendAIMessage} style={{ background: aiLoading ? "#475569" : "#6366f1", minWidth: 70 }} disabled={aiLoading}>
                 {aiLoading ? "⏳" : "שלח ➤"}
               </Btn>
-              {aiMessages.length > 0 && <Btn onClick={() => setAiMessages([])} style={{ background: "#1e293b", color: "#64748b", fontSize: 11 }}>נקה</Btn>}
+              {aiMessages.length > 0 && <Btn onClick={() => setAiMessages([])} style={{ background: "#f1f5f9", color: "#94a3b8", fontSize: 11 }}>נקה</Btn>}
             </div>
           </div>
         )}
@@ -690,18 +690,18 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
           <Btn onClick={addSupplier}>+ הוסף ספק</Btn>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {suppliers.length === 0 && <div style={{ color: "#475569", fontSize: 13, padding: 8 }}>אין ספקים עדיין</div>}
+          {suppliers.length === 0 && <div style={{ color: "#94a3b8", fontSize: 13, padding: 8 }}>אין ספקים עדיין</div>}
           {suppliers.map((s) => (
             <div key={s.id} style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${selSup === s.id ? "#6366f1" : "#1e293b"}`, marginBottom: 2 }}>
               <div onClick={() => { setSelSup(s.id); setEditSupId(null); }} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 padding: "10px 12px", cursor: "pointer",
-                background: selSup === s.id ? "#1e1b4b" : "#0f172a", transition: "all 0.15s"
+                background: selSup === s.id ? "#fee2e2" : "#ffffff", transition: "all 0.15s"
               }}>
                 <div>
                   <div style={{ fontWeight: selSup === s.id ? 700 : 400 }}>{s.name}</div>
-                  {s.contact && <div style={{ fontSize: 11, color: "#64748b" }}>👤 {s.contact}</div>}
-                  {s.phone && <div style={{ fontSize: 11, color: "#64748b" }}>📞 <a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{ color: "#22d3ee", textDecoration: "none" }}>{s.phone}</a></div>}
+                  {s.contact && <div style={{ fontSize: 11, color: "#94a3b8" }}>👤 {s.contact}</div>}
+                  {s.phone && <div style={{ fontSize: 11, color: "#94a3b8" }}>📞 <a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{ color: "#22d3ee", textDecoration: "none" }}>{s.phone}</a></div>}
                 </div>
                 <span style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
                   <span style={{ color: "#6366f1" }}>{products.filter((p) => p.supplierId === s.id).length} פריטים</span>
@@ -710,12 +710,12 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
                 </span>
               </div>
               {editSupId === s.id && (
-                <div style={{ background: "#0f172a", padding: "10px 12px", borderTop: "1px solid #1e293b", display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ background: "#ffffff", padding: "10px 12px", borderTop: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 6 }}>
                   <input value={editSupVals.name} onChange={e => setEditSupVals(p=>({...p, name: e.target.value}))} placeholder="שם ספק" style={{ ...inputStyle, fontSize: 12 }} />
                   <input value={editSupVals.contact} onChange={e => setEditSupVals(p=>({...p, contact: e.target.value}))} placeholder="👤 שם איש קשר" style={{ ...inputStyle, fontSize: 12 }} />
                   <input value={editSupVals.phone} onChange={e => setEditSupVals(p=>({...p, phone: e.target.value}))} placeholder="📞 טלפון" style={{ ...inputStyle, fontSize: 12 }} />
                   <div>
-                    <div style={{ fontSize: 11, color: "#64748b", marginBottom: 3 }}>📦 קטגוריית מלאי</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>📦 קטגוריית מלאי</div>
                     <select value={editSupVals.inventoryCategory || "other"} onChange={e => setEditSupVals(p=>({...p, inventoryCategory: e.target.value}))} style={{ ...inputStyle, fontSize: 12 }}>
                       <option value="other">📦 שונות (ברירת מחדל)</option>
                       <option value="naknikiyot">🌭 נקניקיות — הנדלס</option>
@@ -753,10 +753,10 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
               ? <div style={{ color: "#aaa", fontSize: 13 }}>הוסף פריטים לספק זה</div>
               : (
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>פריט</Th><Th>יחידה</Th><Th>מחיר בסיס (₪)</Th><Th></Th></tr></thead>
+                  <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>יחידה</Th><Th>מחיר בסיס (₪)</Th><Th></Th></tr></thead>
                   <tbody>
                     {supProds.map((p) => (
-                      <tr key={p.id} style={{ borderBottom: "1px solid #1e293b" }}>
+                      <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                         <Td>{p.name}</Td>
                         <Td style={{ color: "#94a3b8" }}>{p.unit}</Td>
                         <Td>
@@ -959,13 +959,13 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
         </div>
       </div>
 
-      {scanError && <div style={{ background: "#1a0505", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", color: "#f87171", fontSize: 13 }}>❌ {scanError}</div>}
+      {scanError && <div style={{ background: "#fff5f5", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", color: "#f87171", fontSize: 13 }}>❌ {scanError}</div>}
 
       {/* Lightbox */}
       {showLightbox && originalImageUrl && (
         <div onClick={() => setShowLightbox(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.93)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}>
           <img src={originalImageUrl} style={{ maxWidth: "95vw", maxHeight: "95vh", objectFit: "contain", borderRadius: 8 }} alt="חשבונית מקורית" />
-          <div style={{ position: "absolute", top: 16, right: 16, background: "#1e293b", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 13 }}>לחץ לסגירה ✕</div>
+          <div style={{ position: "absolute", top: 16, right: 16, background: "#f1f5f9", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 13 }}>לחץ לסגירה ✕</div>
         </div>
       )}
 
@@ -974,34 +974,34 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
           {/* Magnifier button */}
           {originalImageUrl && (
             <div style={{ marginBottom: 12 }}>
-              <button onClick={() => setShowLightbox(true)} style={{ background: "#1e293b", border: "1px solid #6366f1", color: "#a78bfa", borderRadius: 8, padding: "7px 16px", cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
+              <button onClick={() => setShowLightbox(true)} style={{ background: "#f1f5f9", border: "1px solid #6366f1", color: "#a78bfa", borderRadius: 8, padding: "7px 16px", cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
                 🔍 הצג חשבונית מקורית להשוואה
               </button>
             </div>
           )}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>ספק</div>
               <input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, width: "100%", color: "#22d3ee", fontWeight: 700 }} />
             </div>
             <div>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>תאריך</div>
               <input type="date" value={scanResult.date || ""} onChange={e => setScanResult(p => ({ ...p, date: e.target.value }))} style={{ ...inputStyle, width: "100%" }} />
             </div>
             <div>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ חשבונית</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>מס׳ חשבונית</div>
               <input value={scanResult.invoiceNum || ""} onChange={e => setScanResult(p => ({ ...p, invoiceNum: e.target.value }))} style={{ ...inputStyle, width: "100%" }} />
             </div>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
-            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>פריט (ערוך/בחר מרשימה)</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר ליחידה</Th><Th>סה״כ</Th><Th></Th></tr></thead>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>פריט (ערוך/בחר מרשימה)</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר ליחידה</Th><Th>סה״כ</Th><Th></Th></tr></thead>
             <tbody>
               {(scanResult.items || []).map((item, i) => {
                 const sup = suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
                 const supProds = sup ? products.filter(p => p.supplierId === sup.id) : [];
                 const matchedProd = supProds.find(p => p.name.trim() === item.name?.trim());
                 return (
-                  <tr key={i} style={{ borderBottom: "1px solid #1e293b" }}>
+                  <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
                     <Td>
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         <input value={item.name || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: e.target.value } : it) }))} style={{ ...inputStyle, width: "100%", color: matchedProd ? "#22c55e" : "#e2e8f0", fontSize: 12 }} placeholder="שם פריט" />
@@ -1026,7 +1026,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
                   </tr>
                 );
               })}
-              <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
+              <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
                 <Td colSpan={4} style={{ color: "#94a3b8" }}>סה״כ</Td>
                 <Td style={{ color: "#22c55e" }}>₪{fmt((scanResult.items || []).reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0))}</Td>
                 <Td></Td>
@@ -1054,7 +1054,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
 
           {form.supplierId && (
             <>
-              <div style={{ background: "#1e293b", borderRadius: 8, padding: "12px 14px", marginBottom: 12 }}>
+              <div style={{ background: "#f1f5f9", borderRadius: 8, padding: "12px 14px", marginBottom: 12 }}>
                 <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8, fontWeight: 600 }}>הוספת פריט:</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <select value={newItem.productId} onChange={(e) => {
@@ -1071,7 +1071,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
               </div>
 
               {formAlerts.length > 0 && (
-                <div style={{ background: "#1a0505", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", marginBottom: 12, color: "#f87171", fontSize: 13 }}>
+                <div style={{ background: "#fff5f5", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", marginBottom: 12, color: "#f87171", fontSize: 13 }}>
                   ⚠️ <strong>שים לב!</strong> {formAlerts.length} פריט/ים חרגו ביותר מ-5% ממחיר הבסיס. בדוק לפני שמירה!
                 </div>
               )}
@@ -1079,7 +1079,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
               {form.items.length > 0 && (
                 <>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
-                    <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>פריט</Th><Th>כמות</Th><Th>מחיר בסיס</Th><Th>מחיר בחשבונית</Th><Th>סה״כ שורה</Th><Th>סטטוס</Th><Th></Th></tr></thead>
+                    <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>כמות</Th><Th>מחיר בסיס</Th><Th>מחיר בחשבונית</Th><Th>סה״כ שורה</Th><Th>סטטוס</Th><Th></Th></tr></thead>
                     <tbody>
                       {form.items.map((item) => {
                         const prod = products.find((p) => p.id === item.productId);
@@ -1089,7 +1089,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
                         const diff = base > 0 ? ((price - base) / base) * 100 : 0;
                         const alert = diff > 5;
                         return (
-                          <tr key={item.id} style={{ borderBottom: "1px solid #1e293b", background: alert ? "#1a0505" : "transparent" }}>
+                          <tr key={item.id} style={{ borderBottom: "1px solid #e2e8f0", background: alert ? "#1a0505" : "transparent" }}>
                             <Td>{prod?.name}</Td>
                             <Td>{qty} {prod?.unit}</Td>
                             <Td style={{ color: "#94a3b8" }}>₪{fmt(base)}</Td>
@@ -1100,7 +1100,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
                           </tr>
                         );
                       })}
-                      <tr style={{ borderTop: "2px solid #334155" }}>
+                      <tr style={{ borderTop: "2px solid #cbd5e1" }}>
                         <Td colSpan={4} style={{ color: "#94a3b8", fontWeight: 700 }}>סה״כ חשבונית:</Td>
                         <Td style={{ color: "#22d3ee", fontWeight: 700, fontSize: 15 }}>₪{fmt(formTotal)}</Td>
                         <Td colSpan={2}></Td>
@@ -1126,7 +1126,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
             });
             const isEditing = editInvoice?.id === inv.id;
             return (
-              <div key={inv.id} style={{ background: "#0f172a", border: `1px solid ${isEditing ? "#6366f1" : "#1e293b"}`, borderRadius: 8, overflow: "hidden" }}>
+              <div key={inv.id} style={{ background: "#ffffff", border: `1px solid ${isEditing ? "#6366f1" : "#1e293b"}`, borderRadius: 8, overflow: "hidden" }}>
                 {/* Row */}
                 <div style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
                   onClick={() => setEditInvoice(isEditing ? null : { ...inv, items: inv.items.map(i => ({ ...i })) })}>
@@ -1135,7 +1135,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
                     <div style={{ fontSize: 12, color: "#94a3b8" }}>{inv.date} | חשבונית {inv.invoiceNum || "—"} | {(inv.items || []).length} פריטים</div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    {itemAlerts.length > 0 && <span style={{ background: "#1a0505", color: "#f87171", border: "1px solid #ef4444", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>⚠️ {itemAlerts.length} חריגות</span>}
+                    {itemAlerts.length > 0 && <span style={{ background: "#fff5f5", color: "#f87171", border: "1px solid #ef4444", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>⚠️ {itemAlerts.length} חריגות</span>}
                     <span style={{ color: "#22d3ee", fontWeight: 800, fontSize: 15 }}>₪{fmt(inv.total)}</span>
                     <span style={{ color: "#6366f1", fontSize: 12 }}>{isEditing ? "▲ סגור" : "✏️ ערוך"}</span>
                     <button onClick={(e) => { e.stopPropagation(); if (window.confirm("למחוק חשבונית זו?")) setInvoices((p) => p.filter((i) => i.id !== inv.id)); }}
@@ -1145,32 +1145,32 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
 
                 {/* Edit panel */}
                 {isEditing && (
-                  <div style={{ borderTop: "1px solid #1e293b", padding: 16 }}>
+                  <div style={{ borderTop: "1px solid #e2e8f0", padding: 16 }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
                       <div>
-                        <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>ספק</div>
                         <select value={editInvoice.supplierId} onChange={e => setEditInvoice(p => ({ ...p, supplierId: e.target.value }))} style={{ ...inputStyle, width: "100%" }}>
                           {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                       </div>
                       <div>
-                        <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>תאריך</div>
                         <input type="date" value={editInvoice.date} onChange={e => setEditInvoice(p => ({ ...p, date: e.target.value }))} style={{ ...inputStyle, width: "100%" }} />
                       </div>
                       <div>
-                        <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ חשבונית</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>מס׳ חשבונית</div>
                         <input value={editInvoice.invoiceNum || ""} onChange={e => setEditInvoice(p => ({ ...p, invoiceNum: e.target.value }))} style={{ ...inputStyle, width: "100%" }} />
                       </div>
                     </div>
 
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 12 }}>
-                      <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>פריט</Th><Th>כמות</Th><Th>מחיר ליחידה</Th><Th>סה״כ</Th><Th></Th></tr></thead>
+                      <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>כמות</Th><Th>מחיר ליחידה</Th><Th>סה״כ</Th><Th></Th></tr></thead>
                       <tbody>
                         {editInvoice.items.map((item, idx) => {
                           const prod = products.find(p => p.id === item.productId);
                           return (
-                            <tr key={item.id} style={{ borderBottom: "1px solid #1e293b" }}>
-                              <Td style={{ color: "#e2e8f0" }}>{prod?.name || "—"}</Td>
+                            <tr key={item.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                              <Td style={{ color: "#1e293b" }}>{prod?.name || "—"}</Td>
                               <Td><input type="number" value={item.qty} onChange={e => setEditInvoice(p => ({ ...p, items: p.items.map((it, i) => i === idx ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70, textAlign: "center" }} /></Td>
                               <Td><input type="number" value={item.price} onChange={e => setEditInvoice(p => ({ ...p, items: p.items.map((it, i) => i === idx ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, textAlign: "center", color: "#22d3ee" }} /></Td>
                               <Td style={{ color: "#a78bfa" }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
@@ -1178,7 +1178,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
                             </tr>
                           );
                         })}
-                        <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
+                        <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
                           <Td colSpan={3} style={{ color: "#94a3b8" }}>סה״כ</Td>
                           <Td style={{ color: "#22c55e" }}>₪{fmt(editInvoice.items.reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0))}</Td>
                           <Td></Td>
@@ -1400,7 +1400,7 @@ function Sales({ sales, setSales }) {
               <input type="file" accept=".xlsx,.xls" style={{ display: "none" }}
                 onChange={e => e.target.files[0] && parseXlsxSales(e.target.files[0])} disabled={importing} />
             </label>
-            <div style={{ fontSize: 11, color: "#475569", marginTop: 4 }}>דוח מכירות תקופתי — קופה + תעודות משלוח</div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>דוח מכירות תקופתי — קופה + תעודות משלוח</div>
           </div>
           <div>
             <label style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1, display: "inline-block" }}>
@@ -1408,10 +1408,10 @@ function Sales({ sales, setSales }) {
               <input type="file" accept=".csv" style={{ display: "none" }}
                 onChange={e => e.target.files[0] && parseCsvWolt(e.target.files[0])} disabled={importing} />
             </label>
-            <div style={{ fontSize: 11, color: "#475569", marginTop: 4 }}>קובץ purchases מ-Wolt — הזמנות delivered בלבד</div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>קובץ purchases מ-Wolt — הזמנות delivered בלבד</div>
           </div>
         </div>
-        {importError && <div style={{ color: "#f87171", fontSize: 13, background: "#1a0505", borderRadius: 8, padding: "8px 12px" }}>❌ {importError}</div>}
+        {importError && <div style={{ color: "#f87171", fontSize: 13, background: "#fff5f5", borderRadius: 8, padding: "8px 12px" }}>❌ {importError}</div>}
         {importPreview && (
           <div style={{ marginTop: 14 }}>
             {importPreview.type === "caspit" ? (
@@ -1422,9 +1422,9 @@ function Sales({ sales, setSales }) {
                   תפריט: <strong style={{ color: "#a78bfa" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.taprit||0),0))}</strong> |
                   משלוחה: <strong style={{ color: "#f87171" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.mishlocha||0),0))}</strong>
                 </div>
-                <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 12, border: "1px solid #1e293b", borderRadius: 8 }}>
+                <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 12, border: "1px solid #e2e8f0", borderRadius: 8 }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                    <thead><tr style={{ background: "#1e293b" }}><Th>תאריך</Th><Th>סה״כ קופה</Th><Th>מזה: תפריט</Th><Th>מזה: משלוחה</Th></tr></thead>
+                    <thead><tr style={{ background: "#f1f5f9" }}><Th>תאריך</Th><Th>סה״כ קופה</Th><Th>מזה: תפריט</Th><Th>מזה: משלוחה</Th></tr></thead>
                     <tbody>
                       {importPreview.rows.map(r => (
                         <tr key={r.date} style={{ borderBottom: "1px solid #0f172a" }}>
@@ -1444,9 +1444,9 @@ function Sales({ sales, setSales }) {
                   📱 Wolt — <strong style={{ color: "#a78bfa" }}>{importPreview.rows.length} ימים</strong> |
                   סה״כ: <strong style={{ color: "#a78bfa" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.wolt||0),0))}</strong>
                 </div>
-                <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 12, border: "1px solid #1e293b", borderRadius: 8 }}>
+                <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 12, border: "1px solid #e2e8f0", borderRadius: 8 }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                    <thead><tr style={{ background: "#1e293b" }}><Th>תאריך</Th><Th>וולט ₪</Th></tr></thead>
+                    <thead><tr style={{ background: "#f1f5f9" }}><Th>תאריך</Th><Th>וולט ₪</Th></tr></thead>
                     <tbody>
                       {importPreview.rows.map(r => (
                         <tr key={r.date} style={{ borderBottom: "1px solid #0f172a" }}>
@@ -1486,12 +1486,12 @@ function Sales({ sales, setSales }) {
       </Card>
 
       <Card title="מכירות חודש נוכחי">
-        {monthSales.length === 0 && <div style={{ color: "#475569", fontSize: 13 }}>אין נתוני מכירות לחודש זה</div>}
+        {monthSales.length === 0 && <div style={{ color: "#94a3b8", fontSize: 13 }}>אין נתוני מכירות לחודש זה</div>}
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>תאריך</Th><Th>קופה</Th><Th>וולט</Th><Th>סה״כ יומי</Th><Th></Th></tr></thead>
+          <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>תאריך</Th><Th>קופה</Th><Th>וולט</Th><Th>סה״כ יומי</Th><Th></Th></tr></thead>
           <tbody>
             {[...monthSales].sort((a, b) => b.date?.localeCompare(a.date)).map((s) => (
-              <tr key={s.id} style={{ borderBottom: "1px solid #1e293b", background: editId === s.id ? "#1e1b4b" : "transparent" }}>
+              <tr key={s.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === s.id ? "#1e1b4b" : "transparent" }}>
                 <Td>{s.date}</Td>
                 {editId === s.id ? (
                   <>
@@ -1529,7 +1529,7 @@ function Sales({ sales, setSales }) {
               </tr>
             ))}
             {monthSales.length > 0 && (
-              <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
+              <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
                 <Td style={{ color: "#94a3b8" }}>סה״כ חודש</Td>
                 <Td style={{ color: "#22d3ee" }}>₪{fmt(totalKupa)}</Td>
                 <Td style={{ color: "#a78bfa" }}>₪{fmt(totalWolt)}</Td>
@@ -1580,12 +1580,12 @@ function Employees({ employees, setEmployees }) {
       </Card>
 
       <Card title="רשימת עובדים">
-        {employees.length === 0 && <div style={{ color: "#475569", fontSize: 13 }}>אין עובדים — הוסף עובדים כדי לעקוב אחר לייבור קוסט</div>}
+        {employees.length === 0 && <div style={{ color: "#94a3b8", fontSize: 13 }}>אין עובדים — הוסף עובדים כדי לעקוב אחר לייבור קוסט</div>}
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          {employees.length > 0 && <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>שם עובד</Th><Th>₪ לשעה</Th><Th></Th></tr></thead>}
+          {employees.length > 0 && <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>שם עובד</Th><Th>₪ לשעה</Th><Th></Th></tr></thead>}
           <tbody>
             {employees.map((e) => (
-              <tr key={e.id} style={{ borderBottom: "1px solid #1e293b", background: editId === e.id ? "#1e1b4b" : "transparent" }}>
+              <tr key={e.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === e.id ? "#1e1b4b" : "transparent" }}>
                 {editId === e.id ? (
                   <>
                     <Td><input value={editVals.name} onChange={(ev) => setEditVals((v) => ({ ...v, name: ev.target.value }))} style={{ ...inputStyle, width: "100%" }} autoFocus /></Td>
@@ -1672,7 +1672,7 @@ function Hours({ hours, setHours, employees, sales, settings }) {
 
       <Card title="הכנסת שעות יומיות">
         {employees.length === 0
-          ? <div style={{ color: "#475569", fontSize: 13 }}>יש להוסיף עובדים קודם בטאב 👷 עובדים</div>
+          ? <div style={{ color: "#94a3b8", fontSize: 13 }}>יש להוסיף עובדים קודם בטאב 👷 עובדים</div>
           : (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div>
@@ -1698,7 +1698,7 @@ function Hours({ hours, setHours, employees, sales, settings }) {
       </Card>
 
       <Card title="שעות חודש נוכחי">
-        {Object.keys(byDate).length === 0 && <div style={{ color: "#475569", fontSize: 13 }}>אין שעות מוזנות לחודש זה</div>}
+        {Object.keys(byDate).length === 0 && <div style={{ color: "#94a3b8", fontSize: 13 }}>אין שעות מוזנות לחודש זה</div>}
         {Object.entries(byDate).map(([date, entries]) => {
           const dayTotal = entries.reduce((a, h) => a + (parseFloat(h.hours) || 0), 0);
           const dayCost = entries.reduce((a, h) => {
@@ -1709,7 +1709,7 @@ function Hours({ hours, setHours, employees, sales, settings }) {
             <div key={date} style={{ marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <span style={{ fontWeight: 700, color: "#94a3b8", fontSize: 13 }}>{date}</span>
-                <span style={{ fontSize: 12, color: "#475569" }}>{dayTotal.toFixed(1)} שעות | ₪{fmt(dayCost)}</span>
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>{dayTotal.toFixed(1)} שעות | ₪{fmt(dayCost)}</span>
               </div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <tbody>
@@ -1717,8 +1717,8 @@ function Hours({ hours, setHours, employees, sales, settings }) {
                     const emp = employees.find((e) => e.id === h.employeeId);
                     const cost = (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0);
                     return (
-                      <tr key={h.id} style={{ borderBottom: "1px solid #1e293b", background: editId === h.id ? "#1e1b4b" : "transparent" }}>
-                        <Td style={{ color: "#e2e8f0" }}>{emp?.name || "—"}</Td>
+                      <tr key={h.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === h.id ? "#1e1b4b" : "transparent" }}>
+                        <Td style={{ color: "#1e293b" }}>{emp?.name || "—"}</Td>
                         {editId === h.id ? (
                           <>
                             <Td><input type="number" value={editHours} onChange={(e) => setEditHours(e.target.value)} step="0.5" style={{ ...inputStyle, width: 80 }} autoFocus /></Td>
@@ -1751,7 +1751,7 @@ function Hours({ hours, setHours, employees, sales, settings }) {
           );
         })}
         {totalLaborHours > 0 && (
-          <div style={{ borderTop: "2px solid #334155", paddingTop: 12, display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700 }}>
+          <div style={{ borderTop: "2px solid #cbd5e1", paddingTop: 12, display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700 }}>
             <span style={{ color: "#94a3b8" }}>סה״כ חודש</span>
             <span style={{ color: "#fb923c" }}>{totalLaborHours.toFixed(1)} שעות | ₪{fmt(totalLaborCost)}</span>
             <StatusBadge value={laborPct} settings={lcSettings} />
@@ -1913,12 +1913,12 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
 
                 {/* Products */}
                 {isOpen && (
-                  <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6, background: "#0a0a14" }}>
+                  <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6, background: "#f5f5f5" }}>
                     {catProds.map(prod => (
                       <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: counts[prod.id] ? "#052e16" : "#0f172a", borderRadius: 8, padding: "8px 12px", border: `1px solid ${counts[prod.id] ? "#22c55e33" : "#1e293b"}` }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 600, fontSize: 13, color: counts[prod.id] ? "#22c55e" : "#e2e8f0" }}>{prod.name}</div>
-                          <div style={{ fontSize: 11, color: "#475569" }}>{prod.unit}</div>
+                          <div style={{ fontSize: 11, color: "#94a3b8" }}>{prod.unit}</div>
                         </div>
                         <input
                           type="number"
@@ -1928,7 +1928,7 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
                           onChange={e => setCounts(p => ({ ...p, [prod.id]: e.target.value }))}
                           style={{ ...inputStyle, width: 90, textAlign: "center", fontSize: 16, fontWeight: 700, color: counts[prod.id] ? "#22c55e" : "#e2e8f0" }}
                         />
-                        <div style={{ fontSize: 11, color: "#475569", minWidth: 30 }}>{prod.unit}</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", minWidth: 30 }}>{prod.unit}</div>
                       </div>
                     ))}
                   </div>
@@ -1964,7 +1964,7 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
                     {catProds.map(prod => {
                       const item = editCount.items.find(i => i.productId === prod.id);
                       return (
-                        <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#0f172a", borderRadius: 6, padding: "6px 10px" }}>
+                        <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#ffffff", borderRadius: 6, padding: "6px 10px" }}>
                           <div style={{ flex: 1, fontSize: 13 }}>{prod.name}</div>
                           <input type="number" inputMode="decimal" placeholder="0" value={item?.qty ?? ""}
                             onChange={e => setEditCount(p => {
@@ -1973,7 +1973,7 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
                               return { ...p, items: [...p.items, { productId: prod.id, qty: e.target.value }] };
                             })}
                             style={{ ...inputStyle, width: 90, textAlign: "center", fontWeight: 700 }} />
-                          <div style={{ fontSize: 11, color: "#475569", minWidth: 30 }}>{prod.unit}</div>
+                          <div style={{ fontSize: 11, color: "#94a3b8", minWidth: 30 }}>{prod.unit}</div>
                         </div>
                       );
                     })}
@@ -2005,22 +2005,22 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
       {monthReport.length > 0 ? (
         <Card title={`📊 דוח מלאי — ${selectedMonth}`}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}>
               <Th>מוצר</Th><Th>ספק</Th><Th>יחידה</Th><Th>פתיחה</Th><Th>+ כניסות</Th><Th>= תיאורטי</Th><Th>סגירה</Th><Th>בזבוז</Th>
             </tr></thead>
             <tbody>
               {monthReport.map(p => {
                 const wasteColor = p.wastePct === null ? "#475569" : parseFloat(p.wastePct) <= 3 ? "#22c55e" : parseFloat(p.wastePct) <= 8 ? "#f59e0b" : "#ef4444";
                 return (
-                  <tr key={p.id} style={{ borderBottom: "1px solid #1e293b" }}>
+                  <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                     <Td style={{ fontWeight: 700 }}>{p.name}</Td>
-                    <Td style={{ color: "#64748b", fontSize: 12 }}>{sup(p.supplierId)}</Td>
+                    <Td style={{ color: "#94a3b8", fontSize: 12 }}>{sup(p.supplierId)}</Td>
                     <Td style={{ color: "#94a3b8" }}>{p.unit}</Td>
                     <Td>{p.opening > 0 ? p.opening : "—"}</Td>
                     <Td style={{ color: "#22d3ee" }}>+{p.entries.toFixed(2)}</Td>
                     <Td style={{ color: "#a78bfa", fontWeight: 700 }}>{p.theoretical.toFixed(2)}</Td>
                     <Td style={{ color: p.closing > 0 ? "#e2e8f0" : "#475569" }}>{p.closing > 0 ? p.closing : "טרם נספר"}</Td>
-                    <Td>{p.waste !== null ? <span style={{ color: wasteColor, fontWeight: 700 }}>{p.waste.toFixed(2)} {p.unit} ({p.wastePct}%){parseFloat(p.wastePct) <= 3 ? " ✓" : parseFloat(p.wastePct) <= 8 ? " ⚠️" : " 🔴"}</span> : <span style={{ color: "#475569" }}>—</span>}</Td>
+                    <Td>{p.waste !== null ? <span style={{ color: wasteColor, fontWeight: 700 }}>{p.waste.toFixed(2)} {p.unit} ({p.wastePct}%){parseFloat(p.wastePct) <= 3 ? " ✓" : parseFloat(p.wastePct) <= 8 ? " ⚠️" : " 🔴"}</span> : <span style={{ color: "#94a3b8" }}>—</span>}</Td>
                   </tr>
                 );
               })}
@@ -2029,7 +2029,7 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
         </Card>
       ) : (
         <Card title="📊 דוח מלאי">
-          <div style={{ color: "#475569", textAlign: "center", padding: 30, fontSize: 13 }}>אין נתונים לחודש זה</div>
+          <div style={{ color: "#94a3b8", textAlign: "center", padding: 30, fontSize: 13 }}>אין נתונים לחודש זה</div>
         </Card>
       )}
 
@@ -2042,14 +2042,14 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
               .map(({ date, type }) => {
                 const dayItems = inventory.filter(c => c.date === date && c.type === type);
                 return (
-                  <div key={`${date}_${type}`} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div key={`${date}_${type}`} style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <div style={{ fontWeight: 700 }}><span style={{ color: type === "פתיחה" ? "#22d3ee" : "#a78bfa" }}>{type}</span> — {date}</div>
                       <div style={{ fontSize: 12, color: "#94a3b8" }}>{dayItems.length} פריטים נספרו</div>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       <button onClick={() => setEditCount({ date, type, originalDate: date, originalType: type, items: dayItems.map(c => ({ productId: c.productId, qty: String(c.qty) })) })}
-                        style={{ background: "#1e293b", border: "1px solid #334155", color: "#6366f1", cursor: "pointer", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>✏️ ערוך</button>
+                        style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", color: "#6366f1", cursor: "pointer", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>✏️ ערוך</button>
                       <button onClick={() => { if (window.confirm("למחוק?")) setInventory(p => p.filter(c => !(c.date === date && c.type === type))); }}
                         style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
                     </div>
@@ -2177,20 +2177,20 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
         </div>
       </div>
 
-      {scanError && <div style={{ background: "#1a0505", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", color: "#f87171", fontSize: 13 }}>❌ {scanError}</div>}
+      {scanError && <div style={{ background: "#fff5f5", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", color: "#f87171", fontSize: 13 }}>❌ {scanError}</div>}
 
       {scanResult && (
         <Card title="📋 תעודת משלוח — בדוק ואשר">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
-            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div><input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, color: "#22d3ee", fontWeight: 700 }} /></div>
-            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div><input type="date" value={scanResult.date || ""} onChange={e => setScanResult(p => ({ ...p, date: e.target.value }))} style={inputStyle} /></div>
-            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ תעודה</div><input value={scanResult.deliveryNum || ""} onChange={e => setScanResult(p => ({ ...p, deliveryNum: e.target.value }))} style={inputStyle} /></div>
+            <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>ספק</div><input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, color: "#22d3ee", fontWeight: 700 }} /></div>
+            <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>תאריך</div><input type="date" value={scanResult.date || ""} onChange={e => setScanResult(p => ({ ...p, date: e.target.value }))} style={inputStyle} /></div>
+            <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>מס׳ תעודה</div><input value={scanResult.deliveryNum || ""} onChange={e => setScanResult(p => ({ ...p, deliveryNum: e.target.value }))} style={inputStyle} /></div>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
-            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th></tr></thead>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th></tr></thead>
             <tbody>
               {(scanResult.items || []).map((item, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid #1e293b" }}>
+                <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
                   <Td><input value={item.name || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: e.target.value } : it) }))} style={{ ...inputStyle, width: "100%" }} /></Td>
                   <Td><input type="number" value={item.qty || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70 }} /></Td>
                   <Td><select value={item.unit || "יחידה"} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, unit: e.target.value } : it) }))} style={inputStyle}>{['ק"ג', "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}</select></Td>
@@ -2199,7 +2199,7 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
                   <Td><button onClick={() => setScanResult(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
                 </tr>
               ))}
-              <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
+              <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
                 <Td colSpan={4} style={{ color: "#94a3b8" }}>סה״כ</Td>
                 <Td style={{ color: "#22c55e" }}>₪{fmt((scanResult.items || []).reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0))}</Td>
                 <Td></Td>
@@ -2217,13 +2217,13 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
       {supplierSummary.length > 0 && (
         <Card title={`📊 השוואה חודשית — ${monthKey}`}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>ספק</Th><Th>תעודות</Th><Th>סה״כ תעודות</Th><Th>חשבונית שהתקבלה</Th><Th>הפרש</Th></tr></thead>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}><Th>ספק</Th><Th>תעודות</Th><Th>סה״כ תעודות</Th><Th>חשבונית שהתקבלה</Th><Th>הפרש</Th></tr></thead>
             <tbody>
               {supplierSummary.map(s => {
                 const diff = s.invoiceTotal - s.deliveryTotal;
                 const diffColor = Math.abs(diff) < 1 ? "#22c55e" : Math.abs(diff) < 50 ? "#f59e0b" : "#ef4444";
                 return (
-                  <tr key={s.id} style={{ borderBottom: "1px solid #1e293b" }}>
+                  <tr key={s.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                     <Td style={{ fontWeight: 700 }}>{s.name}</Td>
                     <Td style={{ color: "#94a3b8" }}>{s.deliveryCount}</Td>
                     <Td style={{ color: "#22d3ee", fontWeight: 700 }}>₪{fmt(s.deliveryTotal)}</Td>
@@ -2250,7 +2250,7 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
           {[...filteredDeliveries].reverse().map(d => {
             const sup = suppliers.find(s => s.id === d.supplierId);
             return (
-              <div key={d.id} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div key={d.id} style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontWeight: 700 }}>{sup?.name || "ספק לא ידוע"}</div>
                   <div style={{ fontSize: 12, color: "#94a3b8" }}>{d.date} | תעודה {d.deliveryNum || "—"} | {(d.items || []).length} פריטים</div>
@@ -2319,7 +2319,7 @@ function Expenses({ expenses, setExpenses }) {
         <Card title="סיכום לפי קטגוריה — חודש נוכחי">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
             {byCategory.map(({ cat, total }) => (
-              <div key={cat} style={{ background: "#1e293b", borderRadius: 8, padding: "10px 16px", minWidth: 140 }}>
+              <div key={cat} style={{ background: "#f1f5f9", borderRadius: 8, padding: "10px 16px", minWidth: 140 }}>
                 <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>{cat}</div>
                 <div style={{ fontWeight: 700, color: "#f87171", fontSize: 15 }}>₪{fmt(total)}</div>
               </div>
@@ -2332,7 +2332,7 @@ function Expenses({ expenses, setExpenses }) {
         {expenses.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>אין הוצאות עדיין</div>}
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {[...expenses].reverse().map(e => (
-            <div key={e.id} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div key={e.id} style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 700 }}>{e.category} {e.description ? `— ${e.description}` : ""}</div>
                 <div style={{ fontSize: 12, color: "#94a3b8" }}>{e.date}</div>
@@ -2364,7 +2364,7 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
   if (pending.length === 0) {
     return (
       <Card title="🔔 התראות ממתינות לאישור">
-        <div style={{ textAlign: "center", color: "#475569", padding: 40 }}>
+        <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
           <div style={{ fontSize: 16 }}>אין התראות — הכל מאושר!</div>
         </div>
@@ -2374,7 +2374,7 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ background: "#1a0505", border: "1px solid #ef4444", borderRadius: 10, padding: "12px 18px", color: "#f87171", fontWeight: 700, fontSize: 14 }}>
+      <div style={{ background: "#fff5f5", border: "1px solid #ef4444", borderRadius: 10, padding: "12px 18px", color: "#f87171", fontWeight: 700, fontSize: 14 }}>
         🔔 {pending.length} חשבונית/ות ממתינות לאישורך
       </div>
 
@@ -2393,12 +2393,12 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
                 </span>
               )}
               {newProds.map((p, i) => (
-                <span key={i} style={{ background: "#052e16", color: "#22c55e", border: "1px solid #16a34a", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+                <span key={i} style={{ background: "#f0fdf4", color: "#22c55e", border: "1px solid #16a34a", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
                   🆕 מוצר חדש: {p.name}
                 </span>
               ))}
               {alertProds.map((p, i) => (
-                <span key={i} style={{ background: "#1a0505", color: "#f87171", border: "1px solid #ef4444", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+                <span key={i} style={{ background: "#fff5f5", color: "#f87171", border: "1px solid #ef4444", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
                   ⚠️ חריגת מחיר: {p.name} (+{p.priceDiff?.toFixed(1)}%)
                 </span>
               ))}
@@ -2407,13 +2407,13 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
             {/* Items table */}
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
               <thead>
-                <tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}>
+                <tr style={{ color: "#94a3b8", borderBottom: "1px solid #cbd5e1" }}>
                   <Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th><Th>סטטוס</Th>
                 </tr>
               </thead>
               <tbody>
                 {(item.itemsAnalysis || []).map((p, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #1e293b", background: p.isNew ? "#031a0e" : p.hasAlert ? "#1a0505" : "transparent" }}>
+                  <tr key={i} style={{ borderBottom: "1px solid #e2e8f0", background: p.isNew ? "#031a0e" : p.hasAlert ? "#1a0505" : "transparent" }}>
                     <Td style={{ fontWeight: p.isNew || p.hasAlert ? 700 : 400 }}>{p.name}</Td>
                     <Td>{p.qty}</Td>
                     <Td style={{ color: "#94a3b8" }}>{p.unit}</Td>
@@ -2422,11 +2422,11 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
                     <Td>
                       {p.isNew && <span style={{ color: "#22c55e", fontSize: 11, fontWeight: 700 }}>🆕 חדש</span>}
                       {p.hasAlert && <span style={{ color: "#ef4444", fontSize: 11, fontWeight: 700 }}>⚠️ +{p.priceDiff?.toFixed(1)}%</span>}
-                      {!p.isNew && !p.hasAlert && <span style={{ color: "#475569", fontSize: 11 }}>✓ תקין</span>}
+                      {!p.isNew && !p.hasAlert && <span style={{ color: "#94a3b8", fontSize: 11 }}>✓ תקין</span>}
                     </Td>
                   </tr>
                 ))}
-                <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
+                <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
                   <Td colSpan={4} style={{ color: "#94a3b8" }}>סה״כ חשבונית</Td>
                   <Td style={{ color: "#22c55e" }}>₪{fmt(total)}</Td>
                   <Td></Td>
@@ -2460,7 +2460,7 @@ function Settings({ settings, setSettings }) {
             <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 4 }}>🟡 צהוב — עד (%)</label>
             <input type="number" value={form.yellowMax} onChange={(e) => setForm((f) => ({ ...f, yellowMax: parseFloat(e.target.value) }))} style={inputStyle} />
           </div>
-          <div style={{ color: "#64748b", fontSize: 12, background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #1e293b" }}>
+          <div style={{ color: "#94a3b8", fontSize: 12, background: "#ffffff", borderRadius: 8, padding: 10, border: "1px solid #e2e8f0" }}>
             🔴 אדום — מעל {form.yellowMax || "—"}%
           </div>
         </div>
@@ -2475,7 +2475,7 @@ function Settings({ settings, setSettings }) {
             <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 4 }}>🟡 צהוב — עד (%)</label>
             <input type="number" value={form.laborYellowMax} onChange={(e) => setForm((f) => ({ ...f, laborYellowMax: parseFloat(e.target.value) }))} style={inputStyle} />
           </div>
-          <div style={{ color: "#64748b", fontSize: 12, background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #1e293b" }}>
+          <div style={{ color: "#94a3b8", fontSize: 12, background: "#ffffff", borderRadius: 8, padding: 10, border: "1px solid #e2e8f0" }}>
             🔴 אדום — מעל {form.laborYellowMax || "—"}%
           </div>
         </div>
@@ -2490,7 +2490,7 @@ function Settings({ settings, setSettings }) {
             <label style={{ color: "#94a3b8", fontSize: 13, display: "block", marginBottom: 4 }}>🟡 צהוב — עד (%)</label>
             <input type="number" value={form.expenseYellowMax ?? 28} onChange={(e) => setForm((f) => ({ ...f, expenseYellowMax: parseFloat(e.target.value) }))} style={inputStyle} />
           </div>
-          <div style={{ color: "#64748b", fontSize: 12, background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #1e293b" }}>
+          <div style={{ color: "#94a3b8", fontSize: 12, background: "#ffffff", borderRadius: 8, padding: 10, border: "1px solid #e2e8f0" }}>
             🔴 אדום — מעל {form.expenseYellowMax ?? 28}%
           </div>
         </div>
@@ -2504,8 +2504,8 @@ function Settings({ settings, setSettings }) {
 
 function Card({ title, children }) {
   return (
-    <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: 20 }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid #1e293b" }}>{title}</div>
+    <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: "#1e293b", marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid #e2e8f0" }}>{title}</div>
       {children}
     </div>
   );
@@ -2513,12 +2513,12 @@ function Card({ title, children }) {
 
 function KpiCard({ label, value, sub, accent, raw }) {
   return (
-    <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: 16, borderTop: `3px solid ${accent}` }}>
+    <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 16, borderTop: `3px solid ${accent}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 12, color: "#64748b" }}>{label}</span>
+        <span style={{ fontSize: 12, color: "#94a3b8" }}>{label}</span>
       </div>
       {raw ? value : <div style={{ fontSize: 22, fontWeight: 800, color: accent }}>{value}</div>}
-      {sub && <div style={{ fontSize: 11, color: "#e2e8f0", marginTop: 4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: "#1e293b", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -2538,7 +2538,7 @@ function Btn({ onClick, children, style = {} }) {
 }
 
 function Th({ children, style = {} }) {
-  return <th style={{ textAlign: "right", padding: "6px 8px", fontWeight: 600, fontSize: 12, color: "#94a3b8", borderBottom: "1px solid #334155", ...style }}>{children}</th>;
+  return <th style={{ textAlign: "right", padding: "6px 8px", fontWeight: 600, fontSize: 12, color: "#94a3b8", borderBottom: "1px solid #cbd5e1", ...style }}>{children}</th>;
 }
 
 function Td({ children, style = {}, colSpan }) {
@@ -2546,8 +2546,8 @@ function Td({ children, style = {}, colSpan }) {
 }
 
 const inputStyle = {
-  background: "#1e293b", border: "1px solid #334155", borderRadius: 8,
-  color: "#e2e8f0", padding: "8px 12px", fontSize: 13, outline: "none",
+  background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: 8,
+  color: "#1e293b", padding: "8px 12px", fontSize: 13, outline: "none",
   width: "100%", boxSizing: "border-box"
 };
 
