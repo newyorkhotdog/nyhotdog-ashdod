@@ -714,6 +714,19 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
                   <input value={editSupVals.name} onChange={e => setEditSupVals(p=>({...p, name: e.target.value}))} placeholder="שם ספק" style={{ ...inputStyle, fontSize: 12 }} />
                   <input value={editSupVals.contact} onChange={e => setEditSupVals(p=>({...p, contact: e.target.value}))} placeholder="👤 שם איש קשר" style={{ ...inputStyle, fontSize: 12 }} />
                   <input value={editSupVals.phone} onChange={e => setEditSupVals(p=>({...p, phone: e.target.value}))} placeholder="📞 טלפון" style={{ ...inputStyle, fontSize: 12 }} />
+                  <div>
+                    <div style={{ fontSize: 11, color: "#64748b", marginBottom: 3 }}>📦 קטגוריית מלאי</div>
+                    <select value={editSupVals.inventoryCategory || "other"} onChange={e => setEditSupVals(p=>({...p, inventoryCategory: e.target.value}))} style={{ ...inputStyle, fontSize: 12 }}>
+                      <option value="other">📦 שונות (ברירת מחדל)</option>
+                      <option value="naknikiyot">🌭 נקניקיות — הנדלס</option>
+                      <option value="shtiya_cola">🥤 שתייה — קוקה קולה</option>
+                      <option value="shtiya_agm">🍺 שתייה — אג"מ סחר</option>
+                      <option value="chad_pami">🥡 חד פעמי</option>
+                      <option value="levamot_naknik">🍞 לחמניות נקניקייה</option>
+                      <option value="levamot_toast">🥖 לחמניות טוסט</option>
+                      <option value="ratabim">🫙 רטבים — גורן</option>
+                    </select>
+                  </div>
                   <Btn onClick={() => { setSuppliers(p => p.map(x => x.id===s.id ? {...x, ...editSupVals} : x)); setEditSupId(null); }} style={{ background: "#22c55e", fontSize: 12, padding: "5px 10px" }}>💾 שמור</Btn>
                 </div>
               )}
@@ -1812,13 +1825,10 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
   const allProducts = products;
   const sup = (supplierId) => suppliers.find(s => s.id === supplierId)?.name || "";
 
-  // Assign product to category by supplier name
+  // Assign product to category by supplier.inventoryCategory field (set in Suppliers tab)
   const getCatForProduct = (prod) => {
-    const supName = sup(prod.supplierId).toLowerCase();
-    for (const cat of INVENTORY_CATEGORIES) {
-      if (cat.supplierKeyword && supName.includes(cat.supplierKeyword.toLowerCase())) return cat.id;
-    }
-    return "other";
+    const supplier = suppliers.find(s => s.id === prod.supplierId);
+    return supplier?.inventoryCategory || "other";
   };
 
   const toggleCat = (catId) => setOpenCats(p => ({ ...p, [catId]: !p[catId] }));
