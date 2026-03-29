@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   expenses: "nyh_expenses",
   deliveries: "nyh_deliveries",
   inventory: "nyh_inventory",
+  inventoryCategories: "nyh_inv_categories",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
@@ -61,6 +62,7 @@ const TABS = [
   { id: "employees", label: "👷 עובדים" },
   { id: "hours", label: "⏱️ שעות" },
   { id: "inventory", label: "📦 מלאי" },
+  { id: "invSettings", label: "📋 קטגוריות מלאי" },
   { id: "expenses", label: "🏢 הוצאות תפעול" },
   { id: "notifications", label: "🔔 התראות" },
   { id: "settings", label: "⚙️ הגדרות" },
@@ -79,6 +81,7 @@ export default function App() {
   const [expenses, setExpenses] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [inventory, setInventory] = useState([]);
+  const [inventoryCategories, setInventoryCategories] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -123,6 +126,7 @@ export default function App() {
   useEffect(() => { if (loaded) save(STORAGE_KEYS.expenses, expenses); }, [expenses, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.deliveries, deliveries); }, [deliveries, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.inventory, inventory); }, [inventory, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.inventoryCategories, inventoryCategories); }, [inventoryCategories, loaded]);
 
   if (!loaded) return <div style={{ background: "#f1f5f9", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#1e293b" }}>טוען...</div>;
 
@@ -163,7 +167,8 @@ export default function App() {
         {tab === "employees" && <Employees employees={employees} setEmployees={setEmployees} />}
         {tab === "hours" && <Hours hours={hours} setHours={setHours} employees={employees} sales={sales} settings={settings} />}
         {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={setDeliveries} suppliers={suppliers} products={products} setSuppliers={setSuppliers} setProducts={setProducts} pending={pending} setPending={setPending} invoices={invoices} setInvoices={setInvoices} />}
-        {tab === "inventory" && <Inventory inventory={inventory} setInventory={setInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} />}
+        {tab === "inventory" && <Inventory inventory={inventory} setInventory={setInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} inventoryCategories={inventoryCategories} setSuppliers={setSuppliers} />}
+        {tab === "invSettings" && <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />}
         {tab === "expenses" && <Expenses expenses={expenses} setExpenses={setExpenses} />}
         {tab === "notifications" && <Notifications pending={pending} setPending={setPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={setInvoices} setSuppliers={setSuppliers} setProducts={setProducts} />}
         {tab === "settings" && <Settings settings={settings} setSettings={setSettings} />}
@@ -1798,7 +1803,156 @@ function approvePendingItem(item, suppliers, products, setSuppliers, setProducts
 
   // Remove from pending
   setPending(p => p.filter(x => x.id !== item.id));
+}function InvSettings({ inventoryCategories, setInventoryCategories, suppliers, setSuppliers }) {
+  const DEFAULT_CATS = [
+    { id: "naknikiyot", label: "נקניקיות", emoji: "🌭", color: "#ef4444" },
+    { id: "shtiya_cola", label: "שתייה — קוקה קולה", emoji: "🥤", color: "#22d3ee" },
+    { id: "shtiya_agm", label: 'שתייה — אג"מ', emoji: "🍺", color: "#60a5fa" },
+    { id: "chad_pami", label: "חד פעמי", emoji: "🥡", color: "#f59e0b" },
+    { id: "levamot_naknik", label: "לחמניות נקניקייה", emoji: "🍞", color: "#a78bfa" },
+    { id: "levamot_toast", label: "לחמניות טוסט", emoji: "🥖", color: "#fb923c" },
+    { id: "ratabim", label: "רטבים", emoji: "🫙", color: "#22c55e" },
+    { id: "other", label: "שונות", emoji: "📦", color: "#94a3b8" },
+  ];
+
+  const cats = inventoryCategories.length > 0 ? inventoryCategories : DEFAULT_CATS;
+  const [newCat, setNewCat] = useState({ label: "", emoji: "📦", color: "#6366f1" });
+  const [editId, setEditId] = useState(null);
+  const [editVals, setEditVals] = useState({});
+
+  const initIfEmpty = () => {
+    if (inventoryCategories.length === 0) setInventoryCategories(DEFAULT_CATS);
+  };
+
+  const addCat = () => {
+    if (!newCat.label.trim()) return;
+    const updated = [...cats, { id: Date.now().toString(), ...newCat }];
+    setInventoryCategories(updated);
+    setNewCat({ label: "", emoji: "📦", color: "#6366f1" });
+  };
+
+  const deleteCat = (id) => {
+    if (id === "other") return alert("לא ניתן למחוק קטגוריית ברירת מחדל");
+    setInventoryCategories(cats.filter(c => c.id !== id));
+    // Reset suppliers that had this category
+    setSuppliers(p => p.map(s => s.inventoryCategory === id ? { ...s, inventoryCategory: "other" } : s));
+  };
+
+  const saveEdit = () => {
+    setInventoryCategories(cats.map(c => c.id === editId ? { ...c, ...editVals } : c));
+    setEditId(null);
+  };
+
+  const COLORS = ["#ef4444","#f97316","#f59e0b","#22c55e","#22d3ee","#60a5fa","#a78bfa","#fb923c","#6366f1","#ec4899","#94a3b8","#1e293b"];
+  const EMOJIS = ["🌭","🥤","🍺","🥡","🍞","🥖","🫙","📦","🥩","🧂","🧴","🧻","🍟","🧃","🥛","🫒"];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {inventoryCategories.length === 0 && (
+        <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ color: "#92400e", fontSize: 13 }}>⚠️ טרם הוגדרו קטגוריות — לחץ לטעון ברירות מחדל</span>
+          <Btn onClick={initIfEmpty} style={{ background: "#f59e0b", color: "#1e293b" }}>טען ברירות מחדל</Btn>
+        </div>
+      )}
+
+      {/* Categories list */}
+      <Card title="📋 קטגוריות מלאי">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+          {cats.map(cat => (
+            <div key={cat.id} style={{ border: `1px solid ${cat.color}44`, borderRadius: 10, overflow: "hidden" }}>
+              {editId === cat.id ? (
+                <div style={{ padding: 14, background: "#f8fafc", display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ flex: 3 }}>
+                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>שם קטגוריה</div>
+                      <input value={editVals.label || ""} onChange={e => setEditVals(p => ({ ...p, label: e.target.value }))} style={{ ...inputStyle }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>אמוג'י</div>
+                      <select value={editVals.emoji || "📦"} onChange={e => setEditVals(p => ({ ...p, emoji: e.target.value }))} style={{ ...inputStyle, fontSize: 18, textAlign: "center" }}>
+                        {EMOJIS.map(e => <option key={e} value={e}>{e}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#64748b", marginBottom: 6 }}>צבע</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {COLORS.map(c => (
+                        <div key={c} onClick={() => setEditVals(p => ({ ...p, color: c }))}
+                          style={{ width: 28, height: 28, borderRadius: 6, background: c, cursor: "pointer", border: editVals.color === c ? "3px solid #1e293b" : "2px solid transparent" }} />
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Btn onClick={saveEdit} style={{ background: "#22c55e" }}>💾 שמור</Btn>
+                    <Btn onClick={() => setEditId(null)} style={{ background: "#94a3b8" }}>✕ ביטול</Btn>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: `${cat.color}10` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 22 }}>{cat.emoji}</span>
+                    <div>
+                      <div style={{ fontWeight: 700, color: cat.color }}>{cat.label}</div>
+                      <div style={{ fontSize: 11, color: "#94a3b8" }}>
+                        {suppliers.filter(s => s.inventoryCategory === cat.id).map(s => s.name).join(", ") || "אין ספקים משויכים"}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => { setEditId(cat.id); setEditVals({ label: cat.label, emoji: cat.emoji, color: cat.color }); }}
+                      style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#6366f1", cursor: "pointer", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>✏️ ערוך</button>
+                    {cat.id !== "other" && <button onClick={() => deleteCat(cat.id)}
+                      style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Add new */}
+        <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#475569", marginBottom: 10 }}>+ הוספת קטגוריה חדשה</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            <input value={newCat.label} onChange={e => setNewCat(p => ({ ...p, label: e.target.value }))} placeholder="שם הקטגוריה" style={{ ...inputStyle, flex: 3 }} />
+            <select value={newCat.emoji} onChange={e => setNewCat(p => ({ ...p, emoji: e.target.value }))} style={{ ...inputStyle, flex: 1, fontSize: 18, textAlign: "center" }}>
+              {EMOJIS.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+            {COLORS.map(c => (
+              <div key={c} onClick={() => setNewCat(p => ({ ...p, color: c }))}
+                style={{ width: 28, height: 28, borderRadius: 6, background: c, cursor: "pointer", border: newCat.color === c ? "3px solid #1e293b" : "2px solid transparent" }} />
+            ))}
+          </div>
+          <Btn onClick={addCat} style={{ background: "#6366f1" }}>+ הוסף קטגוריה</Btn>
+        </div>
+      </Card>
+
+      {/* Supplier assignment */}
+      <Card title="🏭 שיוך ספקים לקטגוריות">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {suppliers.length === 0 && <div style={{ color: "#94a3b8", fontSize: 13 }}>אין ספקים — הקם ספקים בטאב ספקים</div>}
+          {suppliers.map(sup => (
+            <div key={sup.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#f8fafc", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0" }}>
+              <div style={{ flex: 1, fontWeight: 600, fontSize: 13 }}>{sup.name}</div>
+              <select
+                value={sup.inventoryCategory || "other"}
+                onChange={e => setSuppliers(p => p.map(s => s.id === sup.id ? { ...s, inventoryCategory: e.target.value } : s))}
+                style={{ ...inputStyle, width: "auto", minWidth: 200 }}>
+                {cats.map(cat => <option key={cat.id} value={cat.id}>{cat.emoji} {cat.label}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
 }
+
+
 const INVENTORY_CATEGORIES = [
   { id: "naknikiyot", label: "🌭 נקניקיות — הנדלס", color: "#ef4444", supplierKeyword: "הנדלס" },
   { id: "shtiya_cola", label: "🥤 שתייה — קוקה קולה", color: "#22d3ee", supplierKeyword: "קוקה קולה" },
@@ -1810,7 +1964,7 @@ const INVENTORY_CATEGORIES = [
   { id: "other", label: "📦 שונות", color: "#94a3b8", supplierKeyword: "" },
 ];
 
-function Inventory({ inventory, setInventory, products, invoices, deliveries, suppliers }) {
+function Inventory({ inventory, setInventory, products, invoices, deliveries, suppliers, inventoryCategories: dynCats, setSuppliers }) {
   const [countDate, setCountDate] = useState(today());
   const [countType, setCountType] = useState("סגירה");
   const [counts, setCounts] = useState({});
@@ -1824,8 +1978,8 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
 
   const allProducts = products;
   const sup = (supplierId) => suppliers.find(s => s.id === supplierId)?.name || "";
+  const CATS = dynCats && dynCats.length > 0 ? dynCats : CATS;
 
-  // Assign product to category by supplier.inventoryCategory field (set in Suppliers tab)
   const getCatForProduct = (prod) => {
     const supplier = suppliers.find(s => s.id === prod.supplierId);
     return supplier?.inventoryCategory || "other";
@@ -1871,7 +2025,7 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div style={{ color: "#888", fontSize: 13 }}>ניהול מלאי — ספירות ודוחות</div>
-        <Btn onClick={() => { setShowCount(!showCount); if (!showCount) setOpenCats(Object.fromEntries(INVENTORY_CATEGORIES.map(c => [c.id, true]))); }}
+        <Btn onClick={() => { setShowCount(!showCount); if (!showCount) setOpenCats(Object.fromEntries(CATS.map(c => [c.id, true]))); }}
           style={showCount ? { background: "#666" } : { background: "#6366f1" }}>
           {showCount ? "✕ סגור ספירה" : "📝 ספירת מלאי חדשה"}
         </Btn>
@@ -1892,7 +2046,7 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
           </div>
 
           {/* Categories */}
-          {INVENTORY_CATEGORIES.map(cat => {
+          {CATS.map(cat => {
             const catProds = allProducts.filter(p => getCatForProduct(p) === cat.id);
             if (catProds.length === 0) return null;
             const catCounted = catProds.filter(p => counts[p.id] !== undefined && counts[p.id] !== "").length;
@@ -1954,7 +2108,7 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
                 <option>פתיחה</option><option>סגירה</option>
               </select>
             </div>
-            {INVENTORY_CATEGORIES.map(cat => {
+            {CATS.map(cat => {
               const catProds = allProducts.filter(p => getCatForProduct(p) === cat.id);
               if (catProds.length === 0) return null;
               return (
