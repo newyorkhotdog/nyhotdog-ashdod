@@ -1979,7 +1979,7 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
 
   const allProducts = products;
   const sup = (supplierId) => suppliers.find(s => s.id === supplierId)?.name || "";
-  const CATS = dynCats && dynCats.length > 0 ? dynCats : CATS;
+  const CATS = dynCats && dynCats.length > 0 ? dynCats : INVENTORY_CATEGORIES;
 
   const getCatForProduct = (prod) => {
     const supplier = suppliers.find(s => s.id === prod.supplierId);
