@@ -948,8 +948,24 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
 
       {scanError && <div style={{ background: "#1a0505", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", color: "#f87171", fontSize: 13 }}>❌ {scanError}</div>}
 
+      {/* Lightbox */}
+      {showLightbox && originalImageUrl && (
+        <div onClick={() => setShowLightbox(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.93)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}>
+          <img src={originalImageUrl} style={{ maxWidth: "95vw", maxHeight: "95vh", objectFit: "contain", borderRadius: 8 }} alt="חשבונית מקורית" />
+          <div style={{ position: "absolute", top: 16, right: 16, background: "#1e293b", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 13 }}>לחץ לסגירה ✕</div>
+        </div>
+      )}
+
       {scanResult && (
         <Card title="📋 תוצאת סריקה — ערוך ואשר">
+          {/* Magnifier button */}
+          {originalImageUrl && (
+            <div style={{ marginBottom: 12 }}>
+              <button onClick={() => setShowLightbox(true)} style={{ background: "#1e293b", border: "1px solid #6366f1", color: "#a78bfa", borderRadius: 8, padding: "7px 16px", cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
+                🔍 הצג חשבונית מקורית להשוואה
+              </button>
+            </div>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div>
@@ -965,25 +981,42 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
             </div>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
-            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר ליחידה</Th><Th>סה״כ שורה</Th><Th></Th></tr></thead>
+            <thead><tr style={{ color: "#94a3b8", borderBottom: "1px solid #334155" }}><Th>פריט (ערוך/בחר מרשימה)</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר ליחידה</Th><Th>סה״כ</Th><Th></Th></tr></thead>
             <tbody>
-              {(scanResult.items || []).map((item, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid #1e293b" }}>
-                  <Td><input value={item.name || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: e.target.value } : it) }))} style={{ ...inputStyle, width: "100%" }} /></Td>
-                  <Td><input type="number" value={item.qty || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70, textAlign: "center" }} /></Td>
-                  <Td>
-                    <select value={item.unit || "יחידה"} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, unit: e.target.value } : it) }))} style={{ ...inputStyle }}>
-                      {['ק"ג', "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}
-                    </select>
-                  </Td>
-                  <Td><input type="number" value={item.price || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, textAlign: "center", color: "#22d3ee" }} /></Td>
-                  <Td style={{ color: "#a78bfa", fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
-                  <Td><button onClick={() => setScanResult(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
-                </tr>
-              ))}
+              {(scanResult.items || []).map((item, i) => {
+                const sup = suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
+                const supProds = sup ? products.filter(p => p.supplierId === sup.id) : [];
+                const matchedProd = supProds.find(p => p.name.trim() === item.name?.trim());
+                return (
+                  <tr key={i} style={{ borderBottom: "1px solid #1e293b" }}>
+                    <Td>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <input value={item.name || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: e.target.value } : it) }))} style={{ ...inputStyle, width: "100%", color: matchedProd ? "#22c55e" : "#e2e8f0", fontSize: 12 }} placeholder="שם פריט" />
+                        {supProds.length > 0 && (
+                          <select onChange={e => { if (e.target.value) { const p = supProds.find(x => x.id === e.target.value); if (p) setScanResult(prev => ({ ...prev, items: prev.items.map((it, idx) => idx === i ? { ...it, name: p.name, unit: p.unit, price: String(p.basePrice) } : it) })); e.target.value = ""; }}} style={{ ...inputStyle, fontSize: 11, color: "#94a3b8" }}>
+                            <option value="">🔗 קשר לפריט קיים...</option>
+                            {supProds.map(p => <option key={p.id} value={p.id}>{p.name} | בסיס: ₪{fmt(p.basePrice)}</option>)}
+                          </select>
+                        )}
+                        {matchedProd && <div style={{ fontSize: 10, color: "#22c55e" }}>✓ מקושר למוצר במערכת</div>}
+                      </div>
+                    </Td>
+                    <Td><input type="number" value={item.qty || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70, textAlign: "center" }} /></Td>
+                    <Td>
+                      <select value={item.unit || "יחידה"} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, unit: e.target.value } : it) }))} style={{ ...inputStyle, minWidth: 70 }}>
+                        {['ק"ג', "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}
+                      </select>
+                    </Td>
+                    <Td><input type="number" value={item.price || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, textAlign: "center", color: "#22d3ee" }} /></Td>
+                    <Td style={{ color: "#a78bfa", fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
+                    <Td><button onClick={() => setScanResult(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
+                  </tr>
+                );
+              })}
               <tr style={{ borderTop: "2px solid #334155", fontWeight: 700 }}>
                 <Td colSpan={4} style={{ color: "#94a3b8" }}>סה״כ</Td>
                 <Td style={{ color: "#22c55e" }}>₪{fmt((scanResult.items || []).reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0))}</Td>
+                <Td></Td>
               </tr>
             </tbody>
           </table>
