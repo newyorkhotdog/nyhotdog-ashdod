@@ -165,7 +165,7 @@ export default function App() {
       </div>
 
       <div style={{ padding: 24, background: "#f1f5f9", minHeight: "calc(100vh - 120px)" }}>
-        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} />}
+        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} />}
         {tab === "invoices" && <Invoices invoices={invoices} setInvoices={setInvoices} suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} settings={settings} pending={pending} setPending={setPending} />}
         {tab === "sales" && <Sales sales={sales} setSales={setSales} />}
@@ -182,7 +182,7 @@ export default function App() {
   );
 }
 
-function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [] }) {
+function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [] }) {
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -273,7 +273,16 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   const totalKupa = monthlySales.reduce((a, s) => a + (parseFloat(s.kupa) || 0), 0);
   const totalWolt = monthlySales.reduce((a, s) => a + (parseFloat(s.wolt) || 0), 0);
   const monthlyInvoices = invoices.filter((i) => i.date?.startsWith(monthKey));
-  const totalCost = monthlyInvoices.reduce((a, i) => a + (parseFloat(i.total) || 0), 0);
+  const monthlyDeliveries = deliveries.filter((d) => d.date?.startsWith(monthKey));
+
+  // פוד קוסט חכם: ספק עם חשבונית החודש → חשבונית בלבד; ספק ללא חשבונית → תעודות משלוח
+  const suppliersWithInvoice = new Set(monthlyInvoices.map(i => i.supplierId));
+  const invoiceCost = monthlyInvoices.reduce((a, i) => a + (parseFloat(i.total) || 0), 0);
+  const deliveryCostNoInvoice = monthlyDeliveries
+    .filter(d => !suppliersWithInvoice.has(d.supplierId))
+    .reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
+  const totalCost = invoiceCost + deliveryCostNoInvoice;
+  const deliveryCovered = monthlyDeliveries.filter(d => suppliersWithInvoice.has(d.supplierId)).reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
   const foodCostPct = parseFloat(pct(totalCost, totalSales));
 
   // Labor cost
@@ -412,6 +421,16 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
               {primeCostPct <= 55 ? "✓ מצוין" : primeCostPct <= 65 ? "⚠ גבולי" : "✗ גבוה — נדרשת פעולה"}
               {" | "}יעד: מתחת ל-55%
             </div>
+            {deliveryCostNoInvoice > 0 && (
+              <div style={{ fontSize: 11, color: "#f59e0b", marginTop: 4 }}>
+                ⚠ כולל ₪{fmt(deliveryCostNoInvoice)} מתעודות משלוח ללא חשבונית
+              </div>
+            )}
+            {deliveryCovered > 0 && (
+              <div style={{ fontSize: 11, color: "#22c55e", marginTop: 2 }}>
+                ✓ ₪{fmt(deliveryCovered)} מתעודות — מכוסות ע"י חשבוניות (לא נספרות פעמיים)
+              </div>
+            )}
           </div>
           <div style={{ display: "flex", gap: 24 }}>
             <div style={{ textAlign: "center" }}>
@@ -471,7 +490,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
         <KpiCard label="מכירות החודש" value={`₪${fmt(totalSales)}`} accent="#0284c7" sub={`קופה ₪${fmt(totalKupa)} | וולט ₪${fmt(totalWolt)}`} />
-        <KpiCard label="עלות ספקים" value={`₪${fmt(totalCost)}`} accent="#64748b" sub={`${monthlyInvoices.length} חשבוניות`} />
+        <KpiCard label="עלות ספקים" value={`₪${fmt(totalCost)}`} accent="#64748b" sub={`${monthlyInvoices.length} חשבוניות${deliveryCostNoInvoice > 0 ? ` + ₪${fmt(deliveryCostNoInvoice)} תעודות` : ""}`} />
         <KpiCard label="פוד קוסט" value={<StatusBadge value={foodCostPct} settings={settings} />} accent="#f472b6" raw />
         <KpiCard label="עלות עבודה" value={`₪${fmt(totalLaborCost)}`} accent="#fb923c" sub={`${totalLaborHours.toFixed(1)} שעות`} />
         <KpiCard label="לייבור קוסט" value={<StatusBadge value={laborCostPct} settings={lcSettings} />} accent="#fb923c" raw />
@@ -2372,7 +2391,68 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
 
       {scanError && <div style={{ background: "#fff5f5", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", color: "#f87171", fontSize: 13 }}>❌ {scanError}</div>}
 
-      {scanResult && (
+      {showForm && (
+        <Card title="📋 הכנסת תעודת משלוח ידנית">
+          <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+            <select value={form.supplierId} onChange={e => setForm(f => ({ ...f, supplierId: e.target.value, items: [] }))} style={{ ...inputStyle, flex: 2 }}>
+              <option value="">— בחר ספק —</option>
+              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, flex: 1 }} />
+            <input value={form.deliveryNum} onChange={e => setForm(f => ({ ...f, deliveryNum: e.target.value }))} placeholder="מס׳ תעודה" style={{ ...inputStyle, flex: 1 }} />
+          </div>
+
+          {form.supplierId && (
+            <>
+              <div style={{ background: "#f8fafc", borderRadius: 8, padding: "12px 14px", marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>הוספת פריט:</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <select value={newItem.productId} onChange={e => {
+                    const prod = products.find(p => p.id === e.target.value);
+                    setNewItem(p => ({ ...p, productId: e.target.value, price: prod ? String(prod.basePrice) : "" }));
+                  }} style={{ ...inputStyle, flex: 3 }}>
+                    <option value="">— בחר פריט —</option>
+                    {supProducts.map(p => <option key={p.id} value={p.id}>{p.name} | בסיס: ₪{fmt(p.basePrice)}/{p.unit}</option>)}
+                  </select>
+                  <input value={newItem.qty} onChange={e => setNewItem(p => ({ ...p, qty: e.target.value }))} placeholder="כמות" type="number" style={{ ...inputStyle, flex: 1, minWidth: 70 }} />
+                  <input value={newItem.price} onChange={e => setNewItem(p => ({ ...p, price: e.target.value }))} placeholder="מחיר ₪" type="number" style={{ ...inputStyle, flex: 1, minWidth: 90 }} />
+                  <Btn onClick={addItem}>הוסף</Btn>
+                </div>
+              </div>
+
+              {form.items.length > 0 && (
+                <>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
+                    <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>כמות</Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th></tr></thead>
+                    <tbody>
+                      {form.items.map(item => {
+                        const prod = products.find(p => p.id === item.productId);
+                        return (
+                          <tr key={item.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                            <Td>{prod?.name}</Td>
+                            <Td>{item.qty} {prod?.unit}</Td>
+                            <Td style={{ color: "#1e293b" }}>₪{fmt(item.price)}</Td>
+                            <Td style={{ color: "#22c55e", fontWeight: 700 }}>₪{fmt(parseFloat(item.price) * parseFloat(item.qty))}</Td>
+                            <Td><button onClick={() => setForm(f => ({ ...f, items: f.items.filter(x => x.id !== item.id) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button></Td>
+                          </tr>
+                        );
+                      })}
+                      <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
+                        <Td colSpan={3} style={{ color: "#64748b" }}>סה״כ</Td>
+                        <Td style={{ color: "#22c55e" }}>₪{fmt(form.items.reduce((a, i) => a + parseFloat(i.price) * parseFloat(i.qty), 0))}</Td>
+                        <Td></Td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <Btn onClick={saveDelivery} style={{ background: "#22c55e" }}>✅ שמור תעודה</Btn>
+                </>
+              )}
+            </>
+          )}
+        </Card>
+      )}
+
+
         <Card title="📋 תעודת משלוח — בדוק ואשר">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div><input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, color: "#1e293b", fontWeight: 700 }} /></div>
