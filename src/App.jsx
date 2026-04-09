@@ -2454,6 +2454,7 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
       )}
 
 
+      {scanResult && (
         <Card title="📋 תעודת משלוח — בדוק ואשר">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div><input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, color: "#1e293b", fontWeight: 700 }} /></div>
