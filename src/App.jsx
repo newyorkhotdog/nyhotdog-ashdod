@@ -2382,16 +2382,38 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
             <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th></tr></thead>
             <tbody>
-              {(scanResult.items || []).map((item, i) => (
+              {(scanResult.items || []).map((item, i) => {
+                const sup = suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
+                const supProds = sup ? products.filter(p => p.supplierId === sup.id) : [];
+                return (
                 <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                  <Td><input value={item.name || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: e.target.value } : it) }))} style={{ ...inputStyle, width: "100%" }} /></Td>
+                  <Td>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <input value={item.name || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: e.target.value } : it) }))} style={{ ...inputStyle, width: "100%" }} placeholder="שם פריט" />
+                      {supProds.length > 0 && (
+                        <select
+                          onChange={e => {
+                            if (!e.target.value) return;
+                            const prod = supProds.find(p => p.id === e.target.value);
+                            if (prod) setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: prod.name, unit: prod.unit, price: String(prod.basePrice) } : it) }));
+                            e.target.value = "";
+                          }}
+                          style={{ ...inputStyle, fontSize: 11, color: "#64748b" }}
+                        >
+                          <option value="">🔗 החלף לפריט מהמערכת...</option>
+                          {supProds.map(p => <option key={p.id} value={p.id}>{p.name} | {p.unit} | ₪{fmt(p.basePrice)}</option>)}
+                        </select>
+                      )}
+                    </div>
+                  </Td>
                   <Td><input type="number" value={item.qty || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70 }} /></Td>
                   <Td><select value={item.unit || "יחידה"} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, unit: e.target.value } : it) }))} style={inputStyle}>{['ק"ג', "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}</select></Td>
                   <Td><input type="number" value={item.price || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, color: "#1e293b" }} /></Td>
                   <Td style={{ color: "#1e293b", fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
                   <Td><button onClick={() => setScanResult(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
                 </tr>
-              ))}
+                );
+              })}
               <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
                 <Td colSpan={4} style={{ color: "#64748b" }}>סה״כ</Td>
                 <Td style={{ color: "#22c55e" }}>₪{fmt((scanResult.items || []).reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0))}</Td>
