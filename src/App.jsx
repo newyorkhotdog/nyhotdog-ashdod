@@ -2316,7 +2316,7 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
           messages: [{ role: "user", content: [
-            { type: isPdf ? "document" : "image", source: { type: "base64", media_type: fileMediaType, data: base64 } },
+            { type: isPdf ? "document" : "image", source: { type: "base64", media_type: isPdf ? "application/pdf" : file.type || "image/jpeg", data: base64 } },
             { type: "text", text: 'קרא את תעודת המשלוח הזו והחזר JSON בלבד:\n{"supplierName":"שם הספק","date":"YYYY-MM-DD","deliveryNum":"מספר תעודה","items":[{"name":"שם פריט","unit":"יחידת מידה","qty":1.0,"price":0.0}],"total":0.0}' }
           ]}]
         })
