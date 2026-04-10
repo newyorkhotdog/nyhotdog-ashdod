@@ -1688,10 +1688,11 @@ function Hours({ hours, setHours, employees, sales, settings }) {
   const [form, setForm] = useState({ date: today(), employeeId: "", hours: "" });
   const [editId, setEditId] = useState(null);
   const [editHours, setEditHours] = useState("");
+  const [importPreview, setImportPreview] = useState(null);
+  const [importError, setImportError] = useState("");
 
   const addHours = () => {
     if (!form.date || !form.employeeId || !form.hours) return;
-    // Check if same employee + date already exists → update
     const existing = hours.findIndex((h) => h.date === form.date && h.employeeId === form.employeeId);
     if (existing >= 0) {
       setHours((p) => p.map((h, i) => i === existing ? { ...h, hours: form.hours } : h));
@@ -1704,6 +1705,117 @@ function Hours({ hours, setHours, employees, sales, settings }) {
   const saveEdit = (id) => {
     setHours((p) => p.map((h) => h.id === id ? { ...h, hours: editHours } : h));
     setEditId(null);
+  };
+
+  // ייבוא מיכפל CSV
+  const importMichpal = async (file) => {
+    setImportError("");
+    setImportPreview(null);
+    try {
+      const buffer = await file.arrayBuffer();
+      // Decode windows-1255
+      const decoder = new TextDecoder("windows-1255");
+      const text = decoder.decode(buffer);
+      const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+      // Parse rows: תאריך,שעה,קוד פעולה,זיהוי כרטיס,זיהוי בפוזיטיב,מספר חנות
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",");
+        if (cols.length < 5) continue;
+        const dateStr = cols[0].trim(); // DD/MM/YYYY
+        const timeStr = cols[1].trim(); // HH:MM:SS
+        const action = cols[2].trim();  // 0=כניסה, 1=יציאה
+        const identity = cols[4].trim(); // "ID - שם - מספר"
+        if (!dateStr || !timeStr) continue;
+
+        // Parse date DD/MM/YYYY → YYYY-MM-DD
+        const [dd, mm, yyyy] = dateStr.split("/");
+        const isoDate = `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+
+        // Extract employee name from "97589 - נהוראי מלול - 7078"
+        const parts = identity.split(" - ");
+        const empName = parts.length >= 2 ? parts[1].trim() : identity;
+
+        rows.push({ date: isoDate, time: timeStr, action, empName });
+      }
+
+      // Match pairs: כניסה (0) + יציאה (1) per employee per day
+      const sessions = {};
+      rows.forEach(r => {
+        const key = `${r.date}_${r.empName}`;
+        if (!sessions[key]) sessions[key] = { date: r.date, empName: r.empName, entries: [], exits: [] };
+        if (r.action === "0") sessions[key].entries.push(r.time);
+        else sessions[key].exits.push(r.time);
+      });
+
+      // Calculate hours per session
+      const preview = [];
+      Object.values(sessions).forEach(s => {
+        if (s.entries.length === 0 || s.exits.length === 0) {
+          // Only entry or only exit — skip but warn
+          return;
+        }
+        // Sort entries and exits
+        s.entries.sort();
+        s.exits.sort();
+        // Match first entry with last exit (covers overnight shifts too)
+        const entryTime = s.entries[0];
+        const exitTime = s.exits[s.exits.length - 1];
+
+        const [eh, em, es] = entryTime.split(":").map(Number);
+        let [xh, xm, xs] = exitTime.split(":").map(Number);
+
+        let entryMins = eh * 60 + em;
+        let exitMins = xh * 60 + xm;
+
+        // Handle overnight shift (exit before entry time)
+        if (exitMins < entryMins) exitMins += 24 * 60;
+
+        const totalHours = Math.round((exitMins - entryMins) / 60 * 4) / 4; // Round to 0.25
+
+        // Try to match employee name to system employees
+        const matchedEmp = employees.find(e =>
+          e.name.includes(s.empName) || s.empName.includes(e.name) ||
+          e.name.split(" ")[0] === s.empName.split(" ")[0]
+        );
+
+        preview.push({
+          date: s.date,
+          empName: s.empName,
+          employeeId: matchedEmp?.id || null,
+          entry: entryTime,
+          exit: exitTime,
+          hours: totalHours,
+          matched: !!matchedEmp
+        });
+      });
+
+      if (preview.length === 0) throw new Error("לא נמצאו משמרות מלאות בקובץ");
+      preview.sort((a, b) => a.date.localeCompare(b.date) || a.empName.localeCompare(b.empName));
+      setImportPreview(preview);
+    } catch(e) {
+      setImportError("שגיאה: " + e.message);
+    }
+  };
+
+  const confirmImport = () => {
+    if (!importPreview) return;
+    let updated = [...hours];
+    let added = 0, skipped = 0;
+    importPreview.forEach(row => {
+      if (!row.employeeId) { skipped++; return; }
+      const existing = updated.findIndex(h => h.date === row.date && h.employeeId === row.employeeId);
+      if (existing >= 0) {
+        updated[existing] = { ...updated[existing], hours: String(row.hours) };
+      } else {
+        updated.push({ id: Date.now().toString() + Math.random(), date: row.date, employeeId: row.employeeId, hours: String(row.hours) });
+        added++;
+      }
+    });
+    setHours(updated);
+    setImportPreview(null);
+    alert(`✅ יובאו ${added} רשומות${skipped > 0 ? ` | ${skipped} דולגו (עובד לא מזוהה)` : ""}`);
   };
 
   const monthHours = hours.filter((h) => h.date?.startsWith(monthKey));
@@ -1736,7 +1848,8 @@ function Hours({ hours, setHours, employees, sales, settings }) {
         {employees.length === 0
           ? <div style={{ color: "#64748b", fontSize: 13 }}>יש להוסיף עובדים קודם בטאב 👷 עובדים</div>
           : (
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 12 }}>
               <div>
                 <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>תאריך</label>
                 <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, minWidth: 155 }} />
@@ -1756,8 +1869,57 @@ function Hours({ hours, setHours, employees, sales, settings }) {
               </div>
               <Btn onClick={addHours}>💾 שמור</Btn>
             </div>
+            <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+              <label style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontSize: 13, color: "#475569", fontWeight: 600 }}>
+                📂 ייבוא מיכפל CSV
+                <input type="file" accept=".csv" style={{ display: "none" }} onChange={e => e.target.files[0] && importMichpal(e.target.files[0])} />
+              </label>
+              <span style={{ fontSize: 12, color: "#94a3b8" }}>מייבא שעות אוטומטית מקובץ נוכחות מיכפל</span>
+            </div>
+            {importError && <div style={{ marginTop: 8, color: "#ef4444", fontSize: 13 }}>❌ {importError}</div>}
+            </>
           )}
       </Card>
+
+      {importPreview && (
+        <Card title={`📋 תצוגה מקדימה — ${importPreview.length} משמרות`}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
+                <Th>תאריך</Th><Th>עובד (מקובץ)</Th><Th>התאמה במערכת</Th><Th>כניסה</Th><Th>יציאה</Th><Th>שעות</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {importPreview.map((row, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid #e2e8f0", background: !row.matched ? "#fffbeb" : "transparent" }}>
+                  <Td>{row.date}</Td>
+                  <Td style={{ fontWeight: 600 }}>{row.empName}</Td>
+                  <Td>
+                    {row.matched
+                      ? <span style={{ color: "#22c55e", fontSize: 12 }}>✓ {employees.find(e => e.id === row.employeeId)?.name}</span>
+                      : <select
+                          style={{ ...inputStyle, fontSize: 12, padding: "4px 8px" }}
+                          value={row.employeeId || ""}
+                          onChange={e => setImportPreview(p => p.map((r, idx) => idx === i ? { ...r, employeeId: e.target.value, matched: !!e.target.value } : r))}
+                        >
+                          <option value="">— לא זוהה — בחר ידנית</option>
+                          {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                        </select>
+                    }
+                  </Td>
+                  <Td style={{ color: "#64748b" }}>{row.entry}</Td>
+                  <Td style={{ color: "#64748b" }}>{row.exit}</Td>
+                  <Td style={{ fontWeight: 700, color: "#fb923c" }}>{row.hours}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn onClick={confirmImport} style={{ background: "#22c55e" }}>✅ אשר וייבא</Btn>
+            <Btn onClick={() => setImportPreview(null)} style={{ background: "#94a3b8" }}>✕ בטל</Btn>
+          </div>
+        </Card>
+      )}
 
       <Card title="שעות חודש נוכחי">
         {Object.keys(byDate).length === 0 && <div style={{ color: "#64748b", fontSize: 13 }}>אין שעות מוזנות לחודש זה</div>}
