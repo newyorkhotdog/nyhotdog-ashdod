@@ -1777,15 +1777,21 @@ function Hours({ hours, setHours, employees, sales, settings }) {
         // Try to match employee name to system employees
         const normalize = s => s.trim().replace(/\s+/g, " ").replace(/['"]/g, "");
         const similarity = (a, b) => {
-          // Count matching characters
           const aChars = [...a.replace(/\s/g,"")];
           const bChars = [...b.replace(/\s/g,"")];
           const matches = aChars.filter(c => bChars.includes(c)).length;
           return matches / Math.max(aChars.length, bChars.length);
         };
+        const csvName = normalize(s.empName);
+        console.log("=== MATCHING ===");
+        console.log("CSV name chars:", [...csvName].map(c => `${c}(${c.charCodeAt(0)})`).join(" "));
+        employees.forEach(e => {
+          const eName = normalize(e.name);
+          console.log("Employee chars:", [...eName].map(c => `${c}(${c.charCodeAt(0)})`).join(" "));
+          console.log("Equal?", eName === csvName, "| Similarity:", similarity(eName, csvName));
+        });
         const matchedEmp = employees.find(e => {
           const eName = normalize(e.name);
-          const csvName = normalize(s.empName);
           return eName === csvName ||
             eName.includes(csvName) ||
             csvName.includes(eName) ||
