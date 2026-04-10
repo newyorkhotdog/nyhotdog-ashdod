@@ -1740,74 +1740,71 @@ function Hours({ hours, setHours, employees, sales, settings }) {
         rows.push({ date: isoDate, time: timeStr, action, empName });
       }
 
-      // Match pairs: כניסה (0) + יציאה (1) per employee per day
-      const sessions = {};
+      // Match pairs: כניסה (0) + יציאה (1) per employee
+      // מטפל במשמרות לילה שחוצות חצות (כניסה ביום X, יציאה ביום X+1)
+      const entriesByEmp = {};
+      const exitsByEmp = {};
       rows.forEach(r => {
-        const key = `${r.date}_${r.empName}`;
-        if (!sessions[key]) sessions[key] = { date: r.date, empName: r.empName, entries: [], exits: [] };
-        if (r.action === "0") sessions[key].entries.push(r.time);
-        else sessions[key].exits.push(r.time);
+        if (!entriesByEmp[r.empName]) entriesByEmp[r.empName] = [];
+        if (!exitsByEmp[r.empName]) exitsByEmp[r.empName] = [];
+        if (r.action === "0") entriesByEmp[r.empName].push(r);
+        else exitsByEmp[r.empName].push(r);
       });
 
-      // Calculate hours per session
+      // Calculate hours per session — match each entry with nearest exit after it
       const preview = [];
-      Object.values(sessions).forEach(s => {
-        if (s.entries.length === 0 || s.exits.length === 0) {
-          // Only entry or only exit — skip but warn
-          return;
-        }
-        // Sort entries and exits
-        s.entries.sort();
-        s.exits.sort();
-        // Match first entry with last exit (covers overnight shifts too)
-        const entryTime = s.entries[0];
-        const exitTime = s.exits[s.exits.length - 1];
+      Object.keys(entriesByEmp).forEach(empName => {
+        const entries = entriesByEmp[empName].sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+        const exits = exitsByEmp[empName] ? [...exitsByEmp[empName]].sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)) : [];
 
-        const [eh, em, es] = entryTime.split(":").map(Number);
-        let [xh, xm, xs] = exitTime.split(":").map(Number);
+        entries.forEach(entry => {
+          // Find nearest exit after this entry (same or next day)
+          const entryDT = new Date(`${entry.date}T${entry.time}`);
+          const matchExit = exits.find(x => {
+            const exitDT = new Date(`${x.date}T${x.time}`);
+            const diffMs = exitDT - entryDT;
+            return diffMs > 0 && diffMs < 24 * 3600 * 1000; // within 24 hours
+          });
 
-        let entryMins = eh * 60 + em;
-        let exitMins = xh * 60 + xm;
+          if (!matchExit) return; // no matching exit
 
-        // Handle overnight shift (exit before entry time)
-        if (exitMins < entryMins) exitMins += 24 * 60;
+          const entryDT2 = new Date(`${entry.date}T${entry.time}`);
+          const exitDT2 = new Date(`${matchExit.date}T${matchExit.time}`);
+          const totalHours = Math.round((exitDT2 - entryDT2) / 3600000 * 4) / 4;
 
-        const totalHours = Math.round((exitMins - entryMins) / 60 * 4) / 4; // Round to 0.25
+          // Remove used exit
+          const idx = exits.indexOf(matchExit);
+          if (idx > -1) exits.splice(idx, 1);
 
-        // Try to match employee name to system employees
-        const normalize = s => s.trim().replace(/\s+/g, " ").replace(/['"]/g, "");
-        const similarity = (a, b) => {
-          const aChars = [...a.replace(/\s/g,"")];
-          const bChars = [...b.replace(/\s/g,"")];
-          const matches = aChars.filter(c => bChars.includes(c)).length;
-          return matches / Math.max(aChars.length, bChars.length);
-        };
-        const csvName = normalize(s.empName);
-        console.log("=== MATCHING ===");
-        console.log("CSV name chars:", [...csvName].map(c => `${c}(${c.charCodeAt(0)})`).join(" "));
-        employees.forEach(e => {
-          const eName = normalize(e.name);
-          console.log("Employee chars:", [...eName].map(c => `${c}(${c.charCodeAt(0)})`).join(" "));
-          console.log("Equal?", eName === csvName, "| Similarity:", similarity(eName, csvName));
-        });
-        const matchedEmp = employees.find(e => {
-          const eName = normalize(e.name);
-          return eName === csvName ||
-            eName.includes(csvName) ||
-            csvName.includes(eName) ||
-            eName.split(" ")[0] === csvName.split(" ")[0] ||
-            eName.split(" ").pop() === csvName.split(" ").pop() ||
-            similarity(eName, csvName) > 0.85;
-        });
+          // Match employee name
+          const normalize = n => n.trim().replace(/\s+/g, " ").replace(/['"]/g, "");
+          const similarity = (a, b) => {
+            const aChars = [...a.replace(/\s/g,"")];
+            const bChars = [...b.replace(/\s/g,"")];
+            const matches = aChars.filter(c => bChars.includes(c)).length;
+            return matches / Math.max(aChars.length, bChars.length);
+          };
+          const csvName = normalize(empName);
+          const matchedEmp = employees.find(e => {
+            const eName = normalize(e.name);
+            return eName === csvName ||
+              eName.includes(csvName) ||
+              csvName.includes(eName) ||
+              eName.split(" ")[0] === csvName.split(" ")[0] ||
+              eName.split(" ").pop() === csvName.split(" ").pop() ||
+              similarity(eName, csvName) > 0.8;
+          });
 
-        preview.push({
-          date: s.date,
-          empName: s.empName,
-          employeeId: matchedEmp?.id || null,
-          entry: entryTime,
-          exit: exitTime,
-          hours: totalHours,
-          matched: !!matchedEmp
+          preview.push({
+            date: entry.date,
+            empName,
+            employeeId: matchedEmp?.id || null,
+            entry: entry.time,
+            exit: matchExit.time,
+            exitDate: matchExit.date,
+            hours: totalHours,
+            matched: !!matchedEmp
+          });
         });
       });
 
