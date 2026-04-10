@@ -1776,6 +1776,7 @@ function Hours({ hours, setHours, employees, sales, settings }) {
 
         // Try to match employee name to system employees
         const normalize = s => s.trim().replace(/\s+/g, " ");
+        console.log("CSV name:", JSON.stringify(normalize(s.empName)), "| Employees:", employees.map(e => JSON.stringify(normalize(e.name))));
         const matchedEmp = employees.find(e => {
           const eName = normalize(e.name);
           const csvName = normalize(s.empName);
