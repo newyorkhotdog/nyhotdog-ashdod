@@ -1775,8 +1775,14 @@ function Hours({ hours, setHours, employees, sales, settings }) {
         const totalHours = Math.round((exitMins - entryMins) / 60 * 4) / 4; // Round to 0.25
 
         // Try to match employee name to system employees
-        const normalize = s => s.trim().replace(/\s+/g, " ");
-        console.log("CSV name:", JSON.stringify(normalize(s.empName)), "| Employees:", employees.map(e => JSON.stringify(normalize(e.name))));
+        const normalize = s => s.trim().replace(/\s+/g, " ").replace(/['"]/g, "");
+        const similarity = (a, b) => {
+          // Count matching characters
+          const aChars = [...a.replace(/\s/g,"")];
+          const bChars = [...b.replace(/\s/g,"")];
+          const matches = aChars.filter(c => bChars.includes(c)).length;
+          return matches / Math.max(aChars.length, bChars.length);
+        };
         const matchedEmp = employees.find(e => {
           const eName = normalize(e.name);
           const csvName = normalize(s.empName);
@@ -1784,7 +1790,8 @@ function Hours({ hours, setHours, employees, sales, settings }) {
             eName.includes(csvName) ||
             csvName.includes(eName) ||
             eName.split(" ")[0] === csvName.split(" ")[0] ||
-            eName.split(" ").pop() === csvName.split(" ").pop();
+            eName.split(" ").pop() === csvName.split(" ").pop() ||
+            similarity(eName, csvName) > 0.85;
         });
 
         preview.push({
