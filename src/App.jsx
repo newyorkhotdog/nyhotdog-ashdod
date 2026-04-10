@@ -1775,10 +1775,16 @@ function Hours({ hours, setHours, employees, sales, settings }) {
         const totalHours = Math.round((exitMins - entryMins) / 60 * 4) / 4; // Round to 0.25
 
         // Try to match employee name to system employees
-        const matchedEmp = employees.find(e =>
-          e.name.includes(s.empName) || s.empName.includes(e.name) ||
-          e.name.split(" ")[0] === s.empName.split(" ")[0]
-        );
+        const normalize = s => s.trim().replace(/\s+/g, " ");
+        const matchedEmp = employees.find(e => {
+          const eName = normalize(e.name);
+          const csvName = normalize(s.empName);
+          return eName === csvName ||
+            eName.includes(csvName) ||
+            csvName.includes(eName) ||
+            eName.split(" ")[0] === csvName.split(" ")[0] ||
+            eName.split(" ").pop() === csvName.split(" ").pop();
+        });
 
         preview.push({
           date: s.date,
