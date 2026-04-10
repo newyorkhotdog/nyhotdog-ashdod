@@ -1776,23 +1776,14 @@ function Hours({ hours, setHours, employees, sales, settings }) {
           const idx = exits.indexOf(matchExit);
           if (idx > -1) exits.splice(idx, 1);
 
-          // Match employee name
+          // Match employee name — exact or partial match only (no fuzzy)
           const normalize = n => n.trim().replace(/\s+/g, " ").replace(/['"]/g, "");
-          const similarity = (a, b) => {
-            const aChars = [...a.replace(/\s/g,"")];
-            const bChars = [...b.replace(/\s/g,"")];
-            const matches = aChars.filter(c => bChars.includes(c)).length;
-            return matches / Math.max(aChars.length, bChars.length);
-          };
           const csvName = normalize(empName);
           const matchedEmp = employees.find(e => {
             const eName = normalize(e.name);
             return eName === csvName ||
               eName.includes(csvName) ||
-              csvName.includes(eName) ||
-              eName.split(" ")[0] === csvName.split(" ")[0] ||
-              eName.split(" ").pop() === csvName.split(" ").pop() ||
-              similarity(eName, csvName) > 0.8;
+              csvName.includes(eName);
           });
 
           preview.push({
