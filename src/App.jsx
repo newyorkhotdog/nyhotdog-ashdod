@@ -726,6 +726,8 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
   const [newSupPhone, setNewSupPhone] = useState("");
   const [editSupId, setEditSupId] = useState(null);
   const [editSupVals, setEditSupVals] = useState({ name: "", contact: "", phone: "" });
+  const [editProdId, setEditProdId] = useState(null);
+  const [editProdVals, setEditProdVals] = useState({ name: "", unit: "ק\"ג", basePrice: "" });
 
   const addSupplier = () => {
     if (!newSupName.trim()) return;
@@ -818,14 +820,39 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
                   <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>יחידה</Th><Th>מחיר בסיס (₪)</Th><Th></Th></tr></thead>
                   <tbody>
                     {supProds.map((p) => (
-                      <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                        <Td>{p.name}</Td>
-                        <Td style={{ color: "#64748b" }}>{p.unit}</Td>
-                        <Td>
-                          <input type="number" defaultValue={p.basePrice} onBlur={(e) => updateBasePrice(p.id, e.target.value)}
-                            style={{ ...inputStyle, width: 100, textAlign: "center" }} />
-                        </Td>
-                        <Td><button onClick={() => delProduct(p.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button></Td>
+                      <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0", background: editProdId === p.id ? "#fff8f8" : "transparent" }}>
+                        {editProdId === p.id ? (
+                          <>
+                            <Td><input value={editProdVals.name} onChange={e => setEditProdVals(v => ({ ...v, name: e.target.value }))} style={{ ...inputStyle, width: "100%" }} /></Td>
+                            <Td>
+                              <select value={editProdVals.unit} onChange={e => setEditProdVals(v => ({ ...v, unit: e.target.value }))} style={inputStyle}>
+                                {["ק\"ג", "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}
+                              </select>
+                            </Td>
+                            <Td><input type="number" value={editProdVals.basePrice} onChange={e => setEditProdVals(v => ({ ...v, basePrice: e.target.value }))} style={{ ...inputStyle, width: 100 }} /></Td>
+                            <Td>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => {
+                                  setProducts(prev => prev.map(pr => pr.id === p.id ? { ...pr, name: editProdVals.name, unit: editProdVals.unit, basePrice: parseFloat(editProdVals.basePrice) || 0 } : pr));
+                                  setEditProdId(null);
+                                }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>✓</button>
+                                <button onClick={() => setEditProdId(null)} style={{ background: "#e2e8f0", color: "#64748b", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 12 }}>✕</button>
+                              </div>
+                            </Td>
+                          </>
+                        ) : (
+                          <>
+                            <Td>{p.name}</Td>
+                            <Td style={{ color: "#64748b" }}>{p.unit}</Td>
+                            <Td>₪{fmt(p.basePrice)}</Td>
+                            <Td>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => { setEditProdId(p.id); setEditProdVals({ name: p.name, unit: p.unit, basePrice: String(p.basePrice) }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13 }}>✏️</button>
+                                <button onClick={() => delProduct(p.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button>
+                              </div>
+                            </Td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
