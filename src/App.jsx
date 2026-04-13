@@ -1842,10 +1842,19 @@ function Hours({ hours, setHours, employees, sales, settings }) {
     importPreview.forEach(row => {
       if (!row.employeeId) { skipped++; return; }
       const existing = updated.findIndex(h => h.date === row.date && h.employeeId === row.employeeId);
+      const record = {
+        id: Date.now().toString() + Math.random(),
+        date: row.date,
+        employeeId: row.employeeId,
+        hours: String(row.hours),
+        entryTime: row.entry,
+        exitTime: row.exit,
+        exitDate: row.exitDate,
+      };
       if (existing >= 0) {
-        updated[existing] = { ...updated[existing], hours: String(row.hours) };
+        updated[existing] = { ...updated[existing], hours: String(row.hours), entryTime: row.entry, exitTime: row.exit, exitDate: row.exitDate };
       } else {
-        updated.push({ id: Date.now().toString() + Math.random(), date: row.date, employeeId: row.employeeId, hours: String(row.hours) });
+        updated.push(record);
         added++;
       }
     });
@@ -1972,13 +1981,32 @@ function Hours({ hours, setHours, employees, sales, settings }) {
                 <span style={{ fontSize: 12, color: "#64748b" }}>{dayTotal.toFixed(1)} שעות | ₪{fmt(dayCost)}</span>
               </div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0", color: "#94a3b8", fontSize: 11 }}>
+                    <Th>עובד</Th><Th>▶ כניסה</Th><Th>■ יציאה</Th><Th>שעות</Th><Th>עלות</Th><Th></Th>
+                  </tr>
+                </thead>
                 <tbody>
                   {entries.map((h) => {
                     const emp = employees.find((e) => e.id === h.employeeId);
                     const cost = (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0);
                     return (
                       <tr key={h.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === h.id ? "#fff1f1" : "transparent" }}>
-                        <Td style={{ color: "#1e293b" }}>{emp?.name || "—"}</Td>
+                        <Td style={{ color: "#1e293b", fontWeight: 600 }}>{emp?.name || "—"}</Td>
+                        {/* שעות כניסה/יציאה */}
+                        <Td>
+                          {h.entryTime
+                            ? <span style={{ fontSize: 12, color: "#22c55e", fontWeight: 600 }}>▶ {h.entryTime.slice(0,5)}</span>
+                            : <span style={{ fontSize: 11, color: "#cbd5e1" }}>—</span>}
+                        </Td>
+                        <Td>
+                          {h.exitTime
+                            ? <span style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>
+                                ■ {h.exitTime.slice(0,5)}
+                                {h.exitDate && h.exitDate !== h.date && <span style={{ fontSize: 10, color: "#94a3b8", marginRight: 3 }}>(+1)</span>}
+                              </span>
+                            : <span style={{ fontSize: 11, color: "#cbd5e1" }}>—</span>}
+                        </Td>
                         {editId === h.id ? (
                           <>
                             <Td><input type="number" value={editHours} onChange={(e) => setEditHours(e.target.value)} step="0.5" style={{ ...inputStyle, width: 80 }} autoFocus /></Td>
