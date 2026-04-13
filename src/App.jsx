@@ -827,7 +827,7 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
               ? <div style={{ color: "#aaa", fontSize: 13 }}>הוסף פריטים לספק זה</div>
               : (
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>יחידה</Th><Th>מחיר בסיס (₪)</Th><Th>🔴 מינימום</Th><Th>🟢 מקסימום</Th><Th></Th></tr></thead>
+                  <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>יחידה</Th><Th>מחיר בסיס (₪)</Th><Th>יח׳ לאריזה</Th><Th>🔴 מינימום</Th><Th>🟢 מקסימום</Th><Th></Th></tr></thead>
                   <tbody>
                     {supProds.map((p) => (
                       <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0", background: editProdId === p.id ? "#fff8f8" : "transparent" }}>
@@ -840,12 +840,16 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
                               </select>
                             </Td>
                             <Td><input type="number" value={editProdVals.basePrice} onChange={e => setEditProdVals(v => ({ ...v, basePrice: e.target.value }))} style={{ ...inputStyle, width: 90 }} /></Td>
+                            <Td>
+                              <input type="number" value={editProdVals.unitsPerPack || ""} onChange={e => setEditProdVals(v => ({ ...v, unitsPerPack: e.target.value }))} placeholder="1" style={{ ...inputStyle, width: 70, color: "#0284c7" }} />
+                              <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>יח׳ ב{editProdVals.unit || "אריזה"}</div>
+                            </Td>
                             <Td><input type="number" value={editProdVals.minStock || ""} onChange={e => setEditProdVals(v => ({ ...v, minStock: e.target.value }))} placeholder="מינ׳" style={{ ...inputStyle, width: 70, color: "#dc2626" }} /></Td>
                             <Td><input type="number" value={editProdVals.maxStock || ""} onChange={e => setEditProdVals(v => ({ ...v, maxStock: e.target.value }))} placeholder="מקס׳" style={{ ...inputStyle, width: 70, color: "#16a34a" }} /></Td>
                             <Td>
                               <div style={{ display: "flex", gap: 6 }}>
                                 <button onClick={() => {
-                                  setProducts(prev => prev.map(pr => pr.id === p.id ? { ...pr, name: editProdVals.name, unit: editProdVals.unit, basePrice: parseFloat(editProdVals.basePrice) || 0, minStock: parseFloat(editProdVals.minStock) || 0, maxStock: parseFloat(editProdVals.maxStock) || 0 } : pr));
+                                  setProducts(prev => prev.map(pr => pr.id === p.id ? { ...pr, name: editProdVals.name, unit: editProdVals.unit, basePrice: parseFloat(editProdVals.basePrice) || 0, unitsPerPack: parseFloat(editProdVals.unitsPerPack) || 1, minStock: parseFloat(editProdVals.minStock) || 0, maxStock: parseFloat(editProdVals.maxStock) || 0 } : pr));
                                   setEditProdId(null);
                                 }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>✓</button>
                                 <button onClick={() => setEditProdId(null)} style={{ background: "#e2e8f0", color: "#64748b", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 12 }}>✕</button>
@@ -857,11 +861,12 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
                             <Td>{p.name}</Td>
                             <Td style={{ color: "#64748b" }}>{p.unit}</Td>
                             <Td>₪{fmt(p.basePrice)}</Td>
+                            <Td style={{ color: "#0284c7", fontWeight: 600 }}>{p.unitsPerPack > 1 ? `${p.unitsPerPack} יח׳` : <span style={{ color: "#cbd5e1" }}>—</span>}</Td>
                             <Td style={{ color: "#dc2626", fontWeight: p.minStock ? 700 : 400 }}>{p.minStock || <span style={{ color: "#cbd5e1" }}>—</span>}</Td>
                             <Td style={{ color: "#16a34a", fontWeight: p.maxStock ? 700 : 400 }}>{p.maxStock || <span style={{ color: "#cbd5e1" }}>—</span>}</Td>
                             <Td>
                               <div style={{ display: "flex", gap: 6 }}>
-                                <button onClick={() => { setEditProdId(p.id); setEditProdVals({ name: p.name, unit: p.unit, basePrice: String(p.basePrice), minStock: String(p.minStock || ""), maxStock: String(p.maxStock || "") }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13 }}>✏️</button>
+                                <button onClick={() => { setEditProdId(p.id); setEditProdVals({ name: p.name, unit: p.unit, basePrice: String(p.basePrice), unitsPerPack: String(p.unitsPerPack || ""), minStock: String(p.minStock || ""), maxStock: String(p.maxStock || "") }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13 }}>✏️</button>
                                 <button onClick={() => delProduct(p.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button>
                               </div>
                             </Td>
@@ -2286,11 +2291,15 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
     const candidates = [lastOpening, latestClosing, lastManual].filter(Boolean);
     if (candidates.length === 0) return null;
     const base = candidates.sort((a, b) => b.date.localeCompare(a.date))[0];
+    const prod = products.find(p => p.id === productId);
+    const upp = parseFloat(prod?.unitsPerPack) || 1; // יחידות לאריזה
     const entriesSince = [...invoices, ...deliveries]
       .flatMap(doc => (doc.items || []).map(item => ({ ...item, date: doc.date })))
       .filter(item => item.productId === productId && item.date > base.date)
-      .reduce((a, item) => a + parseFloat(item.qty || 0), 0);
-    return base.qty + entriesSince;
+      .reduce((a, item) => a + parseFloat(item.qty || 0) * upp, 0); // המרה ליחידות
+    // base.qty: אם עדכון ידני — כבר ביחידות. אם כניסה מחשבונית — בקרטונים
+    const baseInUnits = base.type === "עדכון ידני" ? base.qty : base.qty * upp;
+    return baseInUnits + entriesSince;
   };
 
   const getLevel = (qty, minStock, maxStock) => {
@@ -2378,7 +2387,10 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
 
                       {/* Product name */}
                       <div style={{ fontWeight: 700, fontSize: 13, color: "#1e293b", marginTop: 22, marginBottom: 2, lineHeight: 1.3 }}>{prod.name}</div>
-                      <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 8 }}>{sup(prod.supplierId)?.name || "—"}</div>
+                      <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 8 }}>
+                        {sup(prod.supplierId)?.name || "—"}
+                        {prod.unitsPerPack > 1 && <span style={{ marginRight: 6, color: "#0284c7", fontWeight: 600 }}>· {prod.unitsPerPack} יח׳/{prod.unit}</span>}
+                      </div>
 
                       {/* Always-visible quantity input */}
                       <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 8 }}>
