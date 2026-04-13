@@ -320,8 +320,14 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
 
   const supplierStats = suppliers.map((sup) => {
     const supInvoices = monthlyInvoices.filter((i) => i.supplierId === sup.id);
-    const cost = supInvoices.reduce((a, i) => a + (parseFloat(i.total) || 0), 0);
-    return { ...sup, cost, pct: parseFloat(pct(cost, totalSales)) };
+    const invoiceCostSup = supInvoices.reduce((a, i) => a + (parseFloat(i.total) || 0), 0);
+    // אם אין חשבונית לספק זה החודש — קח מתעודות משלוח
+    const hasInvoice = supInvoices.length > 0;
+    const deliveryCostSup = hasInvoice ? 0 : monthlyDeliveries
+      .filter(d => d.supplierId === sup.id)
+      .reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
+    const cost = invoiceCostSup + deliveryCostSup;
+    return { ...sup, cost, pct: parseFloat(pct(cost, totalSales)), fromDelivery: !hasInvoice && deliveryCostSup > 0 };
   }).filter((s) => s.cost > 0);
 
   const fcColor = foodCostPct <= settings.greenMax ? "#22c55e" : foodCostPct <= settings.yellowMax ? "#f59e0b" : "#ef4444";
@@ -563,7 +569,11 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
             <tbody>
               {supplierStats.map((s) => (
                 <tr key={s.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                  <Td>{s.name}</Td><Td>₪{fmt(s.cost)}</Td><Td>{s.pct}%</Td>
+                  <Td>
+                    {s.name}
+                    {s.fromDelivery && <span style={{ fontSize: 10, color: "#f59e0b", marginRight: 6, background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 4, padding: "1px 5px" }}>תעודה</span>}
+                  </Td>
+                  <Td>₪{fmt(s.cost)}</Td><Td>{s.pct}%</Td>
                   <Td><StatusBadge value={s.pct} settings={settings} /></Td>
                 </tr>
               ))}
