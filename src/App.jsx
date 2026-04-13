@@ -144,8 +144,8 @@ export default function App() {
       <div style={{ display: "flex", gap: 4, padding: "12px 24px 0", borderBottom: "1px solid #e2e8f0", overflowX: "auto" }}>
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
-            background: tab === t.id ? "#6366f1" : "transparent",
-            color: tab === t.id ? "#fff" : "#64748b",
+            background: tab === t.id ? "#cc0000" : "transparent",
+            color: tab === t.id ? "#ffffff" : "#334155",
             border: "none", borderRadius: "8px 8px 0 0", padding: "8px 16px",
             cursor: "pointer", fontSize: 13, fontWeight: tab === t.id ? 700 : 400,
             whiteSpace: "nowrap", transition: "all 0.2s", position: "relative"
@@ -1403,7 +1403,7 @@ function Sales({ sales, setSales }) {
       <Card title="📥 ייבוא נתוני מכירות">
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
           <div>
-            <label style={{ background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1, display: "inline-block" }}>
+            <label style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1, display: "inline-block" }}>
               {importing ? "⏳ מעבד..." : "🖥️ ייבוא מ-Caspit (Excel)"}
               <input type="file" accept=".xlsx,.xls" style={{ display: "none" }}
                 onChange={e => e.target.files[0] && parseXlsxSales(e.target.files[0])} disabled={importing} />
@@ -2714,7 +2714,7 @@ function KpiCard({ label, value, sub, accent, raw }) {
 function Btn({ onClick, children, style = {} }) {
   return (
     <button onClick={onClick} style={{
-      background: "#6366f1", color: "#fff", border: "none", borderRadius: 8,
+      background: "#cc0000", color: "#fff", border: "none", borderRadius: 8,
       padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13,
       transition: "opacity 0.15s", whiteSpace: "nowrap", ...style
     }}
