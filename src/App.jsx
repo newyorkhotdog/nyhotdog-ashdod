@@ -2482,6 +2482,8 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState("");
+  const [expandedDelivery, setExpandedDelivery] = useState(null);
+  const [editDelivery, setEditDelivery] = useState(null);
 
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -2519,22 +2521,43 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
   const scanDelivery = async (file) => {
     setScanning(true); setScanResult(null); setScanError("");
     try {
-      const base64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result.split(",")[1]);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
       const isPdf = file.type === "application/pdf";
+      let base64, mediaType;
+      if (isPdf) {
+        base64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
+        mediaType = "application/pdf";
+      } else {
+        const compressed = await compressImage(file);
+        base64 = compressed.base64;
+        mediaType = compressed.mediaType;
+      }
       const response = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
+          max_tokens: 1500,
           messages: [{ role: "user", content: [
-            { type: isPdf ? "document" : "image", source: { type: "base64", media_type: isPdf ? "application/pdf" : file.type || "image/jpeg", data: base64 } },
-            { type: "text", text: 'קרא את תעודת המשלוח הזו והחזר JSON בלבד:\n{"supplierName":"שם הספק","date":"YYYY-MM-DD","deliveryNum":"מספר תעודה","items":[{"name":"שם פריט","unit":"יחידת מידה","qty":1.0,"price":0.0}],"total":0.0}' }
+            { type: isPdf ? "document" : "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+            { type: "text", text: `אתה מומחה בקריאת תעודות משלוח בעברית. קרא את כל הטקסט בתמונה בקפידה.
+
+חלץ את המידע הבא והחזר JSON בלבד (ללא טקסט נוסף, ללא \`\`\`):
+{
+  "supplierName": "שם הספק/ספק המוצר כפי שמופיע בתעודה",
+  "date": "YYYY-MM-DD",
+  "deliveryNum": "מספר התעודה",
+  "items": [
+    {"name": "שם המוצר המדויק", "unit": "יחידת מידה (ק\"ג/יחידה/ליטר/קרטון)", "qty": 0.0, "price": 0.0}
+  ],
+  "total": 0.0
+}
+
+הנחיות:
+- שם הספק: חפש בראש התעודה — שם חברה, לוגו, או "מוכר"/"ספק"
+- תאריך: המר לפורמט YYYY-MM-DD
+- פריטים: כל שורת מוצר עם כמות ומחיר
+- מחיר: מחיר ליחידה (לא סה"כ שורה)
+- אם לא בטוח — כתוב את מה שרואים ישירות` }
           ]}]
         })
       });
@@ -2740,19 +2763,116 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
           </select>
         </div>
         {filteredDeliveries.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>אין תעודות משלוח עדיין</div>}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[...filteredDeliveries].reverse().map(d => {
             const sup = suppliers.find(s => s.id === d.supplierId);
+            const isOpen = expandedDelivery === d.id;
+            const isEditing = editDelivery?.id === d.id;
             return (
-              <div key={d.id} style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>{sup?.name || "ספק לא ידוע"}</div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>{d.date} | תעודה {d.deliveryNum || "—"} | {(d.items || []).length} פריטים</div>
+              <div key={d.id} style={{ border: `1px solid ${isOpen ? "#cc0000" : "#e2e8f0"}`, borderRadius: 10, overflow: "hidden" }}>
+                {/* Header row */}
+                <div onClick={() => { setExpandedDelivery(isOpen ? null : d.id); setEditDelivery(null); }}
+                  style={{ background: isOpen ? "#fff8f8" : "#ffffff", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{sup?.name || "ספק לא ידוע"}</div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{d.date} | תעודה {d.deliveryNum || "—"} | {(d.items || []).length} פריטים</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ color: "#cc0000", fontWeight: 800, fontSize: 15 }}>₪{fmt(d.total)}</span>
+                    <span style={{ color: "#64748b", fontSize: 13 }}>{isOpen ? "▲" : "▼"}</span>
+                  </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ color: "#1e293b", fontWeight: 800, fontSize: 15 }}>₪{fmt(d.total)}</span>
-                  <button onClick={() => { if (window.confirm("למחוק תעודה זו?")) setDeliveries(p => p.filter(x => x.id !== d.id)); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
-                </div>
+
+                {/* Expanded detail */}
+                {isOpen && (
+                  <div style={{ borderTop: "1px solid #e2e8f0", padding: 16 }}>
+                    {isEditing ? (
+                      // Edit mode
+                      <>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div>
+                            <select value={editDelivery.supplierId} onChange={e => setEditDelivery(p => ({ ...p, supplierId: e.target.value }))} style={inputStyle}>
+                              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div>
+                            <input type="date" value={editDelivery.date} onChange={e => setEditDelivery(p => ({ ...p, date: e.target.value }))} style={inputStyle} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ תעודה</div>
+                            <input value={editDelivery.deliveryNum || ""} onChange={e => setEditDelivery(p => ({ ...p, deliveryNum: e.target.value }))} style={inputStyle} />
+                          </div>
+                        </div>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 12 }}>
+                          <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th></tr></thead>
+                          <tbody>
+                            {(editDelivery.items || []).map((item, i) => {
+                              const prod = products.find(p => p.id === item.productId);
+                              const supProds = products.filter(p => p.supplierId === editDelivery.supplierId);
+                              return (
+                                <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                  <Td>
+                                    <select value={item.productId || ""} onChange={e => {
+                                      const p = products.find(x => x.id === e.target.value);
+                                      setEditDelivery(prev => ({ ...prev, items: prev.items.map((it, idx) => idx === i ? { ...it, productId: e.target.value, price: p ? String(p.basePrice) : it.price } : it) }));
+                                    }} style={{ ...inputStyle, fontSize: 12 }}>
+                                      <option value="">— בחר פריט —</option>
+                                      {supProds.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
+                                  </Td>
+                                  <Td><input type="number" value={item.qty} onChange={e => setEditDelivery(prev => ({ ...prev, items: prev.items.map((it, idx) => idx === i ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70 }} /></Td>
+                                  <Td style={{ color: "#64748b" }}>{prod?.unit || "—"}</Td>
+                                  <Td><input type="number" value={item.price} onChange={e => setEditDelivery(prev => ({ ...prev, items: prev.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90 }} /></Td>
+                                  <Td style={{ fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
+                                  <Td><button onClick={() => setEditDelivery(prev => ({ ...prev, items: prev.items.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button></Td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <Btn onClick={() => {
+                            const total = (editDelivery.items || []).reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0);
+                            setDeliveries(p => p.map(x => x.id === d.id ? { ...editDelivery, total } : x));
+                            setEditDelivery(null);
+                          }} style={{ background: "#22c55e" }}>💾 שמור שינויים</Btn>
+                          <Btn onClick={() => setEditDelivery(null)} style={{ background: "#94a3b8" }}>✕ בטל</Btn>
+                        </div>
+                      </>
+                    ) : (
+                      // View mode
+                      <>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 12 }}>
+                          <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th></tr></thead>
+                          <tbody>
+                            {(d.items || []).map((item, i) => {
+                              const prod = products.find(p => p.id === item.productId);
+                              return (
+                                <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                  <Td style={{ fontWeight: 600 }}>{prod?.name || "—"}</Td>
+                                  <Td>{item.qty}</Td>
+                                  <Td style={{ color: "#64748b" }}>{prod?.unit || "—"}</Td>
+                                  <Td>₪{fmt(item.price)}</Td>
+                                  <Td style={{ fontWeight: 700, color: "#cc0000" }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
+                                </tr>
+                              );
+                            })}
+                            <tr style={{ borderTop: "2px solid #e2e8f0", fontWeight: 700 }}>
+                              <Td colSpan={4} style={{ color: "#64748b" }}>סה״כ</Td>
+                              <Td style={{ color: "#cc0000", fontSize: 15 }}>₪{fmt(d.total)}</Td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <Btn onClick={() => setEditDelivery({ ...d, items: d.items.map(i => ({ ...i })) })} style={{ background: "#64748b" }}>✏️ ערוך</Btn>
+                          <Btn onClick={() => { if (window.confirm("למחוק תעודה זו?")) { setDeliveries(p => p.filter(x => x.id !== d.id)); setExpandedDelivery(null); } }} style={{ background: "#ef4444" }}>🗑 מחק</Btn>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
