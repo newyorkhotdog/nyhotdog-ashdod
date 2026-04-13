@@ -2281,7 +2281,8 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
   const [editVal, setEditVal] = useState("");
 
   const sup = (supplierId) => suppliers.find(s => s.id === supplierId);
-  const getCat = (prod) => sup(prod.supplierId)?.inventoryCategory || "other";
+  // קטגוריה ברמת המוצר גוברת על קטגוריית הספק
+  const getCat = (prod) => prod.inventoryCategory || sup(prod.supplierId)?.inventoryCategory || "other";
 
   // Live stock = most recent base (opening/closing/manual) + invoices+deliveries since then
   const getLiveStock = (productId) => {
@@ -2387,10 +2388,19 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
 
                       {/* Product name */}
                       <div style={{ fontWeight: 700, fontSize: 13, color: "#1e293b", marginTop: 22, marginBottom: 2, lineHeight: 1.3 }}>{prod.name}</div>
-                      <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 4 }}>
                         {sup(prod.supplierId)?.name || "—"}
                         {prod.unitsPerPack > 1 && <span style={{ marginRight: 6, color: "#0284c7", fontWeight: 600 }}>· {prod.unitsPerPack} יח׳/{prod.unit}</span>}
                       </div>
+                      {/* Category selector */}
+                      <select
+                        value={prod.inventoryCategory || getCat(prod)}
+                        onChange={e => setProducts(prev => prev.map(pr => pr.id === prod.id ? { ...pr, inventoryCategory: e.target.value } : pr))}
+                        onClick={e => e.stopPropagation()}
+                        style={{ width: "100%", fontSize: 10, padding: "3px 6px", borderRadius: 6, border: `1px solid ${cat.color}44`, background: `${cat.color}0d`, color: cat.color, fontWeight: 600, marginBottom: 8, cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        {CATS.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+                      </select>
 
                       {/* Always-visible quantity input */}
                       <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 8 }}>
