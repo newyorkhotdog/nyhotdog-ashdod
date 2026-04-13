@@ -1838,10 +1838,9 @@ function Hours({ hours, setHours, employees, sales, settings }) {
   const confirmImport = () => {
     if (!importPreview) return;
     let updated = [...hours];
-    let added = 0, skipped = 0;
+    let added = 0, updated_count = 0, skipped = 0;
     importPreview.forEach(row => {
       if (!row.employeeId) { skipped++; return; }
-      const existing = updated.findIndex(h => h.date === row.date && h.employeeId === row.employeeId);
       const record = {
         id: Date.now().toString() + Math.random(),
         date: row.date,
@@ -1851,8 +1850,15 @@ function Hours({ hours, setHours, employees, sales, settings }) {
         exitTime: row.exit,
         exitDate: row.exitDate,
       };
+      // Match by date + employee + entry time (supports multiple shifts per day)
+      const existing = updated.findIndex(h =>
+        h.date === row.date &&
+        h.employeeId === row.employeeId &&
+        h.entryTime === row.entry
+      );
       if (existing >= 0) {
-        updated[existing] = { ...updated[existing], hours: String(row.hours), entryTime: row.entry, exitTime: row.exit, exitDate: row.exitDate };
+        updated[existing] = { ...updated[existing], ...record, id: updated[existing].id };
+        updated_count++;
       } else {
         updated.push(record);
         added++;
@@ -1860,7 +1866,7 @@ function Hours({ hours, setHours, employees, sales, settings }) {
     });
     setHours(updated);
     setImportPreview(null);
-    alert(`✅ יובאו ${added} רשומות${skipped > 0 ? ` | ${skipped} דולגו (עובד לא מזוהה)` : ""}`);
+    alert(`✅ יובאו ${added} רשומות חדשות, עודכנו ${updated_count}${skipped > 0 ? ` | ${skipped} דולגו` : ""}`);
   };
 
   const monthHours = hours.filter((h) => h.date?.startsWith(monthKey));
