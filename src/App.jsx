@@ -1778,49 +1778,40 @@ function Hours({ hours, setHours, employees, sales, settings }) {
       }
 
       // Match pairs: כניסה (0) + יציאה (1) per employee
-      // מטפל במשמרות לילה שחוצות חצות (כניסה ביום X, יציאה ביום X+1)
-      const entriesByEmp = {};
-      const exitsByEmp = {};
-      rows.forEach(r => {
-        if (!entriesByEmp[r.empName]) entriesByEmp[r.empName] = [];
-        if (!exitsByEmp[r.empName]) exitsByEmp[r.empName] = [];
-        if (r.action === "0") entriesByEmp[r.empName].push(r);
-        else exitsByEmp[r.empName].push(r);
-      });
-
-      // Calculate hours per session — match each entry with nearest exit after it
+      // מטפל במשמרות לילה שחוצות חצות וריבוי משמרות
       const preview = [];
-      Object.keys(entriesByEmp).forEach(empName => {
-        const entries = entriesByEmp[empName].sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
-        const exits = exitsByEmp[empName] ? [...exitsByEmp[empName]].sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)) : [];
+      const empNames = [...new Set(rows.map(r => r.empName))];
 
-        entries.forEach(entry => {
-          // Find nearest exit after this entry (same or next day)
+      empNames.forEach(empName => {
+        const empRows = rows
+          .filter(r => r.empName === empName)
+          .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+        const availableExits = empRows
+          .filter(r => r.action === "1")
+          .map(r => ({ ...r, used: false }));
+
+        empRows.filter(r => r.action === "0").forEach(entry => {
           const entryDT = new Date(`${entry.date}T${entry.time}`);
-          const matchExit = exits.find(x => {
+
+          const matchExit = availableExits.find(x => {
+            if (x.used) return false;
             const exitDT = new Date(`${x.date}T${x.time}`);
             const diffMs = exitDT - entryDT;
-            return diffMs > 0 && diffMs < 24 * 3600 * 1000; // within 24 hours
+            return diffMs > 0 && diffMs < 24 * 3600 * 1000;
           });
 
-          if (!matchExit) return; // no matching exit
+          if (!matchExit) return;
+          matchExit.used = true;
 
-          const entryDT2 = new Date(`${entry.date}T${entry.time}`);
-          const exitDT2 = new Date(`${matchExit.date}T${matchExit.time}`);
-          const totalHours = Math.round((exitDT2 - entryDT2) / 3600000 * 4) / 4;
+          const exitDT = new Date(`${matchExit.date}T${matchExit.time}`);
+          const totalHours = Math.round((exitDT - entryDT) / 3600000 * 4) / 4;
 
-          // Remove used exit
-          const idx = exits.indexOf(matchExit);
-          if (idx > -1) exits.splice(idx, 1);
-
-          // Match employee name — exact or partial match only (no fuzzy)
           const normalize = n => n.trim().replace(/\s+/g, " ").replace(/['"]/g, "");
           const csvName = normalize(empName);
           const matchedEmp = employees.find(e => {
             const eName = normalize(e.name);
-            return eName === csvName ||
-              eName.includes(csvName) ||
-              csvName.includes(eName);
+            return eName === csvName || eName.includes(csvName) || csvName.includes(eName);
           });
 
           preview.push({
