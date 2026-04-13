@@ -827,7 +827,7 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
               ? <div style={{ color: "#aaa", fontSize: 13 }}>הוסף פריטים לספק זה</div>
               : (
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>יחידה</Th><Th>מחיר בסיס (₪)</Th><Th></Th></tr></thead>
+                  <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>יחידה</Th><Th>מחיר בסיס (₪)</Th><Th>🔴 מינימום</Th><Th>🟢 מקסימום</Th><Th></Th></tr></thead>
                   <tbody>
                     {supProds.map((p) => (
                       <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0", background: editProdId === p.id ? "#fff8f8" : "transparent" }}>
@@ -839,11 +839,13 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
                                 {["ק\"ג", "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}
                               </select>
                             </Td>
-                            <Td><input type="number" value={editProdVals.basePrice} onChange={e => setEditProdVals(v => ({ ...v, basePrice: e.target.value }))} style={{ ...inputStyle, width: 100 }} /></Td>
+                            <Td><input type="number" value={editProdVals.basePrice} onChange={e => setEditProdVals(v => ({ ...v, basePrice: e.target.value }))} style={{ ...inputStyle, width: 90 }} /></Td>
+                            <Td><input type="number" value={editProdVals.minStock || ""} onChange={e => setEditProdVals(v => ({ ...v, minStock: e.target.value }))} placeholder="מינ׳" style={{ ...inputStyle, width: 70, color: "#dc2626" }} /></Td>
+                            <Td><input type="number" value={editProdVals.maxStock || ""} onChange={e => setEditProdVals(v => ({ ...v, maxStock: e.target.value }))} placeholder="מקס׳" style={{ ...inputStyle, width: 70, color: "#16a34a" }} /></Td>
                             <Td>
                               <div style={{ display: "flex", gap: 6 }}>
                                 <button onClick={() => {
-                                  setProducts(prev => prev.map(pr => pr.id === p.id ? { ...pr, name: editProdVals.name, unit: editProdVals.unit, basePrice: parseFloat(editProdVals.basePrice) || 0 } : pr));
+                                  setProducts(prev => prev.map(pr => pr.id === p.id ? { ...pr, name: editProdVals.name, unit: editProdVals.unit, basePrice: parseFloat(editProdVals.basePrice) || 0, minStock: parseFloat(editProdVals.minStock) || 0, maxStock: parseFloat(editProdVals.maxStock) || 0 } : pr));
                                   setEditProdId(null);
                                 }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>✓</button>
                                 <button onClick={() => setEditProdId(null)} style={{ background: "#e2e8f0", color: "#64748b", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 12 }}>✕</button>
@@ -855,9 +857,11 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
                             <Td>{p.name}</Td>
                             <Td style={{ color: "#64748b" }}>{p.unit}</Td>
                             <Td>₪{fmt(p.basePrice)}</Td>
+                            <Td style={{ color: "#dc2626", fontWeight: p.minStock ? 700 : 400 }}>{p.minStock || <span style={{ color: "#cbd5e1" }}>—</span>}</Td>
+                            <Td style={{ color: "#16a34a", fontWeight: p.maxStock ? 700 : 400 }}>{p.maxStock || <span style={{ color: "#cbd5e1" }}>—</span>}</Td>
                             <Td>
                               <div style={{ display: "flex", gap: 6 }}>
-                                <button onClick={() => { setEditProdId(p.id); setEditProdVals({ name: p.name, unit: p.unit, basePrice: String(p.basePrice) }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13 }}>✏️</button>
+                                <button onClick={() => { setEditProdId(p.id); setEditProdVals({ name: p.name, unit: p.unit, basePrice: String(p.basePrice), minStock: String(p.minStock || ""), maxStock: String(p.maxStock || "") }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13 }}>✏️</button>
                                 <button onClick={() => delProduct(p.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button>
                               </div>
                             </Td>
@@ -2257,14 +2261,14 @@ const INVENTORY_CATEGORIES = [
 
 function Inventory({ inventory, setInventory, products, invoices, deliveries, suppliers, inventoryCategories: dynCats, setSuppliers }) {
   const CATS = dynCats && dynCats.length > 0 ? dynCats : [
-    { id: "naknikiyot", label: "נקניקיות", emoji: "🌭", color: "#ef4444" },
-    { id: "shtiya_cola", label: "שתייה — קוקה קולה", emoji: "🥤", color: "#22d3ee" },
-    { id: "shtiya_agm", label: 'שתייה — אג"מ', emoji: "🍺", color: "#60a5fa" },
-    { id: "chad_pami", label: "חד פעמי", emoji: "🥡", color: "#f59e0b" },
-    { id: "levamot_naknik", label: "לחמניות נקניקייה", emoji: "🍞", color: "#a78bfa" },
-    { id: "levamot_toast", label: "לחמניות טוסט", emoji: "🥖", color: "#fb923c" },
-    { id: "ratabim", label: "רטבים", emoji: "🫙", color: "#22c55e" },
-    { id: "other", label: "שונות", emoji: "📦", color: "#94a3b8" },
+    { id: "naknikiyot", label: "נקניקיות", emoji: "🌭", color: "#dc2626" },
+    { id: "shtiya_cola", label: "שתייה — קוקה קולה", emoji: "🥤", color: "#0284c7" },
+    { id: "shtiya_agm", label: 'שתייה — אג"מ', emoji: "🍺", color: "#7c3aed" },
+    { id: "chad_pami", label: "חד פעמי", emoji: "🥡", color: "#d97706" },
+    { id: "levamot_naknik", label: "לחמניות נקניקייה", emoji: "🍞", color: "#b45309" },
+    { id: "levamot_toast", label: "לחמניות טוסט", emoji: "🥖", color: "#ea580c" },
+    { id: "ratabim", label: "רטבים", emoji: "🫙", color: "#16a34a" },
+    { id: "other", label: "שונות", emoji: "📦", color: "#64748b" },
   ];
 
   const [view, setView] = useState("live");
@@ -2282,23 +2286,52 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
   const sup = (supplierId) => suppliers.find(s => s.id === supplierId);
   const getCat = (prod) => sup(prod.supplierId)?.inventoryCategory || "other";
 
+  // Live stock = last closing (or opening) + entries since then + manual adjustments
   const getLiveStock = (productId) => {
-    const openings = inventory.filter(c => c.productId === productId && c.type === "פתיחה").sort((a, b) => b.date.localeCompare(a.date));
-    const lastOpening = openings[0];
-    if (!lastOpening) return null;
-    const latestClosing = inventory
-      .filter(c => c.productId === productId && c.type === "סגירה" && c.date >= lastOpening.date)
+    // Last opening
+    const lastOpening = inventory
+      .filter(c => c.productId === productId && c.type === "פתיחה")
       .sort((a, b) => b.date.localeCompare(a.date))[0];
-    const base = latestClosing ? latestClosing.qty : lastOpening.qty;
-    const baseDate = latestClosing ? latestClosing.date : lastOpening.date;
+
+    // Latest closing
+    const latestClosing = inventory
+      .filter(c => c.productId === productId && c.type === "סגירה")
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+
+    // Manual updates
+    const lastManual = inventory
+      .filter(c => c.productId === productId && c.type === "עדכון ידני")
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+
+    // Pick the most recent base
+    const candidates = [lastOpening, latestClosing, lastManual].filter(Boolean);
+    if (candidates.length === 0) return null;
+    const base = candidates.sort((a, b) => b.date.localeCompare(a.date))[0];
+    const baseQty = base.qty;
+    const baseDate = base.date;
+
+    // Entries (invoices + deliveries) after base date
     const entriesSinceBase = [...invoices, ...deliveries]
       .flatMap(doc => (doc.items || []).map(item => ({ ...item, date: doc.date })))
       .filter(item => item.productId === productId && item.date > baseDate)
       .reduce((a, item) => a + parseFloat(item.qty || 0), 0);
-    const adjSinceBase = inventory
-      .filter(c => c.productId === productId && c.type === "עדכון ידני" && c.date > baseDate)
-      .reduce((a, c) => a + c.qty, 0);
-    return base + entriesSinceBase + adjSinceBase;
+
+    return baseQty + entriesSinceBase;
+  };
+
+  const getStockLevel = (qty, minStock, maxStock) => {
+    if (qty === null) return "unknown";
+    if (!minStock && !maxStock) return "unknown";
+    if (minStock && qty <= minStock) return "low";
+    if (maxStock && qty >= maxStock * 0.7) return "high";
+    return "medium";
+  };
+
+  const LEVEL_STYLE = {
+    high:    { bg: "#f0fdf4", border: "#86efac", badge: "#16a34a", badgeBg: "#dcfce7", label: "גבוה ✓" },
+    medium:  { bg: "#fffbeb", border: "#fde68a", badge: "#d97706", badgeBg: "#fef3c7", label: "סביר" },
+    low:     { bg: "#fff5f5", border: "#fca5a5", badge: "#dc2626", badgeBg: "#fee2e2", label: "נמוך !" },
+    unknown: { bg: "#f8fafc", border: "#e2e8f0", badge: "#94a3b8", badgeBg: "#f1f5f9", label: "לא ידוע" },
   };
 
   const saveManualUpdate = (productId, newQty) => {
@@ -2336,71 +2369,128 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
 
   const toggleCat = (id) => setOpenCats(p => ({ ...p, [id]: !p[id] }));
 
+  // Summary stats
+  const allLow = products.filter(p => {
+    const qty = getLiveStock(p.id);
+    return qty !== null && p.minStock > 0 && qty <= p.minStock;
+  });
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
       {/* View tabs */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {[["live","📦 מלאי חי"],["count","📝 ספירת מלאי"],["report","📊 דוח חודשי"]].map(([id, label]) => (
-          <button key={id} onClick={() => setView(id)} style={{ padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit", background: view === id ? "#cc0000" : "#f1f5f9", color: view === id ? "#fff" : "#475569" }}>{label}</button>
-        ))}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[["live","📦 מלאי חי"],["count","📝 ספירת מלאי"],["report","📊 דוח חודשי"]].map(([id, label]) => (
+            <button key={id} onClick={() => setView(id)} style={{ padding: "9px 20px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit", background: view === id ? "#cc0000" : "#ffffff", color: view === id ? "#fff" : "#475569", boxShadow: view === id ? "0 2px 8px rgba(204,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.08)", transition: "all 0.2s" }}>{label}</button>
+          ))}
+        </div>
+        {allLow.length > 0 && (
+          <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: "#dc2626", fontWeight: 700 }}>
+            🚨 {allLow.length} פריטים בסף מינימום — נדרשת הזמנה
+          </div>
+        )}
       </div>
 
       {/* LIVE VIEW */}
       {view === "live" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ fontSize: 12, color: "#94a3b8" }}>מלאי מחושב מספירת פתיחה + כניסות מחשבוניות/תעודות + עדכונים ידניים</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {CATS.map(cat => {
             const catProds = products.filter(p => getCat(p) === cat.id);
             if (catProds.length === 0) return null;
-            const isOpen = openCats[cat.id] !== false;
-            const catAlerts = catProds.filter(p => {
-              const qty = getLiveStock(p.id);
-              return qty !== null && p.minStock > 0 && qty <= p.minStock;
-            }).length;
+            const isOpen = openCats[cat.id] !== false; // default open
+
+            const catLow = catProds.filter(p => { const q = getLiveStock(p.id); return q !== null && p.minStock > 0 && q <= p.minStock; }).length;
+            const catHigh = catProds.filter(p => { const q = getLiveStock(p.id); return q !== null && p.maxStock > 0 && q >= p.maxStock * 0.7; }).length;
+            const catMedium = catProds.filter(p => { const q = getLiveStock(p.id); if (q === null) return false; const l = getStockLevel(q, p.minStock, p.maxStock); return l === "medium"; }).length;
+            const catUnknown = catProds.filter(p => getLiveStock(p.id) === null).length;
+
             return (
-              <div key={cat.id} style={{ border: `1px solid ${cat.color}44`, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-                <div onClick={() => toggleCat(cat.id)} style={{ background: `${cat.color}15`, padding: "12px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 22 }}>{cat.emoji}</span>
-                    <span style={{ fontWeight: 700, color: cat.color, fontSize: 14 }}>{cat.label}</span>
-                    <span style={{ fontSize: 11, color: "#94a3b8" }}>{catProds.length} פריטים</span>
-                    {catAlerts > 0 && <span style={{ background: "#fff5f5", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: 10, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>⚠️ {catAlerts} להזמנה</span>}
+              <div key={cat.id} style={{ borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.08)", border: `1px solid ${cat.color}33` }}>
+                {/* Category Header */}
+                <div onClick={() => toggleCat(cat.id)}
+                  style={{ background: `linear-gradient(135deg, ${cat.color}22 0%, ${cat.color}11 100%)`, padding: "14px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: isOpen ? `1px solid ${cat.color}33` : "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 28 }}>{cat.emoji}</span>
+                    <div>
+                      <div style={{ fontWeight: 800, color: cat.color, fontSize: 16 }}>{cat.label}</div>
+                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{catProds.length} פריטים</div>
+                    </div>
                   </div>
-                  <span style={{ color: cat.color }}>{isOpen ? "▲" : "▼"}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {catLow > 0 && <span style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>🔴 {catLow} נמוך</span>}
+                    {catMedium > 0 && <span style={{ background: "#fef3c7", color: "#d97706", border: "1px solid #fde68a", borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>🟡 {catMedium} סביר</span>}
+                    {catHigh > 0 && <span style={{ background: "#dcfce7", color: "#16a34a", border: "1px solid #86efac", borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>🟢 {catHigh} גבוה</span>}
+                    {catUnknown > 0 && <span style={{ background: "#f1f5f9", color: "#94a3b8", border: "1px solid #e2e8f0", borderRadius: 20, padding: "3px 10px", fontSize: 12 }}>⚪ {catUnknown} לא ידוע</span>}
+                    <span style={{ color: cat.color, fontSize: 18, marginRight: 4 }}>{isOpen ? "▲" : "▼"}</span>
+                  </div>
                 </div>
+
+                {/* Products grid */}
                 {isOpen && (
-                  <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ background: "#ffffff", padding: "16px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
                     {catProds.map(prod => {
                       const liveQty = getLiveStock(prod.id);
-                      const isLow = liveQty !== null && prod.minStock > 0 && liveQty <= prod.minStock;
+                      const level = getStockLevel(liveQty, prod.minStock, prod.maxStock);
+                      const st = LEVEL_STYLE[level];
                       const isEditing = editItem === prod.id;
                       const supplier = sup(prod.supplierId);
+
+                      // Progress bar (if minStock and maxStock set)
+                      const hasRange = prod.minStock > 0 && prod.maxStock > 0;
+                      const pct = hasRange && liveQty !== null ? Math.min(100, Math.max(0, (liveQty / prod.maxStock) * 100)) : null;
+                      const barColor = level === "high" ? "#22c55e" : level === "medium" ? "#f59e0b" : level === "low" ? "#ef4444" : "#cbd5e1";
+
                       return (
-                        <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: isLow ? "#fff5f5" : "#f8fafc", borderRadius: 8, padding: "10px 14px", border: `1px solid ${isLow ? "#fca5a5" : "#e2e8f0"}` }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>{prod.name}</div>
-                            <div style={{ fontSize: 11, color: "#94a3b8" }}>{supplier?.name || "—"} | מינימום: {prod.minStock || "—"} {prod.unit}</div>
-                            {isLow && <div style={{ fontSize: 11, color: "#ef4444", fontWeight: 700 }}>⚠️ מלאי נמוך — הזמן מ{supplier?.name}{supplier?.phone ? ` 📞 ${supplier.phone}` : ""}</div>}
-                          </div>
+                        <div key={prod.id} style={{ background: st.bg, border: `1.5px solid ${st.border}`, borderRadius: 12, padding: "14px", position: "relative", transition: "transform 0.15s, box-shadow 0.15s" }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
+
+                          {/* Badge */}
+                          <div style={{ position: "absolute", top: 10, left: 10, background: st.badgeBg, color: st.badge, border: `1px solid ${st.border}`, borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>{st.label}</div>
+
+                          {/* Product name */}
+                          <div style={{ fontWeight: 700, fontSize: 13, color: "#1e293b", marginBottom: 4, marginTop: 20, lineHeight: 1.3 }}>{prod.name}</div>
+                          <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10 }}>{supplier?.name || "—"}</div>
+
+                          {/* Quantity display */}
                           {isEditing ? (
-                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                              <input type="number" inputMode="decimal" value={editVal} onChange={e => setEditVal(e.target.value)} style={{ ...inputStyle, width: 80, textAlign: "center", fontWeight: 700 }} autoFocus />
-                              <span style={{ fontSize: 11, color: "#94a3b8" }}>{prod.unit}</span>
-                              <button onClick={() => saveManualUpdate(prod.id, editVal)} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>✓</button>
-                              <button onClick={() => setEditItem(null)} style={{ background: "#f1f5f9", color: "#94a3b8", border: "none", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12 }}>✕</button>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              <input type="number" inputMode="decimal" value={editVal} onChange={e => setEditVal(e.target.value)}
+                                style={{ ...inputStyle, textAlign: "center", fontWeight: 800, fontSize: 20, color: barColor }} autoFocus />
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => saveManualUpdate(prod.id, editVal)} style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 6, padding: "6px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>✓ שמור</button>
+                                <button onClick={() => setEditItem(null)} style={{ background: "#f1f5f9", color: "#64748b", border: "none", borderRadius: 6, padding: "6px 10px", cursor: "pointer", fontSize: 12 }}>✕</button>
+                              </div>
                             </div>
                           ) : (
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <div style={{ textAlign: "center", minWidth: 70 }}>
-                                {liveQty !== null ? (
-                                  <div style={{ fontSize: 20, fontWeight: 900, color: isLow ? "#ef4444" : cat.color }}>{liveQty % 1 === 0 ? liveQty : liveQty.toFixed(2)}</div>
-                                ) : (
-                                  <div style={{ fontSize: 12, color: "#94a3b8" }}>אין ספירה</div>
-                                )}
-                                <div style={{ fontSize: 10, color: "#94a3b8" }}>{prod.unit}</div>
+                            <>
+                              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 8 }}>
+                                <div>
+                                  <span style={{ fontSize: 28, fontWeight: 900, color: liveQty !== null ? barColor : "#cbd5e1" }}>
+                                    {liveQty !== null ? (liveQty % 1 === 0 ? liveQty : liveQty.toFixed(1)) : "—"}
+                                  </span>
+                                  <span style={{ fontSize: 12, color: "#94a3b8", marginRight: 4 }}>{prod.unit}</span>
+                                </div>
+                                <button onClick={() => { setEditItem(prod.id); setEditVal(liveQty !== null ? String(liveQty) : ""); }}
+                                  style={{ background: "rgba(0,0,0,0.06)", border: "none", borderRadius: 6, padding: "5px 8px", cursor: "pointer", fontSize: 13, color: "#475569" }}>✏️</button>
                               </div>
-                              <button onClick={() => { setEditItem(prod.id); setEditVal(liveQty !== null ? String(liveQty) : ""); }} style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#64748b", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>✏️</button>
-                            </div>
+
+                              {/* Progress bar */}
+                              {pct !== null && (
+                                <div style={{ background: "#e2e8f0", borderRadius: 4, height: 6, overflow: "hidden", marginBottom: 6 }}>
+                                  <div style={{ width: `${pct}%`, height: "100%", background: barColor, borderRadius: 4, transition: "width 0.4s ease" }} />
+                                </div>
+                              )}
+
+                              {/* Min/Max */}
+                              {(prod.minStock > 0 || prod.maxStock > 0) && (
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94a3b8" }}>
+                                  <span>מינ׳: {prod.minStock || "—"}</span>
+                                  <span>מקס׳: {prod.maxStock || "—"}</span>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       );
@@ -2416,41 +2506,56 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
       {/* COUNT VIEW */}
       {view === "count" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 16px", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-            <input type="date" value={countDate} onChange={e => setCountDate(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 140 }} />
-            <select value={countType} onChange={e => setCountType(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 120 }}>
-              <option>פתיחה</option>
-              <option>סגירה</option>
-            </select>
-            <div style={{ fontSize: 12, color: "#475569" }}>הוזנו: <strong style={{ color: "#22c55e" }}>{Object.values(counts).filter(v => v !== "").length}</strong> פריטים</div>
-            <Btn onClick={saveCount} style={{ background: "#22c55e" }}>💾 שמור ספירה</Btn>
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "14px 18px", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <div style={{ flex: 1, minWidth: 140 }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך ספירה</div>
+              <input type="date" value={countDate} onChange={e => setCountDate(e.target.value)} style={inputStyle} />
+            </div>
+            <div style={{ flex: 1, minWidth: 120 }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>סוג ספירה</div>
+              <select value={countType} onChange={e => setCountType(e.target.value)} style={inputStyle}>
+                <option>פתיחה</option>
+                <option>סגירה</option>
+              </select>
+            </div>
+            <div style={{ fontSize: 13, color: "#475569" }}>הוזנו: <strong style={{ color: "#22c55e", fontSize: 16 }}>{Object.values(counts).filter(v => v !== "").length}</strong> / {products.length}</div>
+            <Btn onClick={saveCount} style={{ background: "#22c55e", padding: "10px 20px" }}>💾 שמור ספירה</Btn>
           </div>
+
           {CATS.map(cat => {
             const catProds = products.filter(p => getCat(p) === cat.id);
             if (catProds.length === 0) return null;
             const isOpen = openCats[`count_${cat.id}`] !== false;
             const counted = catProds.filter(p => counts[p.id] !== undefined && counts[p.id] !== "").length;
+            const allDone = counted === catProds.length;
+
             return (
-              <div key={cat.id} style={{ border: `1px solid ${cat.color}44`, borderRadius: 10, overflow: "hidden" }}>
-                <div onClick={() => setOpenCats(p => ({ ...p, [`count_${cat.id}`]: !p[`count_${cat.id}`] }))} style={{ background: `${cat.color}15`, padding: "10px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 700, color: cat.color }}>{cat.emoji} {cat.label}</span>
+              <div key={cat.id} style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${cat.color}33`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+                <div onClick={() => setOpenCats(p => ({ ...p, [`count_${cat.id}`]: !p[`count_${cat.id}`] }))}
+                  style={{ background: allDone ? "#f0fdf4" : `${cat.color}15`, padding: "12px 18px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 22 }}>{cat.emoji}</span>
+                    <span style={{ fontWeight: 700, color: allDone ? "#16a34a" : cat.color, fontSize: 14 }}>{cat.label}</span>
+                  </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{ fontSize: 11, background: counted === catProds.length ? "#f0fdf4" : "#f8fafc", color: counted === catProds.length ? "#16a34a" : "#94a3b8", border: `1px solid ${counted === catProds.length ? "#86efac" : "#e2e8f0"}`, borderRadius: 10, padding: "1px 8px", fontWeight: 700 }}>{counted}/{catProds.length}</span>
+                    <span style={{ fontSize: 12, background: allDone ? "#dcfce7" : "#f1f5f9", color: allDone ? "#16a34a" : "#64748b", border: `1px solid ${allDone ? "#86efac" : "#e2e8f0"}`, borderRadius: 20, padding: "2px 10px", fontWeight: 700 }}>
+                      {counted}/{catProds.length} {allDone ? "✓" : ""}
+                    </span>
                     <span style={{ color: cat.color }}>{isOpen ? "▲" : "▼"}</span>
                   </div>
                 </div>
                 {isOpen && (
-                  <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 5 }}>
+                  <div style={{ background: "#fff", padding: "12px", display: "flex", flexDirection: "column", gap: 6 }}>
                     {catProds.map(prod => (
-                      <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: counts[prod.id] ? "#f0fdf4" : "#f8fafc", borderRadius: 8, padding: "8px 12px", border: `1px solid ${counts[prod.id] ? "#86efac" : "#e2e8f0"}` }}>
+                      <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 12, background: counts[prod.id] ? "#f0fdf4" : "#f8fafc", borderRadius: 10, padding: "10px 14px", border: `1px solid ${counts[prod.id] ? "#86efac" : "#e2e8f0"}` }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: 13 }}>{prod.name}</div>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>{prod.name}</div>
                           <div style={{ fontSize: 11, color: "#94a3b8" }}>{prod.unit}</div>
                         </div>
                         <input type="number" inputMode="decimal" placeholder="0" value={counts[prod.id] || ""}
                           onChange={e => setCounts(p => ({ ...p, [prod.id]: e.target.value }))}
-                          style={{ ...inputStyle, width: 90, textAlign: "center", fontSize: 16, fontWeight: 700, color: counts[prod.id] ? "#16a34a" : "#1e293b" }} />
-                        <span style={{ fontSize: 11, color: "#94a3b8", minWidth: 28 }}>{prod.unit}</span>
+                          style={{ ...inputStyle, width: 100, textAlign: "center", fontSize: 18, fontWeight: 800, color: counts[prod.id] ? "#16a34a" : "#1e293b", background: counts[prod.id] ? "#f0fdf4" : "#fff" }} />
+                        <span style={{ fontSize: 12, color: "#94a3b8", minWidth: 32, fontWeight: 600 }}>{prod.unit}</span>
                       </div>
                     ))}
                   </div>
@@ -2458,15 +2563,18 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
               </div>
             );
           })}
-          <Btn onClick={saveCount} style={{ background: "#22c55e", fontSize: 14, padding: "12px" }}>💾 שמור ספירה ({Object.values(counts).filter(v => v !== "").length} פריטים)</Btn>
+
+          <Btn onClick={saveCount} style={{ background: "#22c55e", fontSize: 15, padding: "14px" }}>
+            💾 שמור ספירת {countType} — {Object.values(counts).filter(v => v !== "").length} פריטים
+          </Btn>
         </div>
       )}
 
       {/* REPORT VIEW */}
       {view === "report" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ color: "#475569", fontSize: 13 }}>חודש:</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <span style={{ color: "#475569", fontSize: 13, fontWeight: 600 }}>חודש לדוח:</span>
             <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
           </div>
           {CATS.map(cat => {
@@ -2474,24 +2582,32 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
             const withData = catProds.filter(p => { const r = getMonthReport(p.id); return r.entries > 0 || r.opening > 0 || r.closing > 0; });
             if (withData.length === 0) return null;
             return (
-              <div key={cat.id} style={{ border: `1px solid ${cat.color}44`, borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ background: `${cat.color}15`, padding: "10px 14px", fontWeight: 700, color: cat.color }}>{cat.emoji} {cat.label}</div>
+              <div key={cat.id} style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${cat.color}33`, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+                <div style={{ background: `${cat.color}18`, padding: "12px 18px", fontWeight: 800, color: cat.color, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>{cat.emoji}</span> {cat.label}
+                </div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
-                    <Th>פריט</Th><Th>פתיחה</Th><Th>+ כניסות</Th><Th>= תיאורטי</Th><Th>ספירת סגירה</Th><Th>בזבוז</Th>
-                  </tr></thead>
+                  <thead>
+                    <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                      <Th>פריט</Th><Th>פתיחה</Th><Th>+ כניסות</Th><Th>= תיאורטי</Th><Th>סגירה בפועל</Th><Th>בזבוז/הפרש</Th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {withData.map(p => {
                       const r = getMonthReport(p.id);
                       const wColor = r.wastePct === null ? "#94a3b8" : parseFloat(r.wastePct) <= 3 ? "#16a34a" : parseFloat(r.wastePct) <= 8 ? "#d97706" : "#dc2626";
                       return (
                         <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                          <Td style={{ fontWeight: 600 }}>{p.name}</Td>
-                          <Td>{r.opening > 0 ? r.opening : "—"}</Td>
-                          <Td style={{ color: "#cc0000" }}>+{r.entries.toFixed(2)}</Td>
+                          <Td style={{ fontWeight: 600, color: "#1e293b" }}>{p.name}</Td>
+                          <Td style={{ color: "#64748b" }}>{r.opening > 0 ? r.opening : "—"}</Td>
+                          <Td style={{ color: "#cc0000", fontWeight: 600 }}>+{r.entries.toFixed(2)}</Td>
                           <Td style={{ fontWeight: 700 }}>{r.theoretical.toFixed(2)}</Td>
-                          <Td style={{ color: r.closing > 0 ? "#1e293b" : "#94a3b8" }}>{r.closing > 0 ? r.closing : "טרם נספר"}</Td>
-                          <Td>{r.waste !== null ? <span style={{ color: wColor, fontWeight: 700 }}>{r.waste.toFixed(2)} {p.unit} ({r.wastePct}%)</span> : "—"}</Td>
+                          <Td style={{ color: r.closing > 0 ? "#1e293b" : "#94a3b8", fontWeight: r.closing > 0 ? 600 : 400 }}>{r.closing > 0 ? r.closing : "טרם נספר"}</Td>
+                          <Td>
+                            {r.waste !== null
+                              ? <span style={{ color: wColor, fontWeight: 700 }}>{r.waste.toFixed(2)} {p.unit} ({r.wastePct}%)</span>
+                              : <span style={{ color: "#94a3b8" }}>—</span>}
+                          </Td>
                         </tr>
                       );
                     })}
