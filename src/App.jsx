@@ -2363,63 +2363,51 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
                   const qty = getLiveStock(prod.id);
                   const level = getLevel(qty, prod.minStock, prod.maxStock);
                   const st = LEVEL[level];
-                  const isEditing = editItem === prod.id;
                   const hasRange = prod.minStock > 0 && prod.maxStock > 0;
                   const barPct = hasRange && qty !== null ? Math.min(100, Math.max(0, (qty / prod.maxStock) * 100)) : null;
+                  const displayQty = qty !== null ? (qty % 1 === 0 ? String(qty) : qty.toFixed(1)) : "";
 
                   return (
                     <div key={prod.id}
-                      style={{ background: st.bg, border: `1.5px solid ${st.border}`, borderRadius: 12, padding: "14px 12px", position: "relative", transition: "transform 0.15s, box-shadow 0.15s", cursor: "default" }}
+                      style={{ background: st.bg, border: `1.5px solid ${st.border}`, borderRadius: 12, padding: "14px 12px", position: "relative", transition: "transform 0.15s, box-shadow 0.15s" }}
                       onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.1)"; }}
                       onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
 
                       {/* Status badge */}
                       <div style={{ position: "absolute", top: 8, left: 8, background: st.badgeBg, color: st.badgeColor, borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>{st.badge}</div>
 
-                      {/* Edit button */}
-                      {!isEditing && (
-                        <button onClick={() => { setEditItem(prod.id); setEditVal(qty !== null ? String(qty) : ""); }}
-                          style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.05)", border: "none", borderRadius: 6, padding: "3px 7px", cursor: "pointer", fontSize: 12, color: "#475569" }}>✏️</button>
+                      {/* Product name */}
+                      <div style={{ fontWeight: 700, fontSize: 13, color: "#1e293b", marginTop: 22, marginBottom: 2, lineHeight: 1.3 }}>{prod.name}</div>
+                      <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 8 }}>{sup(prod.supplierId)?.name || "—"}</div>
+
+                      {/* Always-visible quantity input */}
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 8 }}>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          defaultValue={displayQty}
+                          key={displayQty}
+                          placeholder="0"
+                          onBlur={e => { if (e.target.value !== "" && e.target.value !== displayQty) saveManualUpdate(prod.id, e.target.value); }}
+                          onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
+                          style={{ width: "100%", background: "transparent", border: "none", borderBottom: `2px solid ${st.border}`, borderRadius: 0, padding: "2px 0", fontSize: 30, fontWeight: 900, color: qty !== null ? st.num : "#cbd5e1", textAlign: "center", outline: "none", fontFamily: "inherit" }}
+                        />
+                        <span style={{ fontSize: 12, color: "#94a3b8", whiteSpace: "nowrap" }}>{prod.unit}</span>
+                      </div>
+
+                      {/* Progress bar */}
+                      {barPct !== null && (
+                        <div style={{ background: "#e2e8f0", borderRadius: 4, height: 6, overflow: "hidden", marginBottom: 6 }}>
+                          <div style={{ width: `${barPct}%`, height: "100%", background: st.num, borderRadius: 4, transition: "width 0.5s ease" }} />
+                        </div>
                       )}
 
-                      {/* Product name */}
-                      <div style={{ fontWeight: 700, fontSize: 13, color: "#1e293b", marginTop: 24, marginBottom: 2, lineHeight: 1.3 }}>{prod.name}</div>
-                      <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 10 }}>{sup(prod.supplierId)?.name || "—"}</div>
-
-                      {isEditing ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          <input type="number" inputMode="decimal" value={editVal} onChange={e => setEditVal(e.target.value)}
-                            style={{ ...inputStyle, textAlign: "center", fontWeight: 800, fontSize: 22, color: st.num, background: "#fff" }} autoFocus />
-                          <div style={{ display: "flex", gap: 5 }}>
-                            <button onClick={() => saveManualUpdate(prod.id, editVal)} style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 6, padding: "7px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>✓ שמור</button>
-                            <button onClick={() => setEditItem(null)} style={{ background: "#f1f5f9", color: "#64748b", border: "none", borderRadius: 6, padding: "7px 10px", cursor: "pointer", fontSize: 12 }}>✕</button>
-                          </div>
+                      {/* Min/Max labels */}
+                      {(prod.minStock > 0 || prod.maxStock > 0) && (
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94a3b8" }}>
+                          <span style={{ color: "#dc2626" }}>מינ׳ {prod.minStock || "—"}</span>
+                          <span style={{ color: "#16a34a" }}>מקס׳ {prod.maxStock || "—"}</span>
                         </div>
-                      ) : (
-                        <>
-                          {/* Big number */}
-                          <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 8 }}>
-                            <span style={{ fontSize: 32, fontWeight: 900, color: qty !== null ? st.num : "#cbd5e1", lineHeight: 1 }}>
-                              {qty !== null ? (qty % 1 === 0 ? qty : qty.toFixed(1)) : "—"}
-                            </span>
-                            <span style={{ fontSize: 12, color: "#94a3b8" }}>{prod.unit}</span>
-                          </div>
-
-                          {/* Progress bar */}
-                          {barPct !== null && (
-                            <div style={{ background: "#e2e8f0", borderRadius: 4, height: 6, overflow: "hidden", marginBottom: 6 }}>
-                              <div style={{ width: `${barPct}%`, height: "100%", background: st.num, borderRadius: 4, transition: "width 0.5s ease" }} />
-                            </div>
-                          )}
-
-                          {/* Min/Max labels */}
-                          {(prod.minStock > 0 || prod.maxStock > 0) && (
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94a3b8" }}>
-                              <span style={{ color: "#dc2626" }}>מינ׳ {prod.minStock || "—"}</span>
-                              <span style={{ color: "#16a34a" }}>מקס׳ {prod.maxStock || "—"}</span>
-                            </div>
-                          )}
-                        </>
                       )}
                     </div>
                   );
