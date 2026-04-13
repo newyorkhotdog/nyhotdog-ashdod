@@ -15,7 +15,6 @@ const STORAGE_KEYS = {
   deliveries: "nyh_deliveries",
   inventory: "nyh_inventory",
   inventoryCategories: "nyh_inv_categories",
-  cashDeposits: "nyh_cash_deposits",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
@@ -64,7 +63,6 @@ const TABS = [
   { id: "hours", label: "⏱️ שעות" },
   { id: "inventory", label: "📦 מלאי" },
   { id: "expenses", label: "🏢 הוצאות תפעול" },
-  { id: "cash", label: "💵 הפקדת מזומן" },
   { id: "notifications", label: "🔔 התראות" },
   { id: "settings", label: "⚙️ הגדרות" },
 ];
@@ -83,7 +81,6 @@ export default function App() {
   const [deliveries, setDeliveries] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [inventoryCategories, setInventoryCategories] = useState([]);
-  const [cashDeposits, setCashDeposits] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -100,7 +97,6 @@ export default function App() {
       [STORAGE_KEYS.expenses]: setExpenses,
       [STORAGE_KEYS.deliveries]: setDeliveries,
       [STORAGE_KEYS.inventory]: setInventory,
-      [STORAGE_KEYS.cashDeposits]: setCashDeposits,
     };
     let loadedCount = 0;
     const total = Object.keys(setters).length;
@@ -129,30 +125,28 @@ export default function App() {
   useEffect(() => { if (loaded) save(STORAGE_KEYS.expenses, expenses); }, [expenses, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.deliveries, deliveries); }, [deliveries, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.inventory, inventory); }, [inventory, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.cashDeposits, cashDeposits); }, [cashDeposits, loaded]);
   useEffect(() => { if (loaded) save(STORAGE_KEYS.inventoryCategories, inventoryCategories); }, [inventoryCategories, loaded]);
 
-  if (!loaded) return <div style={{ background: "#f1f5f9", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#1e293b" }}>טוען...</div>;
+  if (!loaded) return <div style={{ background: "#f1f5f9", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#f1f5f9" }}>טוען...</div>;
 
   return (
-    <div dir="rtl" style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'Segoe UI', Tahoma, sans-serif", color: "#1e293b" }}>
+    <div dir="rtl" style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'Segoe UI', Tahoma, sans-serif", color: "#f1f5f9" }}>
       {/* HEADER */}
-      <div style={{ background: "linear-gradient(135deg, #cc0000 0%, #8b0000 100%)", borderBottom: "1px solid #b91c1c", padding: "16px 24px", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)", borderBottom: "1px solid #cbd5e1", padding: "16px 24px", display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ fontSize: 28 }}>🌭</span>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>New York Hotdog — מערכת ניהול פוד קוסט</div>
-          <div style={{ fontSize: 12, color: "#fecaca" }}>סניף אשדוד</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#f1f5f9", letterSpacing: 0.5 }}>New York Hotdog — מערכת ניהול פוד קוסט</div>
+          <div style={{ fontSize: 12, color: "#64748b" }}>סניף אשדוד</div>
         </div>
       </div>
 
       {/* TABS */}
-      <div style={{ display: "flex", gap: 2, padding: "0 24px", borderBottom: "2px solid #e2e8f0", overflowX: "auto", background: "#ffffff" }}>
+      <div style={{ display: "flex", gap: 4, padding: "12px 24px 0", borderBottom: "1px solid #e2e8f0", overflowX: "auto" }}>
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
-            background: "transparent",
-            color: tab === t.id ? "#cc0000" : "#64748b",
-            border: "none", borderBottom: tab === t.id ? "3px solid #cc0000" : "3px solid transparent",
-            borderRadius: 0, padding: "12px 16px",
+            background: tab === t.id ? "#6366f1" : "transparent",
+            color: tab === t.id ? "#fff" : "#64748b",
+            border: "none", borderRadius: "8px 8px 0 0", padding: "8px 16px",
             cursor: "pointer", fontSize: 13, fontWeight: tab === t.id ? 700 : 400,
             whiteSpace: "nowrap", transition: "all 0.2s", position: "relative"
           }}>
@@ -165,7 +159,7 @@ export default function App() {
       </div>
 
       <div style={{ padding: 24, background: "#f1f5f9", minHeight: "calc(100vh - 120px)" }}>
-        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} />}
+        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} />}
         {tab === "invoices" && <Invoices invoices={invoices} setInvoices={setInvoices} suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} settings={settings} pending={pending} setPending={setPending} />}
         {tab === "sales" && <Sales sales={sales} setSales={setSales} />}
@@ -174,7 +168,6 @@ export default function App() {
         {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={setDeliveries} suppliers={suppliers} products={products} setSuppliers={setSuppliers} setProducts={setProducts} pending={pending} setPending={setPending} invoices={invoices} setInvoices={setInvoices} />}
         {tab === "inventory" && <Inventory inventory={inventory} setInventory={setInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} inventoryCategories={inventoryCategories} setSuppliers={setSuppliers} />}
         {tab === "expenses" && <Expenses expenses={expenses} setExpenses={setExpenses} />}
-        {tab === "cash" && <CashDeposits cashDeposits={cashDeposits} setCashDeposits={setCashDeposits} sales={sales} />}
         {tab === "notifications" && <Notifications pending={pending} setPending={setPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={setInvoices} setSuppliers={setSuppliers} setProducts={setProducts} />}
         {tab === "settings" && <Settings settings={settings} setSettings={setSettings} inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />}
       </div>
@@ -182,7 +175,7 @@ export default function App() {
   );
 }
 
-function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [] }) {
+function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses }) {
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -273,16 +266,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   const totalKupa = monthlySales.reduce((a, s) => a + (parseFloat(s.kupa) || 0), 0);
   const totalWolt = monthlySales.reduce((a, s) => a + (parseFloat(s.wolt) || 0), 0);
   const monthlyInvoices = invoices.filter((i) => i.date?.startsWith(monthKey));
-  const monthlyDeliveries = deliveries.filter((d) => d.date?.startsWith(monthKey));
-
-  // פוד קוסט חכם: ספק עם חשבונית החודש → חשבונית בלבד; ספק ללא חשבונית → תעודות משלוח
-  const suppliersWithInvoice = new Set(monthlyInvoices.map(i => i.supplierId));
-  const invoiceCost = monthlyInvoices.reduce((a, i) => a + (parseFloat(i.total) || 0), 0);
-  const deliveryCostNoInvoice = monthlyDeliveries
-    .filter(d => !suppliersWithInvoice.has(d.supplierId))
-    .reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
-  const totalCost = invoiceCost + deliveryCostNoInvoice;
-  const deliveryCovered = monthlyDeliveries.filter(d => suppliersWithInvoice.has(d.supplierId)).reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
+  const totalCost = monthlyInvoices.reduce((a, i) => a + (parseFloat(i.total) || 0), 0);
   const foodCostPct = parseFloat(pct(totalCost, totalSales));
 
   // Labor cost
@@ -320,14 +304,8 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
 
   const supplierStats = suppliers.map((sup) => {
     const supInvoices = monthlyInvoices.filter((i) => i.supplierId === sup.id);
-    const invoiceCostSup = supInvoices.reduce((a, i) => a + (parseFloat(i.total) || 0), 0);
-    // אם אין חשבונית לספק זה החודש — קח מתעודות משלוח
-    const hasInvoice = supInvoices.length > 0;
-    const deliveryCostSup = hasInvoice ? 0 : monthlyDeliveries
-      .filter(d => d.supplierId === sup.id)
-      .reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
-    const cost = invoiceCostSup + deliveryCostSup;
-    return { ...sup, cost, pct: parseFloat(pct(cost, totalSales)), fromDelivery: !hasInvoice && deliveryCostSup > 0 };
+    const cost = supInvoices.reduce((a, i) => a + (parseFloat(i.total) || 0), 0);
+    return { ...sup, cost, pct: parseFloat(pct(cost, totalSales)) };
   }).filter((s) => s.cost > 0);
 
   const fcColor = foodCostPct <= settings.greenMax ? "#22c55e" : foodCostPct <= settings.yellowMax ? "#f59e0b" : "#ef4444";
@@ -419,7 +397,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
 
       {/* Prime Cost banner */}
       {totalSales > 0 && (
-        <div style={{ background: `linear-gradient(135deg, #fff8f8, #f8fafc)`, border: `2px solid ${pcColor}`, borderRadius: 12, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ background: `linear-gradient(135deg, #eef2ff, #f1f5f9)`, border: `2px solid ${pcColor}`, borderRadius: 12, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>PRIME COST — פוד + לייבור</div>
             <div style={{ fontSize: 36, fontWeight: 900, color: pcColor }}>{primeCostPct}%</div>
@@ -427,16 +405,6 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
               {primeCostPct <= 55 ? "✓ מצוין" : primeCostPct <= 65 ? "⚠ גבולי" : "✗ גבוה — נדרשת פעולה"}
               {" | "}יעד: מתחת ל-55%
             </div>
-            {deliveryCostNoInvoice > 0 && (
-              <div style={{ fontSize: 11, color: "#f59e0b", marginTop: 4 }}>
-                ⚠ כולל ₪{fmt(deliveryCostNoInvoice)} מתעודות משלוח ללא חשבונית
-              </div>
-            )}
-            {deliveryCovered > 0 && (
-              <div style={{ fontSize: 11, color: "#22c55e", marginTop: 2 }}>
-                ✓ ₪{fmt(deliveryCovered)} מתעודות — מכוסות ע"י חשבוניות (לא נספרות פעמיים)
-              </div>
-            )}
           </div>
           <div style={{ display: "flex", gap: 24 }}>
             <div style={{ textAlign: "center" }}>
@@ -466,12 +434,12 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>מכירות</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#1e293b" }}>₪{fmt(totalSales)}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#22d3ee" }}>₪{fmt(totalSales)}</div>
             </div>
             <div style={{ color: "#cbd5e1", fontSize: 20, alignSelf: "center" }}>−</div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>פוד קוסט</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#1e293b" }}>₪{fmt(totalCost)}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#a78bfa" }}>₪{fmt(totalCost)}</div>
             </div>
             <div style={{ color: "#cbd5e1", fontSize: 20, alignSelf: "center" }}>−</div>
             <div style={{ textAlign: "center" }}>
@@ -495,8 +463,8 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-        <KpiCard label="מכירות החודש" value={`₪${fmt(totalSales)}`} accent="#0284c7" sub={`קופה ₪${fmt(totalKupa)} | וולט ₪${fmt(totalWolt)}`} />
-        <KpiCard label="עלות ספקים" value={`₪${fmt(totalCost)}`} accent="#64748b" sub={`${monthlyInvoices.length} חשבוניות${deliveryCostNoInvoice > 0 ? ` + ₪${fmt(deliveryCostNoInvoice)} תעודות` : ""}`} />
+        <KpiCard label="מכירות החודש" value={`₪${fmt(totalSales)}`} accent="#22d3ee" sub={`קופה ₪${fmt(totalKupa)} | וולט ₪${fmt(totalWolt)}`} />
+        <KpiCard label="עלות ספקים" value={`₪${fmt(totalCost)}`} accent="#a78bfa" sub={`${monthlyInvoices.length} חשבוניות`} />
         <KpiCard label="פוד קוסט" value={<StatusBadge value={foodCostPct} settings={settings} />} accent="#f472b6" raw />
         <KpiCard label="עלות עבודה" value={`₪${fmt(totalLaborCost)}`} accent="#fb923c" sub={`${totalLaborHours.toFixed(1)} שעות`} />
         <KpiCard label="לייבור קוסט" value={<StatusBadge value={laborCostPct} settings={lcSettings} />} accent="#fb923c" raw />
@@ -569,11 +537,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
             <tbody>
               {supplierStats.map((s) => (
                 <tr key={s.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                  <Td>
-                    {s.name}
-                    {s.fromDelivery && <span style={{ fontSize: 10, color: "#f59e0b", marginRight: 6, background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 4, padding: "1px 5px" }}>תעודה</span>}
-                  </Td>
-                  <Td>₪{fmt(s.cost)}</Td><Td>{s.pct}%</Td>
+                  <Td>{s.name}</Td><Td>₪{fmt(s.cost)}</Td><Td>{s.pct}%</Td>
                   <Td><StatusBadge value={s.pct} settings={settings} /></Td>
                 </tr>
               ))}
@@ -615,50 +579,17 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
         </div>
       )}
 
-      {/* Cash Deposits summary */}
-      {(() => {
-        const monthCash = cashDeposits.filter(d => d.date?.startsWith(monthKey));
-        const totalWithdrawn = monthCash.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
-        const totalDeposited = monthCash.reduce((a, d) => a + parseFloat(d.bankAmount || 0), 0);
-        const pendingDeposit = monthCash.filter(d => !d.bankAmount).reduce((a, d) => a + parseFloat(d.amount || 0), 0);
-        const gap = totalDeposited - totalWithdrawn;
-        if (totalWithdrawn === 0) return null;
-        return (
-          <Card title="💵 מזומן — בקרת הפקדות החודש">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
-              <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>הוצא מהקופה</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#cc0000" }}>₪{fmt(totalWithdrawn)}</div>
-              </div>
-              <div style={{ background: "#f0fdf4", borderRadius: 8, padding: "10px 14px", border: "1px solid #22c55e" }}>
-                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>הופקד בבנק</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#22c55e" }}>₪{fmt(totalDeposited)}</div>
-              </div>
-              <div style={{ background: pendingDeposit > 0 ? "#fffbeb" : "#f0fdf4", borderRadius: 8, padding: "10px 14px", border: `1px solid ${pendingDeposit > 0 ? "#f59e0b" : "#22c55e"}` }}>
-                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ממתין להפקדה</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: pendingDeposit > 0 ? "#f59e0b" : "#22c55e" }}>₪{fmt(pendingDeposit)}</div>
-              </div>
-              <div style={{ background: Math.abs(gap) < 5 ? "#f0fdf4" : gap < 0 ? "#fff5f5" : "#fffbeb", borderRadius: 8, padding: "10px 14px", border: `1px solid ${Math.abs(gap) < 5 ? "#22c55e" : gap < 0 ? "#ef4444" : "#f59e0b"}` }}>
-                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>הפרש: הופקד vs. הוצא</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: Math.abs(gap) < 5 ? "#22c55e" : gap < 0 ? "#ef4444" : "#f59e0b" }}>{gap >= 0 ? "+" : ""}₪{fmt(gap)}</div>
-                <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{Math.abs(gap) < 5 ? "✓ תקין" : gap < 0 ? "⚠ חסר" : "⚠ עודף"}</div>
-              </div>
-            </div>
-          </Card>
-        );
-      })()}
-
       {/* AI Agent */}
-      <div style={{ border: "2px solid #cc0000", borderRadius: 14, overflow: "hidden", background: "#fff" }}>
-        <div onClick={() => setShowAI(p => !p)} style={{ padding: "14px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg, #cc0000, #8b0000)" }}>
+      <div style={{ border: "2px solid #6366f1", borderRadius: 14, overflow: "hidden", background: "#f5f5f5" }}>
+        <div onClick={() => setShowAI(p => !p)} style={{ padding: "14px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg, #1a1a1a, #cc0000)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 24 }}>🤖</span>
             <div>
-              <div style={{ fontWeight: 800, color: "#1e293b", fontSize: 15 }}>סוכן AI — יועץ עסקי</div>
+              <div style={{ fontWeight: 800, color: "#a78bfa", fontSize: 15 }}>סוכן AI — יועץ עסקי</div>
               <div style={{ fontSize: 11, color: "#64748b" }}>מנתח את הנתונים שלך בזמן אמת | מתמחה במסעדות מזון מהיר</div>
             </div>
           </div>
-          <span style={{ color: "#ffffff", fontSize: 18 }}>{showAI ? "▲" : "▼ לחץ לפתיחה"}</span>
+          <span style={{ color: "#6366f1", fontSize: 18 }}>{showAI ? "▲" : "▼ לחץ לפתיחה"}</span>
         </div>
 
         {showAI && (
@@ -673,7 +604,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
                 "מה ימי המכירה החזקים/חלשים?",
                 "תן לי 3 המלצות לשיפור הרווחיות",
               ].map(q => (
-                <button key={q} onClick={() => { setAiInput(q); }} style={{ background: "#fff1f1", border: "1px solid #cc0000", color: "#1e293b", borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                <button key={q} onClick={() => { setAiInput(q); }} style={{ background: "#eef2ff", border: "1px solid #6366f1", color: "#a78bfa", borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                   {q}
                 </button>
               ))}
@@ -686,19 +617,19 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
                   <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
                     <div style={{
                       maxWidth: "85%", padding: "10px 14px", borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                      background: m.role === "user" ? "#cc0000" : "#f8fafc",
-                      color: "#1e293b", fontSize: 13, lineHeight: 1.6,
-                      border: m.role === "assistant" ? "1px solid #e2e8f0" : "none",
+                      background: m.role === "user" ? "#cc0000" : "#f1f5f9",
+                      color: "#f1f5f9", fontSize: 13, lineHeight: 1.6,
+                      border: m.role === "assistant" ? "1px solid #334155" : "none",
                       whiteSpace: "pre-wrap"
                     }}>
-                      {m.role === "assistant" && <div style={{ fontSize: 11, color: "#cc0000", marginBottom: 4, fontWeight: 700 }}>🤖 יועץ AI</div>}
+                      {m.role === "assistant" && <div style={{ fontSize: 11, color: "#6366f1", marginBottom: 4, fontWeight: 700 }}>🤖 יועץ AI</div>}
                       {m.content}
                     </div>
                   </div>
                 ))}
                 {aiLoading && (
                   <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "14px 14px 14px 4px", padding: "10px 16px", color: "#cc0000", fontSize: 13 }}>
+                    <div style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "14px 14px 14px 4px", padding: "10px 16px", color: "#6366f1", fontSize: 13 }}>
                       ⏳ מנתח את הנתונים...
                     </div>
                   </div>
@@ -715,7 +646,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
                 placeholder="שאל אותי כל שאלה על העסק..."
                 style={{ ...inputStyle, flex: 1, fontSize: 13 }}
               />
-              <Btn onClick={sendAIMessage} style={{ background: aiLoading ? "#94a3b8" : "#cc0000", minWidth: 70 }} disabled={aiLoading}>
+              <Btn onClick={sendAIMessage} style={{ background: aiLoading ? "#94a3b8" : "#6366f1", minWidth: 70 }} disabled={aiLoading}>
                 {aiLoading ? "⏳" : "שלח ➤"}
               </Btn>
               {aiMessages.length > 0 && <Btn onClick={() => setAiMessages([])} style={{ background: "#f1f5f9", color: "#64748b", fontSize: 11 }}>נקה</Btn>}
@@ -736,8 +667,6 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
   const [newSupPhone, setNewSupPhone] = useState("");
   const [editSupId, setEditSupId] = useState(null);
   const [editSupVals, setEditSupVals] = useState({ name: "", contact: "", phone: "" });
-  const [editProdId, setEditProdId] = useState(null);
-  const [editProdVals, setEditProdVals] = useState({ name: "", unit: "ק\"ג", basePrice: "" });
 
   const addSupplier = () => {
     if (!newSupName.trim()) return;
@@ -766,7 +695,7 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {suppliers.length === 0 && <div style={{ color: "#64748b", fontSize: 13, padding: 8 }}>אין ספקים עדיין</div>}
           {suppliers.map((s) => (
-            <div key={s.id} style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${selSup === s.id ? "#cc0000" : "#e2e8f0"}`, marginBottom: 2 }}>
+            <div key={s.id} style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${selSup === s.id ? "#6366f1" : "#f1f5f9"}`, marginBottom: 2 }}>
               <div onClick={() => { setSelSup(s.id); setEditSupId(null); }} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 padding: "10px 12px", cursor: "pointer",
@@ -775,11 +704,11 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
                 <div>
                   <div style={{ fontWeight: selSup === s.id ? 700 : 400 }}>{s.name}</div>
                   {s.contact && <div style={{ fontSize: 11, color: "#64748b" }}>👤 {s.contact}</div>}
-                  {s.phone && <div style={{ fontSize: 11, color: "#64748b" }}>📞 <a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{ color: "#1e293b", textDecoration: "none" }}>{s.phone}</a></div>}
+                  {s.phone && <div style={{ fontSize: 11, color: "#64748b" }}>📞 <a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{ color: "#22d3ee", textDecoration: "none" }}>{s.phone}</a></div>}
                 </div>
                 <span style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
-                  <span style={{ color: "#64748b" }}>{products.filter((p) => p.supplierId === s.id).length} פריטים</span>
-                  <button onClick={(e) => { e.stopPropagation(); setEditSupId(editSupId === s.id ? null : s.id); setEditSupVals({ name: s.name, contact: s.contact||"", phone: s.phone||"" }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13 }}>✏️</button>
+                  <span style={{ color: "#6366f1" }}>{products.filter((p) => p.supplierId === s.id).length} פריטים</span>
+                  <button onClick={(e) => { e.stopPropagation(); setEditSupId(editSupId === s.id ? null : s.id); setEditSupVals({ name: s.name, contact: s.contact||"", phone: s.phone||"" }); }} style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: 13 }}>✏️</button>
                   <button onClick={(e) => { e.stopPropagation(); delSupplier(s.id); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button>
                 </span>
               </div>
@@ -827,42 +756,22 @@ function Suppliers({ suppliers, setSuppliers, products, setProducts }) {
               ? <div style={{ color: "#aaa", fontSize: 13 }}>הוסף פריטים לספק זה</div>
               : (
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>יחידה</Th><Th>מחיר בסיס (₪)</Th><Th></Th></tr></thead>
+                  <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>יחידה</Th><Th>מחיר בסיס (₪)</Th><Th>מינימום מלאי 🔔</Th><Th></Th></tr></thead>
                   <tbody>
                     {supProds.map((p) => (
-                      <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0", background: editProdId === p.id ? "#fff8f8" : "transparent" }}>
-                        {editProdId === p.id ? (
-                          <>
-                            <Td><input value={editProdVals.name} onChange={e => setEditProdVals(v => ({ ...v, name: e.target.value }))} style={{ ...inputStyle, width: "100%" }} /></Td>
-                            <Td>
-                              <select value={editProdVals.unit} onChange={e => setEditProdVals(v => ({ ...v, unit: e.target.value }))} style={inputStyle}>
-                                {["ק\"ג", "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}
-                              </select>
-                            </Td>
-                            <Td><input type="number" value={editProdVals.basePrice} onChange={e => setEditProdVals(v => ({ ...v, basePrice: e.target.value }))} style={{ ...inputStyle, width: 100 }} /></Td>
-                            <Td>
-                              <div style={{ display: "flex", gap: 6 }}>
-                                <button onClick={() => {
-                                  setProducts(prev => prev.map(pr => pr.id === p.id ? { ...pr, name: editProdVals.name, unit: editProdVals.unit, basePrice: parseFloat(editProdVals.basePrice) || 0 } : pr));
-                                  setEditProdId(null);
-                                }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>✓</button>
-                                <button onClick={() => setEditProdId(null)} style={{ background: "#e2e8f0", color: "#64748b", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 12 }}>✕</button>
-                              </div>
-                            </Td>
-                          </>
-                        ) : (
-                          <>
-                            <Td>{p.name}</Td>
-                            <Td style={{ color: "#64748b" }}>{p.unit}</Td>
-                            <Td>₪{fmt(p.basePrice)}</Td>
-                            <Td>
-                              <div style={{ display: "flex", gap: 6 }}>
-                                <button onClick={() => { setEditProdId(p.id); setEditProdVals({ name: p.name, unit: p.unit, basePrice: String(p.basePrice) }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13 }}>✏️</button>
-                                <button onClick={() => delProduct(p.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button>
-                              </div>
-                            </Td>
-                          </>
-                        )}
+                      <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <Td>{p.name}</Td>
+                        <Td style={{ color: "#64748b" }}>{p.unit}</Td>
+                        <Td>
+                          <input type="number" defaultValue={p.basePrice} onBlur={(e) => updateBasePrice(p.id, e.target.value)}
+                            style={{ ...inputStyle, width: 90, textAlign: "center" }} />
+                        </Td>
+                        <Td>
+                          <input type="number" defaultValue={p.minStock || ""} placeholder="—"
+                            onBlur={(e) => setProducts(prev => prev.map(pr => pr.id === p.id ? { ...pr, minStock: parseFloat(e.target.value) || 0 } : pr))}
+                            style={{ ...inputStyle, width: 80, textAlign: "center", color: "#ef4444" }} />
+                        </Td>
+                        <Td><button onClick={() => delProduct(p.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button></Td>
                       </tr>
                     ))}
                   </tbody>
@@ -1073,7 +982,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
           {/* Magnifier button */}
           {originalImageUrl && (
             <div style={{ marginBottom: 12 }}>
-              <button onClick={() => setShowLightbox(true)} style={{ background: "#f1f5f9", border: "1px solid #cc0000", color: "#1e293b", borderRadius: 8, padding: "7px 16px", cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
+              <button onClick={() => setShowLightbox(true)} style={{ background: "#f1f5f9", border: "1px solid #6366f1", color: "#a78bfa", borderRadius: 8, padding: "7px 16px", cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
                 🔍 הצג חשבונית מקורית להשוואה
               </button>
             </div>
@@ -1081,7 +990,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div>
-              <input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, width: "100%", color: "#1e293b", fontWeight: 700 }} />
+              <input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, width: "100%", color: "#22d3ee", fontWeight: 700 }} />
             </div>
             <div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div>
@@ -1119,8 +1028,8 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
                         {['ק"ג', "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}
                       </select>
                     </Td>
-                    <Td><input type="number" value={item.price || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, textAlign: "center", color: "#1e293b" }} /></Td>
-                    <Td style={{ color: "#1e293b", fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
+                    <Td><input type="number" value={item.price || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, textAlign: "center", color: "#22d3ee" }} /></Td>
+                    <Td style={{ color: "#a78bfa", fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
                     <Td><button onClick={() => setScanResult(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
                   </tr>
                 );
@@ -1193,7 +1102,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
                             <Td>{qty} {prod?.unit}</Td>
                             <Td style={{ color: "#64748b" }}>₪{fmt(base)}</Td>
                             <Td style={{ color: alert ? "#f87171" : "#e2e8f0", fontWeight: alert ? 700 : 400 }}>₪{fmt(price)}</Td>
-                            <Td style={{ color: "#1e293b" }}>₪{fmt(price * qty)}</Td>
+                            <Td style={{ color: "#22d3ee" }}>₪{fmt(price * qty)}</Td>
                             <Td>{alert ? <span style={{ color: "#ef4444", fontWeight: 700, fontSize: 12 }}>+{diff.toFixed(1)}% ⚠️</span> : <span style={{ color: "#22c55e", fontSize: 12 }}>✓ תקין</span>}</Td>
                             <Td><button onClick={() => removeItem(item.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
                           </tr>
@@ -1201,7 +1110,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
                       })}
                       <tr style={{ borderTop: "2px solid #cbd5e1" }}>
                         <Td colSpan={4} style={{ color: "#64748b", fontWeight: 700 }}>סה״כ חשבונית:</Td>
-                        <Td style={{ color: "#1e293b", fontWeight: 700, fontSize: 15 }}>₪{fmt(formTotal)}</Td>
+                        <Td style={{ color: "#22d3ee", fontWeight: 700, fontSize: 15 }}>₪{fmt(formTotal)}</Td>
                         <Td colSpan={2}></Td>
                       </tr>
                     </tbody>
@@ -1225,7 +1134,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
             });
             const isEditing = editInvoice?.id === inv.id;
             return (
-              <div key={inv.id} style={{ background: "#ffffff", border: `1px solid ${isEditing ? "#cc0000" : "#e2e8f0"}`, borderRadius: 8, overflow: "hidden" }}>
+              <div key={inv.id} style={{ background: "#ffffff", border: `1px solid ${isEditing ? "#6366f1" : "#f1f5f9"}`, borderRadius: 8, overflow: "hidden" }}>
                 {/* Row */}
                 <div style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
                   onClick={() => setEditInvoice(isEditing ? null : { ...inv, items: inv.items.map(i => ({ ...i })) })}>
@@ -1235,8 +1144,8 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     {itemAlerts.length > 0 && <span style={{ background: "#fff5f5", color: "#f87171", border: "1px solid #ef4444", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>⚠️ {itemAlerts.length} חריגות</span>}
-                    <span style={{ color: "#1e293b", fontWeight: 800, fontSize: 15 }}>₪{fmt(inv.total)}</span>
-                    <span style={{ color: "#64748b", fontSize: 12 }}>{isEditing ? "▲ סגור" : "✏️ ערוך"}</span>
+                    <span style={{ color: "#22d3ee", fontWeight: 800, fontSize: 15 }}>₪{fmt(inv.total)}</span>
+                    <span style={{ color: "#6366f1", fontSize: 12 }}>{isEditing ? "▲ סגור" : "✏️ ערוך"}</span>
                     <button onClick={(e) => { e.stopPropagation(); if (window.confirm("למחוק חשבונית זו?")) setInvoices((p) => p.filter((i) => i.id !== inv.id)); }}
                       style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
                   </div>
@@ -1269,10 +1178,10 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
                           const prod = products.find(p => p.id === item.productId);
                           return (
                             <tr key={item.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                              <Td style={{ color: "#1e293b" }}>{prod?.name || "—"}</Td>
+                              <Td style={{ color: "#f1f5f9" }}>{prod?.name || "—"}</Td>
                               <Td><input type="number" value={item.qty} onChange={e => setEditInvoice(p => ({ ...p, items: p.items.map((it, i) => i === idx ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70, textAlign: "center" }} /></Td>
-                              <Td><input type="number" value={item.price} onChange={e => setEditInvoice(p => ({ ...p, items: p.items.map((it, i) => i === idx ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, textAlign: "center", color: "#1e293b" }} /></Td>
-                              <Td style={{ color: "#1e293b" }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
+                              <Td><input type="number" value={item.price} onChange={e => setEditInvoice(p => ({ ...p, items: p.items.map((it, i) => i === idx ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, textAlign: "center", color: "#22d3ee" }} /></Td>
+                              <Td style={{ color: "#a78bfa" }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
                               <Td><button onClick={() => setEditInvoice(p => ({ ...p, items: p.items.filter((_, i) => i !== idx) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
                             </tr>
                           );
@@ -1481,11 +1390,11 @@ function Sales({ sales, setSales }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 16 }}>
         <KpiCard label="🖥️ קופה (Caspit) — חודש נוכחי" value={`₪${fmt(totalKupa)}`}
-          sub={<span>מזה: תפריט <strong style={{color:"#475569"}}>₪{fmt(totalTaprit)}</strong> | משלוחה <strong style={{color:"#f87171"}}>₪{fmt(totalMishlocha)}</strong></span>}
-          accent="#0284c7" raw />
-        <KpiCard label="📱 Wolt — חודש נוכחי" value={`₪${fmt(totalWolt)}`} sub="הזמנות אונליין" accent="#64748b" />
+          sub={<span>מזה: תפריט <strong style={{color:"#a78bfa"}}>₪{fmt(totalTaprit)}</strong> | משלוחה <strong style={{color:"#f87171"}}>₪{fmt(totalMishlocha)}</strong></span>}
+          accent="#22d3ee" raw />
+        <KpiCard label="📱 Wolt — חודש נוכחי" value={`₪${fmt(totalWolt)}`} sub="הזמנות אונליין" accent="#a78bfa" />
       </div>
-      <div style={{ background: "linear-gradient(135deg, #fff1f1, #fff8f8)", border: "1px solid #cc0000", borderRadius: 10, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+      <div style={{ background: "linear-gradient(135deg,#0f172a,#1e1b4b)", border: "1px solid #6366f1", borderRadius: 10, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <span style={{ color: "#64748b", fontSize: 13 }}>סה״כ מכירות החודש ({monthSales.length} ימים)</span>
         <span style={{ color: "#22c55e", fontWeight: 900, fontSize: 22 }}>₪{fmt(totalKupa + totalWolt)}</span>
       </div>
@@ -1494,7 +1403,7 @@ function Sales({ sales, setSales }) {
       <Card title="📥 ייבוא נתוני מכירות">
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
           <div>
-            <label style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1, display: "inline-block" }}>
+            <label style={{ background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1, display: "inline-block" }}>
               {importing ? "⏳ מעבד..." : "🖥️ ייבוא מ-Caspit (Excel)"}
               <input type="file" accept=".xlsx,.xls" style={{ display: "none" }}
                 onChange={e => e.target.files[0] && parseXlsxSales(e.target.files[0])} disabled={importing} />
@@ -1516,9 +1425,9 @@ function Sales({ sales, setSales }) {
             {importPreview.type === "caspit" ? (
               <>
                 <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
-                  📊 Caspit — <strong style={{ color: "#1e293b" }}>{importPreview.rows.length} ימים</strong> |
+                  📊 Caspit — <strong style={{ color: "#22d3ee" }}>{importPreview.rows.length} ימים</strong> |
                   סה״כ קופה: <strong style={{ color: "#22c55e" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.kupa||0),0))}</strong> |
-                  תפריט: <strong style={{ color: "#1e293b" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.taprit||0),0))}</strong> |
+                  תפריט: <strong style={{ color: "#a78bfa" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.taprit||0),0))}</strong> |
                   משלוחה: <strong style={{ color: "#f87171" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.mishlocha||0),0))}</strong>
                 </div>
                 <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 12, border: "1px solid #e2e8f0", borderRadius: 8 }}>
@@ -1526,10 +1435,10 @@ function Sales({ sales, setSales }) {
                     <thead><tr style={{ background: "#f1f5f9" }}><Th>תאריך</Th><Th>סה״כ קופה</Th><Th>מזה: תפריט</Th><Th>מזה: משלוחה</Th></tr></thead>
                     <tbody>
                       {importPreview.rows.map(r => (
-                        <tr key={r.date} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <tr key={r.date} style={{ borderBottom: "1px solid #0f172a" }}>
                           <Td style={{ color: "#64748b" }}>{r.date}</Td>
                           <Td style={{ color: "#22c55e", fontWeight: 700 }}>₪{fmt(r.kupa)}</Td>
-                          <Td style={{ color: "#1e293b" }}>{parseFloat(r.taprit||0)>0 ? `₪${fmt(r.taprit)}` : "—"}</Td>
+                          <Td style={{ color: "#a78bfa" }}>{parseFloat(r.taprit||0)>0 ? `₪${fmt(r.taprit)}` : "—"}</Td>
                           <Td style={{ color: "#f87171" }}>{parseFloat(r.mishlocha||0)>0 ? `₪${fmt(r.mishlocha)}` : "—"}</Td>
                         </tr>
                       ))}
@@ -1540,17 +1449,17 @@ function Sales({ sales, setSales }) {
             ) : (
               <>
                 <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
-                  📱 Wolt — <strong style={{ color: "#1e293b" }}>{importPreview.rows.length} ימים</strong> |
-                  סה״כ: <strong style={{ color: "#1e293b" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.wolt||0),0))}</strong>
+                  📱 Wolt — <strong style={{ color: "#a78bfa" }}>{importPreview.rows.length} ימים</strong> |
+                  סה״כ: <strong style={{ color: "#a78bfa" }}>₪{fmt(importPreview.rows.reduce((a,r) => a+parseFloat(r.wolt||0),0))}</strong>
                 </div>
                 <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 12, border: "1px solid #e2e8f0", borderRadius: 8 }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                     <thead><tr style={{ background: "#f1f5f9" }}><Th>תאריך</Th><Th>וולט ₪</Th></tr></thead>
                     <tbody>
                       {importPreview.rows.map(r => (
-                        <tr key={r.date} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <tr key={r.date} style={{ borderBottom: "1px solid #0f172a" }}>
                           <Td style={{ color: "#64748b" }}>{r.date}</Td>
-                          <Td style={{ color: "#1e293b", fontWeight: 700 }}>₪{fmt(r.wolt)}</Td>
+                          <Td style={{ color: "#a78bfa", fontWeight: 700 }}>₪{fmt(r.wolt)}</Td>
                         </tr>
                       ))}
                     </tbody>
@@ -1590,7 +1499,7 @@ function Sales({ sales, setSales }) {
           <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>תאריך</Th><Th>קופה</Th><Th>וולט</Th><Th>סה״כ יומי</Th><Th></Th></tr></thead>
           <tbody>
             {[...monthSales].sort((a, b) => b.date?.localeCompare(a.date)).map((s) => (
-              <tr key={s.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === s.id ? "#fff1f1" : "transparent" }}>
+              <tr key={s.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === s.id ? "#eef2ff" : "transparent" }}>
                 <Td>{s.date}</Td>
                 {editId === s.id ? (
                   <>
@@ -1602,7 +1511,7 @@ function Sales({ sales, setSales }) {
                       <input type="number" value={editVals.wolt} onChange={(e) => setEditVals((v) => ({ ...v, wolt: e.target.value }))}
                         style={{ ...inputStyle, width: 110 }} />
                     </Td>
-                    <Td style={{ color: "#1e293b", fontWeight: 700 }}>
+                    <Td style={{ color: "#22d3ee", fontWeight: 700 }}>
                       ₪{fmt((parseFloat(editVals.kupa) || 0) + (parseFloat(editVals.wolt) || 0))}
                     </Td>
                     <Td>
@@ -1614,12 +1523,12 @@ function Sales({ sales, setSales }) {
                   </>
                 ) : (
                   <>
-                    <Td style={{ color: "#1e293b" }}>₪{fmt(s.kupa || 0)}</Td>
-                    <Td style={{ color: "#1e293b" }}>₪{fmt(s.wolt || 0)}</Td>
+                    <Td style={{ color: "#22d3ee" }}>₪{fmt(s.kupa || 0)}</Td>
+                    <Td style={{ color: "#a78bfa" }}>₪{fmt(s.wolt || 0)}</Td>
                     <Td style={{ fontWeight: 700 }}>₪{fmt((parseFloat(s.kupa) || 0) + (parseFloat(s.wolt) || 0))}</Td>
                     <Td>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => startEdit(s)} style={{ background: "none", border: "none", color: "#cc0000", cursor: "pointer", fontSize: 14 }} title="עריכה">✏️</button>
+                        <button onClick={() => startEdit(s)} style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: 14 }} title="עריכה">✏️</button>
                         <button onClick={() => setSales((p) => p.filter((i) => i.id !== s.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14 }} title="מחיקה">×</button>
                       </div>
                     </Td>
@@ -1630,8 +1539,8 @@ function Sales({ sales, setSales }) {
             {monthSales.length > 0 && (
               <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
                 <Td style={{ color: "#64748b" }}>סה״כ חודש</Td>
-                <Td style={{ color: "#1e293b" }}>₪{fmt(totalKupa)}</Td>
-                <Td style={{ color: "#1e293b" }}>₪{fmt(totalWolt)}</Td>
+                <Td style={{ color: "#22d3ee" }}>₪{fmt(totalKupa)}</Td>
+                <Td style={{ color: "#a78bfa" }}>₪{fmt(totalWolt)}</Td>
                 <Td style={{ color: "#22c55e" }}>₪{fmt(totalKupa + totalWolt)}</Td><Td></Td>
               </tr>
             )}
@@ -1684,7 +1593,7 @@ function Employees({ employees, setEmployees }) {
           {employees.length > 0 && <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>שם עובד</Th><Th>₪ לשעה</Th><Th></Th></tr></thead>}
           <tbody>
             {employees.map((e) => (
-              <tr key={e.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === e.id ? "#fff1f1" : "transparent" }}>
+              <tr key={e.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === e.id ? "#eef2ff" : "transparent" }}>
                 {editId === e.id ? (
                   <>
                     <Td><input value={editVals.name} onChange={(ev) => setEditVals((v) => ({ ...v, name: ev.target.value }))} style={{ ...inputStyle, width: "100%" }} autoFocus /></Td>
@@ -1703,7 +1612,7 @@ function Employees({ employees, setEmployees }) {
                     <Td>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button onClick={() => { setEditId(e.id); setEditVals({ name: e.name, hourlyRate: String(e.hourlyRate) }); }}
-                          style={{ background: "none", border: "none", color: "#cc0000", cursor: "pointer", fontSize: 14 }}>✏️</button>
+                          style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: 14 }}>✏️</button>
                         <button onClick={() => setEmployees((p) => p.filter((x) => x.id !== e.id))}
                           style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button>
                       </div>
@@ -1725,11 +1634,10 @@ function Hours({ hours, setHours, employees, sales, settings }) {
   const [form, setForm] = useState({ date: today(), employeeId: "", hours: "" });
   const [editId, setEditId] = useState(null);
   const [editHours, setEditHours] = useState("");
-  const [importPreview, setImportPreview] = useState(null);
-  const [importError, setImportError] = useState("");
 
   const addHours = () => {
     if (!form.date || !form.employeeId || !form.hours) return;
+    // Check if same employee + date already exists → update
     const existing = hours.findIndex((h) => h.date === form.date && h.employeeId === form.employeeId);
     if (existing >= 0) {
       setHours((p) => p.map((h, i) => i === existing ? { ...h, hours: form.hours } : h));
@@ -1742,131 +1650,6 @@ function Hours({ hours, setHours, employees, sales, settings }) {
   const saveEdit = (id) => {
     setHours((p) => p.map((h) => h.id === id ? { ...h, hours: editHours } : h));
     setEditId(null);
-  };
-
-  // ייבוא מיכפל CSV
-  const importMichpal = async (file) => {
-    setImportError("");
-    setImportPreview(null);
-    try {
-      const buffer = await file.arrayBuffer();
-      // Decode windows-1255
-      const decoder = new TextDecoder("windows-1255");
-      const text = decoder.decode(buffer);
-      const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-
-      // Parse rows: תאריך,שעה,קוד פעולה,זיהוי כרטיס,זיהוי בפוזיטיב,מספר חנות
-      const rows = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(",");
-        if (cols.length < 5) continue;
-        const dateStr = cols[0].trim(); // DD/MM/YYYY
-        const timeStr = cols[1].trim(); // HH:MM:SS
-        const action = cols[2].trim();  // 0=כניסה, 1=יציאה
-        const identity = cols[4].trim(); // "ID - שם - מספר"
-        if (!dateStr || !timeStr) continue;
-
-        // Parse date DD/MM/YYYY → YYYY-MM-DD
-        const [dd, mm, yyyy] = dateStr.split("/");
-        const isoDate = `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
-
-        // Extract employee name from "97589 - נהוראי מלול - 7078"
-        const parts = identity.split(" - ");
-        const empName = parts.length >= 2 ? parts[1].trim() : identity;
-
-        rows.push({ date: isoDate, time: timeStr, action, empName });
-      }
-
-      // Match pairs: כניסה (0) + יציאה (1) per employee
-      // מטפל במשמרות לילה שחוצות חצות וריבוי משמרות
-      const preview = [];
-      const empNames = [...new Set(rows.map(r => r.empName))];
-
-      empNames.forEach(empName => {
-        const empRows = rows
-          .filter(r => r.empName === empName)
-          .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-
-        const availableExits = empRows
-          .filter(r => r.action === "1")
-          .map(r => ({ ...r, used: false }));
-
-        empRows.filter(r => r.action === "0").forEach(entry => {
-          const entryDT = new Date(`${entry.date}T${entry.time}`);
-
-          const matchExit = availableExits.find(x => {
-            if (x.used) return false;
-            const exitDT = new Date(`${x.date}T${x.time}`);
-            const diffMs = exitDT - entryDT;
-            return diffMs > 0 && diffMs < 24 * 3600 * 1000;
-          });
-
-          if (!matchExit) return;
-          matchExit.used = true;
-
-          const exitDT = new Date(`${matchExit.date}T${matchExit.time}`);
-          const totalHours = Math.round((exitDT - entryDT) / 3600000 * 4) / 4;
-
-          const normalize = n => n.trim().replace(/\s+/g, " ").replace(/['"]/g, "");
-          const csvName = normalize(empName);
-          const matchedEmp = employees.find(e => {
-            const eName = normalize(e.name);
-            return eName === csvName || eName.includes(csvName) || csvName.includes(eName);
-          });
-
-          preview.push({
-            date: entry.date,
-            empName,
-            employeeId: matchedEmp?.id || null,
-            entry: entry.time,
-            exit: matchExit.time,
-            exitDate: matchExit.date,
-            hours: totalHours,
-            matched: !!matchedEmp
-          });
-        });
-      });
-
-      if (preview.length === 0) throw new Error("לא נמצאו משמרות מלאות בקובץ");
-      preview.sort((a, b) => a.date.localeCompare(b.date) || a.empName.localeCompare(b.empName));
-      setImportPreview(preview);
-    } catch(e) {
-      setImportError("שגיאה: " + e.message);
-    }
-  };
-
-  const confirmImport = () => {
-    if (!importPreview) return;
-    let updated = [...hours];
-    let added = 0, updated_count = 0, skipped = 0;
-    importPreview.forEach(row => {
-      if (!row.employeeId) { skipped++; return; }
-      const record = {
-        id: Date.now().toString() + Math.random(),
-        date: row.date,
-        employeeId: row.employeeId,
-        hours: String(row.hours),
-        entryTime: row.entry,
-        exitTime: row.exit,
-        exitDate: row.exitDate,
-      };
-      // Match by date + employee + entry time (supports multiple shifts per day)
-      const existing = updated.findIndex(h =>
-        h.date === row.date &&
-        h.employeeId === row.employeeId &&
-        h.entryTime === row.entry
-      );
-      if (existing >= 0) {
-        updated[existing] = { ...updated[existing], ...record, id: updated[existing].id };
-        updated_count++;
-      } else {
-        updated.push(record);
-        added++;
-      }
-    });
-    setHours(updated);
-    setImportPreview(null);
-    alert(`✅ יובאו ${added} רשומות חדשות, עודכנו ${updated_count}${skipped > 0 ? ` | ${skipped} דולגו` : ""}`);
   };
 
   const monthHours = hours.filter((h) => h.date?.startsWith(monthKey));
@@ -1899,8 +1682,7 @@ function Hours({ hours, setHours, employees, sales, settings }) {
         {employees.length === 0
           ? <div style={{ color: "#64748b", fontSize: 13 }}>יש להוסיף עובדים קודם בטאב 👷 עובדים</div>
           : (
-            <>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 12 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div>
                 <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>תאריך</label>
                 <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, minWidth: 155 }} />
@@ -1920,57 +1702,8 @@ function Hours({ hours, setHours, employees, sales, settings }) {
               </div>
               <Btn onClick={addHours}>💾 שמור</Btn>
             </div>
-            <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-              <label style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontSize: 13, color: "#475569", fontWeight: 600 }}>
-                📂 ייבוא מיכפל CSV
-                <input type="file" accept=".csv" style={{ display: "none" }} onChange={e => e.target.files[0] && importMichpal(e.target.files[0])} />
-              </label>
-              <span style={{ fontSize: 12, color: "#94a3b8" }}>מייבא שעות אוטומטית מקובץ נוכחות מיכפל</span>
-            </div>
-            {importError && <div style={{ marginTop: 8, color: "#ef4444", fontSize: 13 }}>❌ {importError}</div>}
-            </>
           )}
       </Card>
-
-      {importPreview && (
-        <Card title={`📋 תצוגה מקדימה — ${importPreview.length} משמרות`}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #e2e8f0", color: "#64748b" }}>
-                <Th>תאריך</Th><Th>עובד (מקובץ)</Th><Th>התאמה במערכת</Th><Th>כניסה</Th><Th>יציאה</Th><Th>שעות</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {importPreview.map((row, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid #e2e8f0", background: !row.matched ? "#fffbeb" : "transparent" }}>
-                  <Td>{row.date}</Td>
-                  <Td style={{ fontWeight: 600 }}>{row.empName}</Td>
-                  <Td>
-                    {row.matched
-                      ? <span style={{ color: "#22c55e", fontSize: 12 }}>✓ {employees.find(e => e.id === row.employeeId)?.name}</span>
-                      : <select
-                          style={{ ...inputStyle, fontSize: 12, padding: "4px 8px" }}
-                          value={row.employeeId || ""}
-                          onChange={e => setImportPreview(p => p.map((r, idx) => idx === i ? { ...r, employeeId: e.target.value, matched: !!e.target.value } : r))}
-                        >
-                          <option value="">— לא זוהה — בחר ידנית</option>
-                          {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                        </select>
-                    }
-                  </Td>
-                  <Td style={{ color: "#64748b" }}>{row.entry}</Td>
-                  <Td style={{ color: "#64748b" }}>{row.exit}</Td>
-                  <Td style={{ fontWeight: 700, color: "#fb923c" }}>{row.hours}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Btn onClick={confirmImport} style={{ background: "#22c55e" }}>✅ אשר וייבא</Btn>
-            <Btn onClick={() => setImportPreview(null)} style={{ background: "#94a3b8" }}>✕ בטל</Btn>
-          </div>
-        </Card>
-      )}
 
       <Card title="שעות חודש נוכחי">
         {Object.keys(byDate).length === 0 && <div style={{ color: "#64748b", fontSize: 13 }}>אין שעות מוזנות לחודש זה</div>}
@@ -1987,32 +1720,13 @@ function Hours({ hours, setHours, employees, sales, settings }) {
                 <span style={{ fontSize: 12, color: "#64748b" }}>{dayTotal.toFixed(1)} שעות | ₪{fmt(dayCost)}</span>
               </div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid #e2e8f0", color: "#94a3b8", fontSize: 11 }}>
-                    <Th>עובד</Th><Th>▶ כניסה</Th><Th>■ יציאה</Th><Th>שעות</Th><Th>עלות</Th><Th></Th>
-                  </tr>
-                </thead>
                 <tbody>
                   {entries.map((h) => {
                     const emp = employees.find((e) => e.id === h.employeeId);
                     const cost = (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0);
                     return (
-                      <tr key={h.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === h.id ? "#fff1f1" : "transparent" }}>
-                        <Td style={{ color: "#1e293b", fontWeight: 600 }}>{emp?.name || "—"}</Td>
-                        {/* שעות כניסה/יציאה */}
-                        <Td>
-                          {h.entryTime
-                            ? <span style={{ fontSize: 12, color: "#22c55e", fontWeight: 600 }}>▶ {h.entryTime.slice(0,5)}</span>
-                            : <span style={{ fontSize: 11, color: "#cbd5e1" }}>—</span>}
-                        </Td>
-                        <Td>
-                          {h.exitTime
-                            ? <span style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>
-                                ■ {h.exitTime.slice(0,5)}
-                                {h.exitDate && h.exitDate !== h.date && <span style={{ fontSize: 10, color: "#94a3b8", marginRight: 3 }}>(+1)</span>}
-                              </span>
-                            : <span style={{ fontSize: 11, color: "#cbd5e1" }}>—</span>}
-                        </Td>
+                      <tr key={h.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === h.id ? "#eef2ff" : "transparent" }}>
+                        <Td style={{ color: "#f1f5f9" }}>{emp?.name || "—"}</Td>
                         {editId === h.id ? (
                           <>
                             <Td><input type="number" value={editHours} onChange={(e) => setEditHours(e.target.value)} step="0.5" style={{ ...inputStyle, width: 80 }} autoFocus /></Td>
@@ -2030,7 +1744,7 @@ function Hours({ hours, setHours, employees, sales, settings }) {
                             <Td style={{ color: "#64748b" }}>₪{fmt(cost)}</Td>
                             <Td>
                               <div style={{ display: "flex", gap: 8 }}>
-                                <button onClick={() => { setEditId(h.id); setEditHours(h.hours); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13 }}>✏️</button>
+                                <button onClick={() => { setEditId(h.id); setEditHours(h.hours); }} style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: 13 }}>✏️</button>
                                 <button onClick={() => setHours((p) => p.filter((x) => x.id !== h.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button>
                               </div>
                             </Td>
@@ -2097,17 +1811,17 @@ function approvePendingItem(item, suppliers, products, setSuppliers, setProducts
 function InvSettings({ inventoryCategories, setInventoryCategories, suppliers, setSuppliers }) {
   const DEFAULT_CATS = [
     { id: "naknikiyot", label: "נקניקיות", emoji: "🌭", color: "#ef4444" },
-    { id: "shtiya_cola", label: "שתייה — קוקה קולה", emoji: "🥤", color: "#1e293b" },
+    { id: "shtiya_cola", label: "שתייה — קוקה קולה", emoji: "🥤", color: "#22d3ee" },
     { id: "shtiya_agm", label: 'שתייה — אג"מ', emoji: "🍺", color: "#60a5fa" },
     { id: "chad_pami", label: "חד פעמי", emoji: "🥡", color: "#f59e0b" },
-    { id: "levamot_naknik", label: "לחמניות נקניקייה", emoji: "🍞", color: "#1e293b" },
+    { id: "levamot_naknik", label: "לחמניות נקניקייה", emoji: "🍞", color: "#a78bfa" },
     { id: "levamot_toast", label: "לחמניות טוסט", emoji: "🥖", color: "#fb923c" },
     { id: "ratabim", label: "רטבים", emoji: "🫙", color: "#22c55e" },
     { id: "other", label: "שונות", emoji: "📦", color: "#64748b" },
   ];
 
   const cats = inventoryCategories.length > 0 ? inventoryCategories : DEFAULT_CATS;
-  const [newCat, setNewCat] = useState({ label: "", emoji: "📦", color: "#cc0000" });
+  const [newCat, setNewCat] = useState({ label: "", emoji: "📦", color: "#6366f1" });
   const [editId, setEditId] = useState(null);
   const [editVals, setEditVals] = useState({});
 
@@ -2119,7 +1833,7 @@ function InvSettings({ inventoryCategories, setInventoryCategories, suppliers, s
     if (!newCat.label.trim()) return;
     const updated = [...cats, { id: Date.now().toString(), ...newCat }];
     setInventoryCategories(updated);
-    setNewCat({ label: "", emoji: "📦", color: "#cc0000" });
+    setNewCat({ label: "", emoji: "📦", color: "#6366f1" });
   };
 
   const deleteCat = (id) => {
@@ -2134,7 +1848,7 @@ function InvSettings({ inventoryCategories, setInventoryCategories, suppliers, s
     setEditId(null);
   };
 
-  const COLORS = ["#ef4444","#f97316","#f59e0b","#22c55e","#0369a1","#60a5fa","#475569","#fb923c","#cc0000","#ec4899","#64748b","#f1f5f9"];
+  const COLORS = ["#ef4444","#f97316","#f59e0b","#22c55e","#22d3ee","#60a5fa","#a78bfa","#fb923c","#6366f1","#ec4899","#64748b","#f1f5f9"];
   const EMOJIS = ["🌭","🥤","🍺","🥡","🍞","🥖","🫙","📦","🥩","🧂","🧴","🧻","🍟","🧃","🥛","🫒"];
 
   return (
@@ -2143,7 +1857,7 @@ function InvSettings({ inventoryCategories, setInventoryCategories, suppliers, s
       {inventoryCategories.length === 0 && (
         <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ color: "#92400e", fontSize: 13 }}>⚠️ טרם הוגדרו קטגוריות — לחץ לטעון ברירות מחדל</span>
-          <Btn onClick={initIfEmpty} style={{ background: "#f59e0b", color: "#1e293b" }}>טען ברירות מחדל</Btn>
+          <Btn onClick={initIfEmpty} style={{ background: "#f59e0b", color: "#f1f5f9" }}>טען ברירות מחדל</Btn>
         </div>
       )}
 
@@ -2193,7 +1907,7 @@ function InvSettings({ inventoryCategories, setInventoryCategories, suppliers, s
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={() => { setEditId(cat.id); setEditVals({ label: cat.label, emoji: cat.emoji, color: cat.color }); }}
-                      style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#cc0000", cursor: "pointer", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>✏️ ערוך</button>
+                      style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#6366f1", cursor: "pointer", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>✏️ ערוך</button>
                     {cat.id !== "other" && <button onClick={() => deleteCat(cat.id)}
                       style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>}
                   </div>
@@ -2218,7 +1932,7 @@ function InvSettings({ inventoryCategories, setInventoryCategories, suppliers, s
                 style={{ width: 28, height: 28, borderRadius: 6, background: c, cursor: "pointer", border: newCat.color === c ? "3px solid #1e293b" : "2px solid transparent" }} />
             ))}
           </div>
-          <Btn onClick={addCat} style={{ background: "#cc0000" }}>+ הוסף קטגוריה</Btn>
+          <Btn onClick={addCat} style={{ background: "#6366f1" }}>+ הוסף קטגוריה</Btn>
         </div>
       </Card>
 
@@ -2246,134 +1960,239 @@ function InvSettings({ inventoryCategories, setInventoryCategories, suppliers, s
 
 const INVENTORY_CATEGORIES = [
   { id: "naknikiyot", label: "🌭 נקניקיות — הנדלס", color: "#ef4444", supplierKeyword: "הנדלס" },
-  { id: "shtiya_cola", label: "🥤 שתייה — קוקה קולה", color: "#1e293b", supplierKeyword: "קוקה קולה" },
+  { id: "shtiya_cola", label: "🥤 שתייה — קוקה קולה", color: "#22d3ee", supplierKeyword: "קוקה קולה" },
   { id: "shtiya_agm", label: 'שתייה — אג"מ סחר 🍺', color: "#60a5fa", supplierKeyword: "אגמ" },
   { id: "chad_pami", label: "🥡 חד פעמי", color: "#f59e0b", supplierKeyword: "חד פעמי" },
-  { id: "levamot_naknik", label: "🍞 לחמניות נקניקייה", color: "#1e293b", supplierKeyword: "לחמניות נקניקייה" },
+  { id: "levamot_naknik", label: "🍞 לחמניות נקניקייה", color: "#a78bfa", supplierKeyword: "לחמניות נקניקייה" },
   { id: "levamot_toast", label: "🥖 לחמניות טוסט", color: "#fb923c", supplierKeyword: "לחמניות טוסט" },
   { id: "ratabim", label: "🫙 רטבים — גורן", color: "#22c55e", supplierKeyword: "גורן" },
   { id: "other", label: "📦 שונות", color: "#64748b", supplierKeyword: "" },
 ];
 
 function Inventory({ inventory, setInventory, products, invoices, deliveries, suppliers, inventoryCategories: dynCats, setSuppliers }) {
+  const CATS = dynCats && dynCats.length > 0 ? dynCats : [
+    { id: "naknikiyot", label: "נקניקיות", emoji: "🌭", color: "#ef4444" },
+    { id: "shtiya_cola", label: "שתייה — קוקה קולה", emoji: "🥤", color: "#22d3ee" },
+    { id: "shtiya_agm", label: 'שתייה — אג"מ', emoji: "🍺", color: "#60a5fa" },
+    { id: "chad_pami", label: "חד פעמי", emoji: "🥡", color: "#f59e0b" },
+    { id: "levamot_naknik", label: "לחמניות נקניקייה", emoji: "🍞", color: "#a78bfa" },
+    { id: "levamot_toast", label: "לחמניות טוסט", emoji: "🥖", color: "#fb923c" },
+    { id: "ratabim", label: "רטבים", emoji: "🫙", color: "#22c55e" },
+    { id: "other", label: "שונות", emoji: "📦", color: "#94a3b8" },
+  ];
+
+  const [view, setView] = useState("live"); // "live" | "count" | "report"
+  const [openCats, setOpenCats] = useState({});
   const [countDate, setCountDate] = useState(today());
   const [countType, setCountType] = useState("סגירה");
   const [counts, setCounts] = useState({});
-  const [showCount, setShowCount] = useState(false);
-  const [openCats, setOpenCats] = useState({});
-  const [editCount, setEditCount] = useState(null);
+  const [editItem, setEditItem] = useState(null); // { productId, currentQty }
+  const [editVal, setEditVal] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
 
-  const allProducts = products;
-  const sup = (supplierId) => suppliers.find(s => s.id === supplierId)?.name || "";
-  const CATS = dynCats && dynCats.length > 0 ? dynCats : INVENTORY_CATEGORIES;
+  const sup = (supplierId) => suppliers.find(s => s.id === supplierId);
+  const getCat = (prod) => sup(prod.supplierId)?.inventoryCategory || "other";
 
-  const getCatForProduct = (prod) => {
-    const supplier = suppliers.find(s => s.id === prod.supplierId);
-    return supplier?.inventoryCategory || "other";
+  // Calculate live stock for a product
+  const getLiveStock = (productId) => {
+    // Get latest opening count
+    const openings = inventory.filter(c => c.productId === productId && c.type === "פתיחה").sort((a, b) => b.date.localeCompare(a.date));
+    const lastOpening = openings[0];
+    if (!lastOpening) return null; // No opening = no live data
+
+    // Sum entries since opening
+    const entries = [...invoices, ...deliveries]
+      .flatMap(doc => (doc.items || []).map(item => ({ ...item, date: doc.date })))
+      .filter(item => item.productId === productId && item.date >= lastOpening.date)
+      .reduce((a, item) => a + parseFloat(item.qty || 0), 0);
+
+    // Sum manual adjustments since opening
+    const adjustments = inventory
+      .filter(c => c.productId === productId && c.type === "עדכון ידני" && c.date >= lastOpening.date)
+      .reduce((a, c) => a + c.qty, 0);
+
+    // Latest closing after opening
+    const latestClosing = inventory
+      .filter(c => c.productId === productId && c.type === "סגירה" && c.date >= lastOpening.date)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+
+    const base = latestClosing ? latestClosing.qty : lastOpening.qty;
+    const baseDate = latestClosing ? latestClosing.date : lastOpening.date;
+
+    // Entries and adjustments since base date
+    const entriesSinceBase = [...invoices, ...deliveries]
+      .flatMap(doc => (doc.items || []).map(item => ({ ...item, date: doc.date })))
+      .filter(item => item.productId === productId && item.date > baseDate)
+      .reduce((a, item) => a + parseFloat(item.qty || 0), 0);
+
+    const adjSinceBase = inventory
+      .filter(c => c.productId === productId && c.type === "עדכון ידני" && c.date > baseDate)
+      .reduce((a, c) => a + c.qty, 0);
+
+    return base + entriesSinceBase + adjSinceBase;
   };
 
-  const toggleCat = (catId) => setOpenCats(p => ({ ...p, [catId]: !p[catId] }));
-
-  const getEntries = (productId, monthKey) => {
-    const fromInvoices = invoices.filter(i => i.date?.startsWith(monthKey)).flatMap(i => i.items || []).filter(item => item.productId === productId).reduce((a, item) => a + parseFloat(item.qty || 0), 0);
-    const fromDeliveries = deliveries.filter(d => d.date?.startsWith(monthKey)).flatMap(d => d.items || []).filter(item => item.productId === productId).reduce((a, item) => a + parseFloat(item.qty || 0), 0);
-    return fromInvoices + fromDeliveries;
+  const saveManualUpdate = (productId, newQty) => {
+    setInventory(p => [...p, {
+      id: Date.now().toString() + Math.random(),
+      productId, date: today(), type: "עדכון ידני", qty: parseFloat(newQty) || 0
+    }]);
+    setEditItem(null);
   };
 
   const saveCount = () => {
-    const entries = Object.entries(counts).filter(([, v]) => v !== "").map(([productId, val]) => ({
-      id: (Date.now() + Math.random() * 1000).toString(),
-      productId, date: countDate, type: countType,
-      qty: parseFloat(val) || 0
+    const entries = Object.entries(counts).filter(([, v]) => v !== "").map(([productId, qty]) => ({
+      id: Date.now().toString() + Math.random(),
+      productId, date: countDate, type: countType, qty: parseFloat(qty) || 0
     }));
     if (entries.length === 0) return alert("לא הוזנו כמויות");
     setInventory(p => [...p, ...entries]);
     setCounts({});
-    setShowCount(false);
+    setView("live");
     alert(`✅ ${countType} נשמרה — ${entries.length} פריטים`);
   };
 
-  const monthReport = allProducts.map(prod => {
-    const opening = inventory.filter(c => c.productId === prod.id && c.type === "פתיחה" && c.date?.startsWith(selectedMonth)).reduce((a, c) => a + c.qty, 0);
-    const closing = inventory.filter(c => c.productId === prod.id && c.type === "סגירה" && c.date?.startsWith(selectedMonth)).reduce((a, c) => a + c.qty, 0);
-    const entries = getEntries(prod.id, selectedMonth);
+  // Monthly report
+  const getMonthReport = (productId) => {
+    const opening = inventory.filter(c => c.productId === productId && c.type === "פתיחה" && c.date?.startsWith(selectedMonth)).reduce((a, c) => a + c.qty, 0);
+    const closing = inventory.filter(c => c.productId === productId && c.type === "סגירה" && c.date?.startsWith(selectedMonth)).reduce((a, c) => a + c.qty, 0);
+    const entries = [...invoices, ...deliveries]
+      .flatMap(doc => (doc.items || []).map(item => ({ ...item, date: doc.date })))
+      .filter(item => item.productId === productId && item.date?.startsWith(selectedMonth))
+      .reduce((a, item) => a + parseFloat(item.qty || 0), 0);
     const theoretical = opening + entries;
     const waste = closing > 0 ? theoretical - closing : null;
     const wastePct = theoretical > 0 && waste !== null ? (waste / theoretical * 100).toFixed(1) : null;
-    return { ...prod, opening, entries, theoretical, closing, waste, wastePct };
-  }).filter(p => p.entries > 0 || p.opening > 0 || p.closing > 0);
+    return { opening, entries, closing, theoretical, waste, wastePct };
+  };
 
-  const countedItems = Object.values(counts).filter(v => v !== "").length;
-  const totalItems = allProducts.length;
+  const toggleCat = (id) => setOpenCats(p => ({ ...p, [id]: !p[id] }));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <div style={{ color: "#888", fontSize: 13 }}>ניהול מלאי — ספירות ודוחות</div>
-        <Btn onClick={() => { setShowCount(!showCount); if (!showCount) setOpenCats(Object.fromEntries(CATS.map(c => [c.id, true]))); }}
-          style={showCount ? { background: "#64748b" } : { background: "#cc0000" }}>
-          {showCount ? "✕ סגור ספירה" : "📝 ספירת מלאי חדשה"}
-        </Btn>
+      {/* View tabs */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {[["live","📦 מלאי חי"],["count","📝 ספירת מלאי"],["report","📊 דוח חודשי"]].map(([id, label]) => (
+          <button key={id} onClick={() => setView(id)} style={{ padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit", background: view === id ? "#cc0000" : "#f1f5f9", color: view === id ? "#fff" : "#475569" }}>{label}</button>
+        ))}
       </div>
 
-      {/* Count form — categories */}
-      {showCount && (
+      {/* ===== LIVE VIEW ===== */}
+      {view === "live" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontSize: 12, color: "#94a3b8" }}>מלאי מחושב מספירת פתיחה + כניסות מחשבוניות/תעודות + עדכונים ידניים</div>
+          {CATS.map(cat => {
+            const catProds = products.filter(p => getCat(p) === cat.id);
+            if (catProds.length === 0) return null;
+            const isOpen = openCats[cat.id] !== false;
+            const catAlerts = catProds.filter(p => {
+              const qty = getLiveStock(p.id);
+              return qty !== null && p.minStock > 0 && qty <= p.minStock;
+            }).length;
+
+            return (
+              <div key={cat.id} style={{ border: `1px solid ${cat.color}44`, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+                <div onClick={() => toggleCat(cat.id)} style={{ background: `${cat.color}15`, padding: "12px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 22 }}>{cat.emoji}</span>
+                    <span style={{ fontWeight: 700, color: cat.color, fontSize: 14 }}>{cat.label}</span>
+                    <span style={{ fontSize: 11, color: "#94a3b8" }}>{catProds.length} פריטים</span>
+                    {catAlerts > 0 && <span style={{ background: "#fff5f5", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: 10, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>⚠️ {catAlerts} להזמנה</span>}
+                  </div>
+                  <span style={{ color: cat.color }}>{isOpen ? "▲" : "▼"}</span>
+                </div>
+
+                {isOpen && (
+                  <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                    {catProds.map(prod => {
+                      const liveQty = getLiveStock(prod.id);
+                      const isLow = liveQty !== null && prod.minStock > 0 && liveQty <= prod.minStock;
+                      const isEditing = editItem === prod.id;
+                      const supplier = sup(prod.supplierId);
+
+                      return (
+                        <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: isLow ? "#fff5f5" : "#f8fafc", borderRadius: 8, padding: "10px 14px", border: `1px solid ${isLow ? "#fca5a5" : "#e2e8f0"}` }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>{prod.name}</div>
+                            <div style={{ fontSize: 11, color: "#94a3b8" }}>{supplier?.name || "—"} | מינימום: {prod.minStock || "—"} {prod.unit}</div>
+                            {isLow && <div style={{ fontSize: 11, color: "#ef4444", fontWeight: 700 }}>⚠️ מלאי נמוך — הזמן מ{supplier?.name}  {supplier?.phone ? `📞 ${supplier.phone}` : ""}</div>}
+                          </div>
+
+                          {isEditing ? (
+                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <input type="number" inputMode="decimal" value={editVal} onChange={e => setEditVal(e.target.value)} style={{ ...inputStyle, width: 80, textAlign: "center", fontWeight: 700 }} autoFocus />
+                              <span style={{ fontSize: 11, color: "#94a3b8" }}>{prod.unit}</span>
+                              <button onClick={() => saveManualUpdate(prod.id, editVal)} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>✓</button>
+                              <button onClick={() => setEditItem(null)} style={{ background: "#f1f5f9", color: "#94a3b8", border: "none", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12 }}>✕</button>
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ textAlign: "center", minWidth: 70 }}>
+                                {liveQty !== null ? (
+                                  <div style={{ fontSize: 20, fontWeight: 900, color: isLow ? "#ef4444" : cat.color }}>{liveQty % 1 === 0 ? liveQty : liveQty.toFixed(2)}</div>
+                                ) : (
+                                  <div style={{ fontSize: 12, color: "#94a3b8" }}>אין ספירה</div>
+                                )}
+                                <div style={{ fontSize: 10, color: "#94a3b8" }}>{prod.unit}</div>
+                              </div>
+                              <button onClick={() => { setEditItem(prod.id); setEditVal(liveQty !== null ? String(liveQty) : ""); }} style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#6366f1", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>✏️</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ===== COUNT VIEW ===== */}
+      {view === "count" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {/* Date + type bar */}
-          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 16px", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+          <div style={{ background: "#eef2ff", border: "1px solid #c7d2fe", borderRadius: 10, padding: "12px 16px", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
             <input type="date" value={countDate} onChange={e => setCountDate(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 140 }} />
             <select value={countType} onChange={e => setCountType(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 120 }}>
               <option>פתיחה</option>
               <option>סגירה</option>
             </select>
-            <div style={{ color: "#64748b", fontSize: 12, whiteSpace: "nowrap" }}>הוזנו: <strong style={{ color: "#22c55e" }}>{countedItems}</strong> / {totalItems} פריטים</div>
-            <Btn onClick={saveCount} style={{ background: "#22c55e", minWidth: 120 }}>💾 שמור ספירה</Btn>
+            <div style={{ fontSize: 12, color: "#475569" }}>הוזנו: <strong style={{ color: "#22c55e" }}>{Object.values(counts).filter(v => v !== "").length}</strong> פריטים</div>
+            <Btn onClick={saveCount} style={{ background: "#22c55e" }}>💾 שמור ספירה</Btn>
           </div>
 
-          {/* Categories */}
           {CATS.map(cat => {
-            const catProds = allProducts.filter(p => getCatForProduct(p) === cat.id);
+            const catProds = products.filter(p => getCat(p) === cat.id);
             if (catProds.length === 0) return null;
-            const catCounted = catProds.filter(p => counts[p.id] !== undefined && counts[p.id] !== "").length;
-            const isOpen = openCats[cat.id] !== false; // default open
+            const isOpen = openCats[`count_${cat.id}`] !== false;
+            const counted = catProds.filter(p => counts[p.id] !== undefined && counts[p.id] !== "").length;
 
             return (
-              <div key={cat.id} style={{ border: `1px solid ${cat.color}33`, borderRadius: 10, overflow: "hidden" }}>
-                {/* Category header */}
-                <div onClick={() => toggleCat(cat.id)} style={{ background: `${cat.color}18`, padding: "12px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontWeight: 700, color: cat.color, fontSize: 14 }}>{cat.label}</span>
-                    <span style={{ background: catCounted === catProds.length ? "#f0fdf4" : "#ffffff", color: catCounted === catProds.length ? "#22c55e" : "#64748b", border: `1px solid ${catCounted === catProds.length ? "#22c55e" : "#cbd5e1"}`, borderRadius: 12, padding: "1px 10px", fontSize: 11, fontWeight: 700 }}>
-                      {catCounted}/{catProds.length}
-                    </span>
+              <div key={cat.id} style={{ border: `1px solid ${cat.color}44`, borderRadius: 10, overflow: "hidden" }}>
+                <div onClick={() => setOpenCats(p => ({ ...p, [`count_${cat.id}`]: !p[`count_${cat.id}`] }))} style={{ background: `${cat.color}15`, padding: "10px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 700, color: cat.color }}>{cat.emoji} {cat.label}</span>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, background: counted === catProds.length ? "#f0fdf4" : "#f8fafc", color: counted === catProds.length ? "#16a34a" : "#94a3b8", border: `1px solid ${counted === catProds.length ? "#86efac" : "#e2e8f0"}`, borderRadius: 10, padding: "1px 8px", fontWeight: 700 }}>{counted}/{catProds.length}</span>
+                    <span style={{ color: cat.color }}>{isOpen ? "▲" : "▼"}</span>
                   </div>
-                  <span style={{ color: cat.color, fontSize: 16 }}>{isOpen ? "▲" : "▼"}</span>
                 </div>
-
-                {/* Products */}
                 {isOpen && (
-                  <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6, background: "#f5f5f5" }}>
+                  <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 5 }}>
                     {catProds.map(prod => (
-                      <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: counts[prod.id] ? "#f0fdf4" : "#f8fafc", borderRadius: 8, padding: "8px 12px", border: `1px solid ${counts[prod.id] ? "#22c55e33" : "#f1f5f9"}` }}>
+                      <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: counts[prod.id] ? "#f0fdf4" : "#f8fafc", borderRadius: 8, padding: "8px 12px", border: `1px solid ${counts[prod.id] ? "#86efac" : "#e2e8f0"}` }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, color: counts[prod.id] ? "#22c55e" : "#e2e8f0" }}>{prod.name}</div>
-                          <div style={{ fontSize: 11, color: "#64748b" }}>{prod.unit}</div>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{prod.name}</div>
+                          <div style={{ fontSize: 11, color: "#94a3b8" }}>{prod.unit}</div>
                         </div>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          placeholder="0"
-                          value={counts[prod.id] || ""}
+                        <input type="number" inputMode="decimal" placeholder="0" value={counts[prod.id] || ""}
                           onChange={e => setCounts(p => ({ ...p, [prod.id]: e.target.value }))}
-                          style={{ ...inputStyle, width: 90, textAlign: "center", fontSize: 16, fontWeight: 700, color: counts[prod.id] ? "#22c55e" : "#e2e8f0" }}
-                        />
-                        <div style={{ fontSize: 11, color: "#64748b", minWidth: 30 }}>{prod.unit}</div>
+                          style={{ ...inputStyle, width: 90, textAlign: "center", fontSize: 16, fontWeight: 700, color: counts[prod.id] ? "#16a34a" : "#1e293b" }} />
+                        <span style={{ fontSize: 11, color: "#94a3b8", minWidth: 28 }}>{prod.unit}</span>
                       </div>
                     ))}
                   </div>
@@ -2381,128 +2200,49 @@ function Inventory({ inventory, setInventory, products, invoices, deliveries, su
               </div>
             );
           })}
-
-          <Btn onClick={saveCount} style={{ background: "#22c55e", fontSize: 15, padding: "12px 20px" }}>💾 שמור ספירה ({countedItems} פריטים)</Btn>
+          <Btn onClick={saveCount} style={{ background: "#22c55e", fontSize: 14, padding: "12px" }}>💾 שמור ספירה ({Object.values(counts).filter(v => v !== "").length} פריטים)</Btn>
         </div>
       )}
 
-      {/* Edit count panel */}
-      {editCount && (
-        <div style={{ border: "1px solid #cc0000", borderRadius: 10, overflow: "hidden" }}>
-          <div style={{ background: "#fff1f1", padding: "12px 16px", fontWeight: 700, color: "#1e293b" }}>
-            ✏️ עריכת ספירת {editCount.type} — {editCount.date}
+      {/* ===== REPORT VIEW ===== */}
+      {view === "report" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ color: "#475569", fontSize: 13 }}>חודש:</span>
+            <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
           </div>
-          <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <input type="date" value={editCount.date} onChange={e => setEditCount(p => ({ ...p, date: e.target.value }))} style={{ ...inputStyle, flex: 1 }} />
-              <select value={editCount.type} onChange={e => setEditCount(p => ({ ...p, type: e.target.value }))} style={{ ...inputStyle, flex: 1 }}>
-                <option>פתיחה</option><option>סגירה</option>
-              </select>
-            </div>
-            {CATS.map(cat => {
-              const catProds = allProducts.filter(p => getCatForProduct(p) === cat.id);
-              if (catProds.length === 0) return null;
-              return (
-                <div key={cat.id} style={{ border: `1px solid ${cat.color}33`, borderRadius: 8, overflow: "hidden" }}>
-                  <div style={{ background: `${cat.color}18`, padding: "8px 12px", fontWeight: 700, color: cat.color, fontSize: 13 }}>{cat.label}</div>
-                  <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 5 }}>
-                    {catProds.map(prod => {
-                      const item = editCount.items.find(i => i.productId === prod.id);
+          {CATS.map(cat => {
+            const catProds = products.filter(p => getCat(p) === cat.id);
+            const withData = catProds.filter(p => { const r = getMonthReport(p.id); return r.entries > 0 || r.opening > 0 || r.closing > 0; });
+            if (withData.length === 0) return null;
+            return (
+              <div key={cat.id} style={{ border: `1px solid ${cat.color}44`, borderRadius: 12, overflow: "hidden" }}>
+                <div style={{ background: `${cat.color}15`, padding: "10px 14px", fontWeight: 700, color: cat.color }}>{cat.emoji} {cat.label}</div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                    <Th>פריט</Th><Th>פתיחה</Th><Th>+ כניסות</Th><Th>= תיאורטי</Th><Th>ספירת סגירה</Th><Th>בזבוז</Th>
+                  </tr></thead>
+                  <tbody>
+                    {withData.map(p => {
+                      const r = getMonthReport(p.id);
+                      const wColor = r.wastePct === null ? "#94a3b8" : parseFloat(r.wastePct) <= 3 ? "#16a34a" : parseFloat(r.wastePct) <= 8 ? "#d97706" : "#dc2626";
                       return (
-                        <div key={prod.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#ffffff", borderRadius: 6, padding: "6px 10px" }}>
-                          <div style={{ flex: 1, fontSize: 13 }}>{prod.name}</div>
-                          <input type="number" inputMode="decimal" placeholder="0" value={item?.qty ?? ""}
-                            onChange={e => setEditCount(p => {
-                              const exists = p.items.find(i => i.productId === prod.id);
-                              if (exists) return { ...p, items: p.items.map(i => i.productId === prod.id ? { ...i, qty: e.target.value } : i) };
-                              return { ...p, items: [...p.items, { productId: prod.id, qty: e.target.value }] };
-                            })}
-                            style={{ ...inputStyle, width: 90, textAlign: "center", fontWeight: 700 }} />
-                          <div style={{ fontSize: 11, color: "#64748b", minWidth: 30 }}>{prod.unit}</div>
-                        </div>
+                        <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <Td style={{ fontWeight: 600 }}>{p.name}</Td>
+                          <Td>{r.opening > 0 ? r.opening : "—"}</Td>
+                          <Td style={{ color: "#6366f1" }}>+{r.entries.toFixed(2)}</Td>
+                          <Td style={{ fontWeight: 700 }}>{r.theoretical.toFixed(2)}</Td>
+                          <Td style={{ color: r.closing > 0 ? "#1e293b" : "#94a3b8" }}>{r.closing > 0 ? r.closing : "טרם נספר"}</Td>
+                          <Td>{r.waste !== null ? <span style={{ color: wColor, fontWeight: 700 }}>{r.waste.toFixed(2)} {p.unit} ({r.wastePct}%)</span> : "—"}</Td>
+                        </tr>
                       );
                     })}
-                  </div>
-                </div>
-              );
-            })}
-            <div style={{ display: "flex", gap: 10 }}>
-              <Btn onClick={() => {
-                setInventory(p => {
-                  const filtered = p.filter(c => !(c.date === editCount.originalDate && c.type === editCount.originalType));
-                  const newEntries = editCount.items.filter(i => i.qty !== "" && i.qty !== undefined).map(i => ({ id: (Date.now() + Math.random() * 1000).toString(), productId: i.productId, date: editCount.date, type: editCount.type, qty: parseFloat(i.qty) || 0 }));
-                  return [...filtered, ...newEntries];
-                });
-                setEditCount(null);
-              }} style={{ background: "#22c55e" }}>💾 שמור שינויים</Btn>
-              <Btn onClick={() => setEditCount(null)} style={{ background: "#94a3b8" }}>✕ ביטול</Btn>
-            </div>
-          </div>
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
         </div>
-      )}
-
-      {/* Month selector + report */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ color: "#64748b", fontSize: 13 }}>חודש לדוח:</span>
-        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
-      </div>
-
-      {monthReport.length > 0 ? (
-        <Card title={`📊 דוח מלאי — ${selectedMonth}`}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}>
-              <Th>מוצר</Th><Th>ספק</Th><Th>יחידה</Th><Th>פתיחה</Th><Th>+ כניסות</Th><Th>= תיאורטי</Th><Th>סגירה</Th><Th>בזבוז</Th>
-            </tr></thead>
-            <tbody>
-              {monthReport.map(p => {
-                const wasteColor = p.wastePct === null ? "#94a3b8" : parseFloat(p.wastePct) <= 3 ? "#22c55e" : parseFloat(p.wastePct) <= 8 ? "#f59e0b" : "#ef4444";
-                return (
-                  <tr key={p.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                    <Td style={{ fontWeight: 700 }}>{p.name}</Td>
-                    <Td style={{ color: "#64748b", fontSize: 12 }}>{sup(p.supplierId)}</Td>
-                    <Td style={{ color: "#64748b" }}>{p.unit}</Td>
-                    <Td>{p.opening > 0 ? p.opening : "—"}</Td>
-                    <Td style={{ color: "#1e293b" }}>+{p.entries.toFixed(2)}</Td>
-                    <Td style={{ color: "#1e293b", fontWeight: 700 }}>{p.theoretical.toFixed(2)}</Td>
-                    <Td style={{ color: p.closing > 0 ? "#e2e8f0" : "#94a3b8" }}>{p.closing > 0 ? p.closing : "טרם נספר"}</Td>
-                    <Td>{p.waste !== null ? <span style={{ color: wasteColor, fontWeight: 700 }}>{p.waste.toFixed(2)} {p.unit} ({p.wastePct}%){parseFloat(p.wastePct) <= 3 ? " ✓" : parseFloat(p.wastePct) <= 8 ? " ⚠️" : " 🔴"}</span> : <span style={{ color: "#64748b" }}>—</span>}</Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </Card>
-      ) : (
-        <Card title="📊 דוח מלאי">
-          <div style={{ color: "#64748b", textAlign: "center", padding: 30, fontSize: 13 }}>אין נתונים לחודש זה</div>
-        </Card>
-      )}
-
-      {/* Count history */}
-      {inventory.length > 0 && (
-        <Card title="היסטוריית ספירות">
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {[...new Map(inventory.map(c => [`${c.date}_${c.type}`, c])).values()]
-              .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20)
-              .map(({ date, type }) => {
-                const dayItems = inventory.filter(c => c.date === date && c.type === type);
-                return (
-                  <div key={`${date}_${type}`} style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontWeight: 700 }}><span style={{ color: type === "פתיחה" ? "#0369a1" : "#475569" }}>{type}</span> — {date}</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>{dayItems.length} פריטים נספרו</div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => setEditCount({ date, type, originalDate: date, originalType: type, items: dayItems.map(c => ({ productId: c.productId, qty: String(c.qty) })) })}
-                        style={{ background: "#f8fafc", border: "1px solid #e2e8f0", color: "#cc0000", cursor: "pointer", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700 }}>✏️ ערוך</button>
-                      <button onClick={() => { if (window.confirm("למחוק?")) setInventory(p => p.filter(c => !(c.date === date && c.type === type))); }}
-                        style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        </Card>
       )}
     </div>
   );
@@ -2517,8 +2257,6 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState("");
-  const [expandedDelivery, setExpandedDelivery] = useState(null);
-  const [editDelivery, setEditDelivery] = useState(null);
 
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -2556,43 +2294,22 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
   const scanDelivery = async (file) => {
     setScanning(true); setScanResult(null); setScanError("");
     try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(",")[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
       const isPdf = file.type === "application/pdf";
-      let base64, mediaType;
-      if (isPdf) {
-        base64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
-        mediaType = "application/pdf";
-      } else {
-        const compressed = await compressImage(file);
-        base64 = compressed.base64;
-        mediaType = compressed.mediaType;
-      }
       const response = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 1500,
+          max_tokens: 1000,
           messages: [{ role: "user", content: [
-            { type: isPdf ? "document" : "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-            { type: "text", text: `אתה מומחה בקריאת תעודות משלוח בעברית. קרא את כל הטקסט בתמונה בקפידה.
-
-חלץ את המידע הבא והחזר JSON בלבד (ללא טקסט נוסף, ללא \`\`\`):
-{
-  "supplierName": "שם הספק/ספק המוצר כפי שמופיע בתעודה",
-  "date": "YYYY-MM-DD",
-  "deliveryNum": "מספר התעודה",
-  "items": [
-    {"name": "שם המוצר המדויק", "unit": "יחידת מידה (ק\"ג/יחידה/ליטר/קרטון)", "qty": 0.0, "price": 0.0}
-  ],
-  "total": 0.0
-}
-
-הנחיות:
-- שם הספק: חפש בראש התעודה — שם חברה, לוגו, או "מוכר"/"ספק"
-- תאריך: המר לפורמט YYYY-MM-DD
-- פריטים: כל שורת מוצר עם כמות ומחיר
-- מחיר: מחיר ליחידה (לא סה"כ שורה)
-- אם לא בטוח — כתוב את מה שרואים ישירות` }
+            { type: isPdf ? "document" : "image", source: { type: "base64", media_type: fileMediaType, data: base64 } },
+            { type: "text", text: 'קרא את תעודת המשלוח הזו והחזר JSON בלבד:\n{"supplierName":"שם הספק","date":"YYYY-MM-DD","deliveryNum":"מספר תעודה","items":[{"name":"שם פריט","unit":"יחידת מידה","qty":1.0,"price":0.0}],"total":0.0}' }
           ]}]
         })
       });
@@ -2647,110 +2364,26 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
 
       {scanError && <div style={{ background: "#fff5f5", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", color: "#f87171", fontSize: 13 }}>❌ {scanError}</div>}
 
-      {showForm && (
-        <Card title="📋 הכנסת תעודת משלוח ידנית">
-          <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-            <select value={form.supplierId} onChange={e => setForm(f => ({ ...f, supplierId: e.target.value, items: [] }))} style={{ ...inputStyle, flex: 2 }}>
-              <option value="">— בחר ספק —</option>
-              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, flex: 1 }} />
-            <input value={form.deliveryNum} onChange={e => setForm(f => ({ ...f, deliveryNum: e.target.value }))} placeholder="מס׳ תעודה" style={{ ...inputStyle, flex: 1 }} />
-          </div>
-
-          {form.supplierId && (
-            <>
-              <div style={{ background: "#f8fafc", borderRadius: 8, padding: "12px 14px", marginBottom: 12 }}>
-                <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>הוספת פריט:</div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <select value={newItem.productId} onChange={e => {
-                    const prod = products.find(p => p.id === e.target.value);
-                    setNewItem(p => ({ ...p, productId: e.target.value, price: prod ? String(prod.basePrice) : "" }));
-                  }} style={{ ...inputStyle, flex: 3 }}>
-                    <option value="">— בחר פריט —</option>
-                    {supProducts.map(p => <option key={p.id} value={p.id}>{p.name} | בסיס: ₪{fmt(p.basePrice)}/{p.unit}</option>)}
-                  </select>
-                  <input value={newItem.qty} onChange={e => setNewItem(p => ({ ...p, qty: e.target.value }))} placeholder="כמות" type="number" style={{ ...inputStyle, flex: 1, minWidth: 70 }} />
-                  <input value={newItem.price} onChange={e => setNewItem(p => ({ ...p, price: e.target.value }))} placeholder="מחיר ₪" type="number" style={{ ...inputStyle, flex: 1, minWidth: 90 }} />
-                  <Btn onClick={addItem}>הוסף</Btn>
-                </div>
-              </div>
-
-              {form.items.length > 0 && (
-                <>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
-                    <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>כמות</Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th></tr></thead>
-                    <tbody>
-                      {form.items.map(item => {
-                        const prod = products.find(p => p.id === item.productId);
-                        return (
-                          <tr key={item.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                            <Td>{prod?.name}</Td>
-                            <Td>{item.qty} {prod?.unit}</Td>
-                            <Td style={{ color: "#1e293b" }}>₪{fmt(item.price)}</Td>
-                            <Td style={{ color: "#22c55e", fontWeight: 700 }}>₪{fmt(parseFloat(item.price) * parseFloat(item.qty))}</Td>
-                            <Td><button onClick={() => setForm(f => ({ ...f, items: f.items.filter(x => x.id !== item.id) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button></Td>
-                          </tr>
-                        );
-                      })}
-                      <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
-                        <Td colSpan={3} style={{ color: "#64748b" }}>סה״כ</Td>
-                        <Td style={{ color: "#22c55e" }}>₪{fmt(form.items.reduce((a, i) => a + parseFloat(i.price) * parseFloat(i.qty), 0))}</Td>
-                        <Td></Td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <Btn onClick={saveDelivery} style={{ background: "#22c55e" }}>✅ שמור תעודה</Btn>
-                </>
-              )}
-            </>
-          )}
-        </Card>
-      )}
-
-
       {scanResult && (
         <Card title="📋 תעודת משלוח — בדוק ואשר">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
-            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div><input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, color: "#1e293b", fontWeight: 700 }} /></div>
+            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div><input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, color: "#22d3ee", fontWeight: 700 }} /></div>
             <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div><input type="date" value={scanResult.date || ""} onChange={e => setScanResult(p => ({ ...p, date: e.target.value }))} style={inputStyle} /></div>
             <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ תעודה</div><input value={scanResult.deliveryNum || ""} onChange={e => setScanResult(p => ({ ...p, deliveryNum: e.target.value }))} style={inputStyle} /></div>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
             <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th></tr></thead>
             <tbody>
-              {(scanResult.items || []).map((item, i) => {
-                const sup = suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
-                const supProds = sup ? products.filter(p => p.supplierId === sup.id) : [];
-                return (
+              {(scanResult.items || []).map((item, i) => (
                 <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                  <Td>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <input value={item.name || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: e.target.value } : it) }))} style={{ ...inputStyle, width: "100%" }} placeholder="שם פריט" />
-                      {supProds.length > 0 && (
-                        <select
-                          onChange={e => {
-                            if (!e.target.value) return;
-                            const prod = supProds.find(p => p.id === e.target.value);
-                            if (prod) setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: prod.name, unit: prod.unit, price: String(prod.basePrice) } : it) }));
-                            e.target.value = "";
-                          }}
-                          style={{ ...inputStyle, fontSize: 11, color: "#64748b" }}
-                        >
-                          <option value="">🔗 החלף לפריט מהמערכת...</option>
-                          {supProds.map(p => <option key={p.id} value={p.id}>{p.name} | {p.unit} | ₪{fmt(p.basePrice)}</option>)}
-                        </select>
-                      )}
-                    </div>
-                  </Td>
+                  <Td><input value={item.name || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: e.target.value } : it) }))} style={{ ...inputStyle, width: "100%" }} /></Td>
                   <Td><input type="number" value={item.qty || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70 }} /></Td>
                   <Td><select value={item.unit || "יחידה"} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, unit: e.target.value } : it) }))} style={inputStyle}>{['ק"ג', "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}</select></Td>
-                  <Td><input type="number" value={item.price || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, color: "#1e293b" }} /></Td>
-                  <Td style={{ color: "#1e293b", fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
+                  <Td><input type="number" value={item.price || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, color: "#22d3ee" }} /></Td>
+                  <Td style={{ color: "#a78bfa", fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
                   <Td><button onClick={() => setScanResult(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
                 </tr>
-                );
-              })}
+              ))}
               <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
                 <Td colSpan={4} style={{ color: "#64748b" }}>סה״כ</Td>
                 <Td style={{ color: "#22c55e" }}>₪{fmt((scanResult.items || []).reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0))}</Td>
@@ -2778,8 +2411,8 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
                   <tr key={s.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                     <Td style={{ fontWeight: 700 }}>{s.name}</Td>
                     <Td style={{ color: "#64748b" }}>{s.deliveryCount}</Td>
-                    <Td style={{ color: "#1e293b", fontWeight: 700 }}>₪{fmt(s.deliveryTotal)}</Td>
-                    <Td style={{ color: s.invoiceTotal > 0 ? "#475569" : "#94a3b8" }}>{s.invoiceTotal > 0 ? `₪${fmt(s.invoiceTotal)}` : "טרם התקבלה"}</Td>
+                    <Td style={{ color: "#22d3ee", fontWeight: 700 }}>₪{fmt(s.deliveryTotal)}</Td>
+                    <Td style={{ color: s.invoiceTotal > 0 ? "#a78bfa" : "#94a3b8" }}>{s.invoiceTotal > 0 ? `₪${fmt(s.invoiceTotal)}` : "טרם התקבלה"}</Td>
                     <Td style={{ color: diffColor, fontWeight: 700 }}>{s.invoiceTotal > 0 ? (diff > 0 ? `+₪${fmt(diff)}` : diff < -0.5 ? `-₪${fmt(Math.abs(diff))}` : "✓ תואם") : "—"}</Td>
                   </tr>
                 );
@@ -2798,116 +2431,19 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
           </select>
         </div>
         {filteredDeliveries.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>אין תעודות משלוח עדיין</div>}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {[...filteredDeliveries].reverse().map(d => {
             const sup = suppliers.find(s => s.id === d.supplierId);
-            const isOpen = expandedDelivery === d.id;
-            const isEditing = editDelivery?.id === d.id;
             return (
-              <div key={d.id} style={{ border: `1px solid ${isOpen ? "#cc0000" : "#e2e8f0"}`, borderRadius: 10, overflow: "hidden" }}>
-                {/* Header row */}
-                <div onClick={() => { setExpandedDelivery(isOpen ? null : d.id); setEditDelivery(null); }}
-                  style={{ background: isOpen ? "#fff8f8" : "#ffffff", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{sup?.name || "ספק לא ידוע"}</div>
-                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{d.date} | תעודה {d.deliveryNum || "—"} | {(d.items || []).length} פריטים</div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ color: "#cc0000", fontWeight: 800, fontSize: 15 }}>₪{fmt(d.total)}</span>
-                    <span style={{ color: "#64748b", fontSize: 13 }}>{isOpen ? "▲" : "▼"}</span>
-                  </div>
+              <div key={d.id} style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{sup?.name || "ספק לא ידוע"}</div>
+                  <div style={{ fontSize: 12, color: "#64748b" }}>{d.date} | תעודה {d.deliveryNum || "—"} | {(d.items || []).length} פריטים</div>
                 </div>
-
-                {/* Expanded detail */}
-                {isOpen && (
-                  <div style={{ borderTop: "1px solid #e2e8f0", padding: 16 }}>
-                    {isEditing ? (
-                      // Edit mode
-                      <>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
-                          <div>
-                            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div>
-                            <select value={editDelivery.supplierId} onChange={e => setEditDelivery(p => ({ ...p, supplierId: e.target.value }))} style={inputStyle}>
-                              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div>
-                            <input type="date" value={editDelivery.date} onChange={e => setEditDelivery(p => ({ ...p, date: e.target.value }))} style={inputStyle} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ תעודה</div>
-                            <input value={editDelivery.deliveryNum || ""} onChange={e => setEditDelivery(p => ({ ...p, deliveryNum: e.target.value }))} style={inputStyle} />
-                          </div>
-                        </div>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 12 }}>
-                          <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th></tr></thead>
-                          <tbody>
-                            {(editDelivery.items || []).map((item, i) => {
-                              const prod = products.find(p => p.id === item.productId);
-                              const supProds = products.filter(p => p.supplierId === editDelivery.supplierId);
-                              return (
-                                <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                                  <Td>
-                                    <select value={item.productId || ""} onChange={e => {
-                                      const p = products.find(x => x.id === e.target.value);
-                                      setEditDelivery(prev => ({ ...prev, items: prev.items.map((it, idx) => idx === i ? { ...it, productId: e.target.value, price: p ? String(p.basePrice) : it.price } : it) }));
-                                    }} style={{ ...inputStyle, fontSize: 12 }}>
-                                      <option value="">— בחר פריט —</option>
-                                      {supProds.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                    </select>
-                                  </Td>
-                                  <Td><input type="number" value={item.qty} onChange={e => setEditDelivery(prev => ({ ...prev, items: prev.items.map((it, idx) => idx === i ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70 }} /></Td>
-                                  <Td style={{ color: "#64748b" }}>{prod?.unit || "—"}</Td>
-                                  <Td><input type="number" value={item.price} onChange={e => setEditDelivery(prev => ({ ...prev, items: prev.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90 }} /></Td>
-                                  <Td style={{ fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
-                                  <Td><button onClick={() => setEditDelivery(prev => ({ ...prev, items: prev.items.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button></Td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <Btn onClick={() => {
-                            const total = (editDelivery.items || []).reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0);
-                            setDeliveries(p => p.map(x => x.id === d.id ? { ...editDelivery, total } : x));
-                            setEditDelivery(null);
-                          }} style={{ background: "#22c55e" }}>💾 שמור שינויים</Btn>
-                          <Btn onClick={() => setEditDelivery(null)} style={{ background: "#94a3b8" }}>✕ בטל</Btn>
-                        </div>
-                      </>
-                    ) : (
-                      // View mode
-                      <>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 12 }}>
-                          <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th></tr></thead>
-                          <tbody>
-                            {(d.items || []).map((item, i) => {
-                              const prod = products.find(p => p.id === item.productId);
-                              return (
-                                <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                                  <Td style={{ fontWeight: 600 }}>{prod?.name || "—"}</Td>
-                                  <Td>{item.qty}</Td>
-                                  <Td style={{ color: "#64748b" }}>{prod?.unit || "—"}</Td>
-                                  <Td>₪{fmt(item.price)}</Td>
-                                  <Td style={{ fontWeight: 700, color: "#cc0000" }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
-                                </tr>
-                              );
-                            })}
-                            <tr style={{ borderTop: "2px solid #e2e8f0", fontWeight: 700 }}>
-                              <Td colSpan={4} style={{ color: "#64748b" }}>סה״כ</Td>
-                              <Td style={{ color: "#cc0000", fontSize: 15 }}>₪{fmt(d.total)}</Td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <Btn onClick={() => setEditDelivery({ ...d, items: d.items.map(i => ({ ...i })) })} style={{ background: "#64748b" }}>✏️ ערוך</Btn>
-                          <Btn onClick={() => { if (window.confirm("למחוק תעודה זו?")) { setDeliveries(p => p.filter(x => x.id !== d.id)); setExpandedDelivery(null); } }} style={{ background: "#ef4444" }}>🗑 מחק</Btn>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ color: "#22d3ee", fontWeight: 800, fontSize: 15 }}>₪{fmt(d.total)}</span>
+                  <button onClick={() => { if (window.confirm("למחוק תעודה זו?")) setDeliveries(p => p.filter(x => x.id !== d.id)); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
+                </div>
               </div>
             );
           })}
@@ -3037,7 +2573,7 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
             {/* Flags */}
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
               {item.isNewSupplier && (
-                <span style={{ background: "#fff1f1", color: "#1e293b", border: "1px solid #cc0000", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+                <span style={{ background: "#eef2ff", color: "#a78bfa", border: "1px solid #6366f1", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
                   🆕 ספק חדש: {item.supName}
                 </span>
               )}
@@ -3062,12 +2598,12 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
               </thead>
               <tbody>
                 {(item.itemsAnalysis || []).map((p, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #e2e8f0", background: p.isNew ? "#f0fdf4" : p.hasAlert ? "#fff5f5" : "transparent" }}>
+                  <tr key={i} style={{ borderBottom: "1px solid #e2e8f0", background: p.isNew ? "#031a0e" : p.hasAlert ? "#fff5f5" : "transparent" }}>
                     <Td style={{ fontWeight: p.isNew || p.hasAlert ? 700 : 400 }}>{p.name}</Td>
                     <Td>{p.qty}</Td>
                     <Td style={{ color: "#64748b" }}>{p.unit}</Td>
-                    <Td style={{ color: p.hasAlert ? "#f87171" : "#0369a1" }}>₪{fmt(p.price)}</Td>
-                    <Td style={{ color: "#1e293b" }}>₪{fmt(p.price * p.qty)}</Td>
+                    <Td style={{ color: p.hasAlert ? "#f87171" : "#22d3ee" }}>₪{fmt(p.price)}</Td>
+                    <Td style={{ color: "#a78bfa" }}>₪{fmt(p.price * p.qty)}</Td>
                     <Td>
                       {p.isNew && <span style={{ color: "#22c55e", fontSize: 11, fontWeight: 700 }}>🆕 חדש</span>}
                       {p.hasAlert && <span style={{ color: "#ef4444", fontSize: 11, fontWeight: 700 }}>⚠️ +{p.priceDiff?.toFixed(1)}%</span>}
@@ -3091,167 +2627,6 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
           </Card>
         );
       })}
-    </div>
-  );
-}
-
-function CashDeposits({ cashDeposits, setCashDeposits, sales }) {
-  const [form, setForm] = useState({ date: today(), amount: "", bankAmount: "", note: "" });
-  const [editId, setEditId] = useState(null);
-  const [editVals, setEditVals] = useState({});
-
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-
-  const addDeposit = () => {
-    if (!form.amount) return alert("נא להזין סכום");
-    setCashDeposits(p => [...p, { id: Date.now().toString(), ...form }]);
-    setForm({ date: today(), amount: "", bankAmount: "", note: "" });
-  };
-
-  const deleteDeposit = (id) => setCashDeposits(p => p.filter(d => d.id !== id));
-
-  const saveEdit = (id) => {
-    setCashDeposits(p => p.map(d => d.id === id ? { ...d, ...editVals } : d));
-    setEditId(null);
-  };
-
-  // Monthly stats
-  const monthDeposits = cashDeposits.filter(d => d.date?.startsWith(monthKey));
-  const totalWithdrawn = monthDeposits.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
-  const totalDeposited = monthDeposits.reduce((a, d) => a + parseFloat(d.bankAmount || 0), 0);
-  const pendingDeposit = monthDeposits.filter(d => !d.bankAmount).reduce((a, d) => a + parseFloat(d.amount || 0), 0);
-
-  // הפרש: הופקד בבנק vs. הוצא מהקופה
-  const gap = totalDeposited - totalWithdrawn;
-
-  const sortedDeposits = [...cashDeposits].sort((a, b) => b.date?.localeCompare(a.date));
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-      {/* KPI row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-        <KpiCard label="💵 סה״כ הוצא מהקופה החודש" value={`₪${fmt(totalWithdrawn)}`} accent="#cc0000" />
-        <KpiCard label="🏦 סה״כ הופקד בבנק החודש" value={`₪${fmt(totalDeposited)}`} accent="#22c55e" />
-        <KpiCard label="⏳ ממתין להפקדה" value={`₪${fmt(pendingDeposit)}`} accent={pendingDeposit > 0 ? "#f59e0b" : "#22c55e"} />
-        <KpiCard
-          label="📊 הפרש: הופקד vs. הוצא"
-          accent={Math.abs(gap) < 5 ? "#22c55e" : gap < 0 ? "#ef4444" : "#f59e0b"}
-          value={
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: Math.abs(gap) < 5 ? "#22c55e" : gap < 0 ? "#ef4444" : "#f59e0b" }}>
-                {gap >= 0 ? "+" : ""}₪{fmt(gap)}
-              </div>
-              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
-                {Math.abs(gap) < 5 ? "✓ כל הכסף הגיע לבנק" : gap < 0 ? "⚠ חסר בבנק" : "⚠ הופקד יותר מהוצא"}
-              </div>
-            </div>
-          }
-          raw
-        />
-      </div>
-
-      {/* Add form */}
-      <Card title="💵 רישום הוצאת מזומן מהקופה">
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <div style={{ flex: 1, minWidth: 130 }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>תאריך</div>
-            <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={inputStyle} />
-          </div>
-          <div style={{ flex: 1, minWidth: 120 }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>💵 סכום שהוצא מהקופה ₪ *</div>
-            <input type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0" style={inputStyle} />
-          </div>
-          <div style={{ flex: 1, minWidth: 120 }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>🏦 סכום שהגיע לבנק ₪</div>
-            <input type="number" value={form.bankAmount} onChange={e => setForm(f => ({ ...f, bankAmount: e.target.value }))} placeholder="אם כבר הופקד" style={inputStyle} />
-          </div>
-          <div style={{ flex: 2, minWidth: 160 }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>הערה</div>
-            <input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="לדוגמה: עילי הפקיד" style={inputStyle} />
-          </div>
-          <Btn onClick={addDeposit} style={{ background: "#cc0000", marginBottom: 1 }}>+ הוסף</Btn>
-        </div>
-      </Card>
-
-      {/* Deposits list */}
-      <Card title="📋 רשימת הוצאות והפקדות">
-        {sortedDeposits.length === 0 && (
-          <div style={{ color: "#64748b", fontSize: 13, padding: 20, textAlign: "center" }}>אין רשומות עדיין</div>
-        )}
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          {sortedDeposits.length > 0 && (
-            <thead>
-              <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                <Th>תאריך</Th>
-                <Th>הוצא מהקופה</Th>
-                <Th>הגיע לבנק</Th>
-                <Th>הפרש</Th>
-                <Th>סטטוס</Th>
-                <Th>הערה</Th>
-                <Th></Th>
-              </tr>
-            </thead>
-          )}
-          <tbody>
-            {sortedDeposits.map(d => {
-              const withdrawn = parseFloat(d.amount || 0);
-              const banked = parseFloat(d.bankAmount || 0);
-              const diff = banked > 0 ? banked - withdrawn : null;
-              const isOk = diff !== null && Math.abs(diff) < 5;
-              const isEdit = editId === d.id;
-
-              return (
-                <tr key={d.id} style={{ borderBottom: "1px solid #e2e8f0", background: isEdit ? "#fff8f8" : "transparent" }}>
-                  {isEdit ? (
-                    <>
-                      <Td><input type="date" value={editVals.date} onChange={e => setEditVals(p => ({ ...p, date: e.target.value }))} style={{ ...inputStyle, width: 130 }} /></Td>
-                      <Td><input type="number" value={editVals.amount} onChange={e => setEditVals(p => ({ ...p, amount: e.target.value }))} style={{ ...inputStyle, width: 100 }} /></Td>
-                      <Td><input type="number" value={editVals.bankAmount} onChange={e => setEditVals(p => ({ ...p, bankAmount: e.target.value }))} style={{ ...inputStyle, width: 100 }} /></Td>
-                      <Td></Td>
-                      <Td></Td>
-                      <Td><input value={editVals.note} onChange={e => setEditVals(p => ({ ...p, note: e.target.value }))} style={{ ...inputStyle, width: 160 }} /></Td>
-                      <Td>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => saveEdit(d.id)} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>✓</button>
-                          <button onClick={() => setEditId(null)} style={{ background: "#e2e8f0", color: "#64748b", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 12 }}>✕</button>
-                        </div>
-                      </Td>
-                    </>
-                  ) : (
-                    <>
-                      <Td style={{ color: "#64748b" }}>{d.date}</Td>
-                      <Td style={{ fontWeight: 700, color: "#cc0000" }}>₪{fmt(withdrawn)}</Td>
-                      <Td style={{ fontWeight: 700, color: banked > 0 ? "#22c55e" : "#94a3b8" }}>
-                        {banked > 0 ? `₪${fmt(banked)}` : "—"}
-                      </Td>
-                      <Td style={{ color: diff === null ? "#94a3b8" : isOk ? "#22c55e" : "#ef4444", fontWeight: diff !== null ? 700 : 400 }}>
-                        {diff === null ? "—" : `${diff >= 0 ? "+" : ""}₪${fmt(diff)}`}
-                      </Td>
-                      <Td>
-                        {!d.bankAmount
-                          ? <span style={{ background: "#fffbeb", color: "#f59e0b", border: "1px solid #f59e0b", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>⏳ ממתין</span>
-                          : isOk
-                            ? <span style={{ background: "#f0fdf4", color: "#22c55e", border: "1px solid #22c55e", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>✓ תקין</span>
-                            : <span style={{ background: "#fff5f5", color: "#ef4444", border: "1px solid #ef4444", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>⚠ פער</span>
-                        }
-                      </Td>
-                      <Td style={{ color: "#64748b" }}>{d.note || "—"}</Td>
-                      <Td>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => { setEditId(d.id); setEditVals({ date: d.date, amount: d.amount, bankAmount: d.bankAmount || "", note: d.note || "" }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13 }}>✏️</button>
-                          <button onClick={() => deleteDeposit(d.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button>
-                        </div>
-                      </Td>
-                    </>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
     </div>
   );
 }
@@ -3318,7 +2693,7 @@ function Settings({ settings, setSettings, inventoryCategories, setInventoryCate
 function Card({ title, children }) {
   return (
     <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "#1e293b", marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid #e2e8f0" }}>{title}</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid #e2e8f0" }}>{title}</div>
       {children}
     </div>
   );
@@ -3331,7 +2706,7 @@ function KpiCard({ label, value, sub, accent, raw }) {
         <span style={{ fontSize: 12, color: "#64748b" }}>{label}</span>
       </div>
       {raw ? value : <div style={{ fontSize: 22, fontWeight: 800, color: accent }}>{value}</div>}
-      {sub && <div style={{ fontSize: 11, color: "#1e293b", marginTop: 4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: "#f1f5f9", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -3339,7 +2714,7 @@ function KpiCard({ label, value, sub, accent, raw }) {
 function Btn({ onClick, children, style = {} }) {
   return (
     <button onClick={onClick} style={{
-      background: "#cc0000", color: "#fff", border: "none", borderRadius: 8,
+      background: "#6366f1", color: "#fff", border: "none", borderRadius: 8,
       padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13,
       transition: "opacity 0.15s", whiteSpace: "nowrap", ...style
     }}
