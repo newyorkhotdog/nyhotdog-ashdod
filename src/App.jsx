@@ -970,25 +970,25 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
             role: "user",
             content: [
               { type: isPdf ? "document" : "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-              { type: "text", text: `קרא את החשבונית הזו בקפידה. שים לב: בחשבוניות ישראליות, לרוב:
-- העמודה הראשונה היא שם הפריט
-- אחריה: כמות (לרוב מספר קטן כמו 1, 2, 5, 10, 45, 70...)
-- אחריה: מחיר ליחידה (לרוב מספר עם נקודה עשרונית)
-- אחריה: סה"כ שורה (כמות × מחיר)
+              { type: "text", text: `אתה מומחה בקריאת חשבוניות ישראליות. קרא את החשבונית בקפידה.
 
-החזר JSON בלבד ללא markdown ללא backticks:
+הכלל הקריטי לזיהוי כמות מול מחיר:
+- כמות (qty): מספר שלם קטן — 1, 2, 3, 5, 10, 24, 48. לעולם לא יהיה מספר גדול עם נקודה עשרונית.
+- מחיר (price): מספר עם אגורות — 12.50, 45.90, 120.00, 8.40. לרוב גדול מ-5.
+- סה"כ שורה = qty × price. השתמש בזה לאימות: אם qty=2 ו-price=45.90 אז סה"כ שורה=91.80.
+- אם רואים שתי עמודות מספרים ואחת קטנה (1-50) ואחת גדולה — הקטנה היא qty, הגדולה היא price.
+- לעולם אל תשים מחיר בשדה qty!
+
+החזר JSON בלבד, ללא markdown, ללא backticks:
 {
-  "supplierName": "שם הספק",
+  "supplierName": "שם הספק/חברה כפי שמופיע בראש החשבונית",
   "date": "YYYY-MM-DD",
-  "invoiceNum": "מספר חשבונית",
+  "invoiceNum": "מספר החשבונית",
   "items": [{ "name": "שם פריט", "unit": "יחידת מידה", "qty": 1.0, "price": 0.0 }],
   "total": 0.0
 }
-חשוב מאוד:
-- qty = כמות (כמה יחידות/ק"ג נרכשו)
-- price = מחיר ליחידה אחת (לא סה"כ שורה)
-- total = הסכום הכולל של כל החשבונית
-אם qty×price ≠ סה"כ שורה, בדוק שוב את הערכים.` }
+
+לפני שליחה — בדוק כל פריט: האם qty × price = סה"כ שורה? אם לא, תקן.` }
             ]
           }]
         })
@@ -1114,6 +1114,17 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
             <div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div>
               <input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, width: "100%", color: "#1e293b", fontWeight: 700 }} />
+              <select
+                value={suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim())?.id || ""}
+                onChange={e => {
+                  const sup = suppliers.find(s => s.id === e.target.value);
+                  if (sup) setScanResult(p => ({ ...p, supplierName: sup.name }));
+                }}
+                style={{ ...inputStyle, marginTop: 4, fontSize: 12, color: "#64748b" }}
+              >
+                <option value="">— בחר מהרשימה —</option>
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
             </div>
             <div>
               <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div>
@@ -2661,7 +2672,18 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
       {scanResult && (
         <Card title="📋 תעודת משלוח — בדוק ואשר">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
-            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div><input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, color: "#1e293b", fontWeight: 700 }} /></div>
+            <div>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div>
+              <input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, color: "#1e293b", fontWeight: 700 }} />
+              <select
+                value={suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim())?.id || ""}
+                onChange={e => { const s = suppliers.find(x => x.id === e.target.value); if (s) setScanResult(p => ({ ...p, supplierName: s.name })); }}
+                style={{ ...inputStyle, marginTop: 4, fontSize: 12, color: "#64748b" }}
+              >
+                <option value="">— בחר מהרשימה —</option>
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
             <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div><input type="date" value={scanResult.date || ""} onChange={e => setScanResult(p => ({ ...p, date: e.target.value }))} style={inputStyle} /></div>
             <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ תעודה</div><input value={scanResult.deliveryNum || ""} onChange={e => setScanResult(p => ({ ...p, deliveryNum: e.target.value }))} style={inputStyle} /></div>
           </div>
