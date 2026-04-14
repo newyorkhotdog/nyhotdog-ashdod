@@ -101,6 +101,7 @@ export default function App() {
       [STORAGE_KEYS.deliveries]: setDeliveries,
       [STORAGE_KEYS.inventory]: setInventory,
       [STORAGE_KEYS.cashDeposits]: setCashDeposits,
+      [STORAGE_KEYS.inventoryCategories]: setInventoryCategories,
     };
     let loadedCount = 0;
     const total = Object.keys(setters).length;
