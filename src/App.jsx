@@ -30,13 +30,18 @@ async function load(key) {
   } catch { return null; }
 }
 
+let _setSaving = null; // global ref to update saving indicator
+
 async function save(key, val) {
   try {
+    if (_setSaving) _setSaving(true);
     const ref = doc(db, "branches", BRANCH_ID, "data", key);
     await setDoc(ref, { value: val });
+    if (_setSaving) { _setSaving("ok"); setTimeout(() => _setSaving(false), 2000); }
   } catch (e) {
     console.error("🔴 Firebase save error:", key, e.message);
-    alert("שגיאת שמירה: " + e.message);
+    if (_setSaving) _setSaving("error");
+    alert("❌ שגיאת שמירה! בדוק חיבור אינטרנט.\n" + e.message);
   }
 }
 
@@ -88,6 +93,8 @@ export default function App() {
   const [inventoryCategories, setInventoryCategories] = useState([]);
   const [cashDeposits, setCashDeposits] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { _setSaving = setSaving; return () => { _setSaving = null; }; }, []);
 
   useEffect(() => {
     // Real-time listeners — כל שינוי ב-Firebase מתעדכן מיד בכל המכשירים
@@ -142,11 +149,21 @@ export default function App() {
   return (
     <div dir="rtl" style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'Segoe UI', Tahoma, sans-serif", color: "#1e293b" }}>
       {/* HEADER */}
-      <div style={{ background: "linear-gradient(135deg, #cc0000 0%, #8b0000 100%)", borderBottom: "1px solid #b91c1c", padding: "16px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 28 }}>🌭</span>
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>New York Hotdog — מערכת ניהול פוד קוסט</div>
-          <div style={{ fontSize: 12, color: "#fecaca" }}>סניף אשדוד</div>
+      <div style={{ background: "linear-gradient(135deg, #cc0000 0%, #8b0000 100%)", borderBottom: "1px solid #b91c1c", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 28 }}>🌭</span>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>New York Hotdog — מערכת ניהול פוד קוסט</div>
+            <div style={{ fontSize: 12, color: "#fecaca" }}>סניף אשדוד</div>
+          </div>
+        </div>
+        {/* Save indicator */}
+        <div style={{ fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6,
+          color: saving === "error" ? "#fca5a5" : saving === "ok" ? "#86efac" : saving ? "#fde68a" : "#ffffff66" }}>
+          {saving === "error" && <span>❌ שגיאת שמירה!</span>}
+          {saving === "ok" && <span>✅ נשמר</span>}
+          {saving === true && <span>💾 שומר...</span>}
+          {!saving && <span style={{ fontSize: 11 }}>☁️ מחובר</span>}
         </div>
       </div>
 
