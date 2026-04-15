@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 
@@ -85,8 +85,6 @@ export default function App() {
   const [inventoryCategories, setInventoryCategories] = useState([]);
   const [cashDeposits, setCashDeposits] = useState([]);
   const [loaded, setLoaded] = useState(false);
-  const initialLoad = useRef(true);
-  useEffect(() => { if (loaded) initialLoad.current = false; }, [loaded]);
 
   useEffect(() => {
     // Real-time listeners — כל שינוי ב-Firebase מתעדכן מיד בכל המכשירים
@@ -122,19 +120,19 @@ export default function App() {
     return () => unsubs.forEach(u => u());
   }, []);
 
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.suppliers, suppliers); }, [suppliers]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.products, products); }, [products]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.invoices, invoices); }, [invoices]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.sales, sales); }, [sales]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.employees, employees); }, [employees]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.hours, hours); }, [hours]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.settings, settings); }, [settings]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.pending, pending); }, [pending]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.expenses, expenses); }, [expenses]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.deliveries, deliveries); }, [deliveries]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.inventory, inventory); }, [inventory]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.cashDeposits, cashDeposits); }, [cashDeposits]);
-  useEffect(() => { if (loaded && !initialLoad.current) save(STORAGE_KEYS.inventoryCategories, inventoryCategories); }, [inventoryCategories]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.suppliers, suppliers); }, [suppliers, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.products, products); }, [products, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.invoices, invoices); }, [invoices, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.sales, sales); }, [sales, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.employees, employees); }, [employees, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.hours, hours); }, [hours, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.settings, settings); }, [settings, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.pending, pending); }, [pending, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.expenses, expenses); }, [expenses, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.deliveries, deliveries); }, [deliveries, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.inventory, inventory); }, [inventory, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.cashDeposits, cashDeposits); }, [cashDeposits, loaded]);
+  useEffect(() => { if (loaded) save(STORAGE_KEYS.inventoryCategories, inventoryCategories); }, [inventoryCategories, loaded]);
 
   if (!loaded) return <div style={{ background: "#f1f5f9", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#1e293b" }}>טוען...</div>;
 
