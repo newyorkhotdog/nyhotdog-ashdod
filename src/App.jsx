@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 
 const STORAGE_KEYS = {
   employees: "nyh_employees",
@@ -34,7 +34,10 @@ async function save(key, val) {
   try {
     const ref = doc(db, "branches", BRANCH_ID, "data", key);
     await setDoc(ref, { value: val });
-  } catch (e) { console.error("Save error:", e); }
+  } catch (e) {
+    console.error("🔴 Firebase save error:", key, e.message);
+    alert("שגיאת שמירה: " + e.message);
+  }
 }
 
 const fmt = (n) => Number(n || 0).toFixed(2);
