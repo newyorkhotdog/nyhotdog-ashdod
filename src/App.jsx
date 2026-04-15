@@ -3316,7 +3316,7 @@ function Settings({ settings, setSettings, inventoryCategories, setInventoryCate
         <Btn onClick={() => setSettings(form)} style={{ background: "#22c55e" }}>💾 שמור הגדרות</Btn>
       </div>
       </div>
-      <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={uSetInventoryCategories} suppliers={suppliers} setSuppliers={uSetSuppliers} />
+      <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />
     </div>
   );
 }
