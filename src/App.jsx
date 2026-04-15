@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db } from "./firebase";
 import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 
@@ -95,37 +95,47 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
 
-  // שמירה ישירה — נקראת בנקודת הפעולה, לא דרך useEffect
+  // saveQ: תור שמירה — מונע race conditions
+  const saveQ = useRef({});
+  const saveTimer = useRef({});
+
   const persist = async (key, val) => {
-    setSaveStatus("saving");
-    try {
-      await setDoc(doc(db, "branches", BRANCH_ID, "data", key), { value: val });
-      setSaveStatus("ok");
-      setTimeout(() => setSaveStatus(null), 2000);
-    } catch (e) {
-      console.error("🔴 save error:", key, e.message);
-      setSaveStatus("error");
-      alert("❌ שגיאת שמירה!\n" + e.message);
-    }
+    // שמור את הערך האחרון בתור
+    saveQ.current[key] = val;
+    // debounce: המתן 300ms לפני שמירה — תמיד שומר את הערך האחרון
+    clearTimeout(saveTimer.current[key]);
+    saveTimer.current[key] = setTimeout(async () => {
+      const latest = saveQ.current[key];
+      setSaveStatus("saving");
+      try {
+        await setDoc(doc(db, "branches", BRANCH_ID, "data", key), { value: latest });
+        setSaveStatus("ok");
+        setTimeout(() => setSaveStatus(null), 2000);
+      } catch (e) {
+        console.error("🔴 save error:", key, e.message);
+        setSaveStatus("error");
+        alert("❌ שגיאת שמירה!\n" + e.message);
+      }
+    }, 300);
   };
 
-  // Setters שמעדכנים state ושומרים Firebase בו-זמנית
-  const uSetSuppliers = (val) => { const v = typeof val === "function" ? val(suppliers) : val; setSuppliers(v); persist(STORAGE_KEYS.suppliers, v); };
-  const uSetProducts = (val) => { const v = typeof val === "function" ? val(products) : val; setProducts(v); persist(STORAGE_KEYS.products, v); };
-  const uSetInvoices = (val) => { const v = typeof val === "function" ? val(invoices) : val; setInvoices(v); persist(STORAGE_KEYS.invoices, v); };
-  const uSetSales = (val) => { const v = typeof val === "function" ? val(sales) : val; setSales(v); persist(STORAGE_KEYS.sales, v); };
-  const uSetEmployees = (val) => { const v = typeof val === "function" ? val(employees) : val; setEmployees(v); persist(STORAGE_KEYS.employees, v); };
-  const uSetHours = (val) => { const v = typeof val === "function" ? val(hours) : val; setHours(v); persist(STORAGE_KEYS.hours, v); };
-  const uSetSettings = (val) => { const v = typeof val === "function" ? val(settings) : val; setSettings(v); persist(STORAGE_KEYS.settings, v); };
-  const uSetPending = (val) => { const v = typeof val === "function" ? val(pending) : val; setPending(v); persist(STORAGE_KEYS.pending, v); };
-  const uSetExpenses = (val) => { const v = typeof val === "function" ? val(expenses) : val; setExpenses(v); persist(STORAGE_KEYS.expenses, v); };
-  const uSetDeliveries = (val) => { const v = typeof val === "function" ? val(deliveries) : val; setDeliveries(v); persist(STORAGE_KEYS.deliveries, v); };
-  const uSetInventory = (val) => { const v = typeof val === "function" ? val(inventory) : val; setInventory(v); persist(STORAGE_KEYS.inventory, v); };
-  const uSetCashDeposits = (val) => { const v = typeof val === "function" ? val(cashDeposits) : val; setCashDeposits(v); persist(STORAGE_KEYS.cashDeposits, v); };
-  const uSetInventoryCategories = (val) => { const v = typeof val === "function" ? val(inventoryCategories) : val; setInventoryCategories(v); persist(STORAGE_KEYS.inventoryCategories, v); };
+  // Setters — מעדכנים state ושומרים. עם functional update תמיד נכון.
+  const uSetSuppliers = (val) => setSuppliers(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.suppliers, v); return v; });
+  const uSetProducts = (val) => setProducts(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.products, v); return v; });
+  const uSetInvoices = (val) => setInvoices(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.invoices, v); return v; });
+  const uSetSales = (val) => setSales(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.sales, v); return v; });
+  const uSetEmployees = (val) => setEmployees(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.employees, v); return v; });
+  const uSetHours = (val) => setHours(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.hours, v); return v; });
+  const uSetSettings = (val) => setSettings(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.settings, v); return v; });
+  const uSetPending = (val) => setPending(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.pending, v); return v; });
+  const uSetExpenses = (val) => setExpenses(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.expenses, v); return v; });
+  const uSetDeliveries = (val) => setDeliveries(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.deliveries, v); return v; });
+  const uSetInventory = (val) => setInventory(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.inventory, v); return v; });
+  const uSetCashDeposits = (val) => setCashDeposits(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.cashDeposits, v); return v; });
+  const uSetInventoryCategories = (val) => setInventoryCategories(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.inventoryCategories, v); return v; });
 
   useEffect(() => {
-    // טעינה חד-פעמית מ-Firebase בעת פתיחה — onSnapshot לעדכונים בזמן אמת
+    // טעינה מ-Firebase — onSnapshot לעדכונים בזמן אמת
     const setters = {
       [STORAGE_KEYS.suppliers]: setSuppliers,
       [STORAGE_KEYS.products]: setProducts,
