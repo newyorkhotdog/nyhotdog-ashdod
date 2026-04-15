@@ -93,11 +93,39 @@ export default function App() {
   const [inventoryCategories, setInventoryCategories] = useState([]);
   const [cashDeposits, setCashDeposits] = useState([]);
   const [loaded, setLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
-  useEffect(() => { _setSaving = setSaving; return () => { _setSaving = null; }; }, []);
+  const [saveStatus, setSaveStatus] = useState(null);
+
+  // שמירה ישירה — נקראת בנקודת הפעולה, לא דרך useEffect
+  const persist = async (key, val) => {
+    setSaveStatus("saving");
+    try {
+      await setDoc(doc(db, "branches", BRANCH_ID, "data", key), { value: val });
+      setSaveStatus("ok");
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (e) {
+      console.error("🔴 save error:", key, e.message);
+      setSaveStatus("error");
+      alert("❌ שגיאת שמירה!\n" + e.message);
+    }
+  };
+
+  // Setters שמעדכנים state ושומרים Firebase בו-זמנית
+  const uSetSuppliers = (val) => { const v = typeof val === "function" ? val(suppliers) : val; setSuppliers(v); persist(STORAGE_KEYS.suppliers, v); };
+  const uSetProducts = (val) => { const v = typeof val === "function" ? val(products) : val; setProducts(v); persist(STORAGE_KEYS.products, v); };
+  const uSetInvoices = (val) => { const v = typeof val === "function" ? val(invoices) : val; setInvoices(v); persist(STORAGE_KEYS.invoices, v); };
+  const uSetSales = (val) => { const v = typeof val === "function" ? val(sales) : val; setSales(v); persist(STORAGE_KEYS.sales, v); };
+  const uSetEmployees = (val) => { const v = typeof val === "function" ? val(employees) : val; setEmployees(v); persist(STORAGE_KEYS.employees, v); };
+  const uSetHours = (val) => { const v = typeof val === "function" ? val(hours) : val; setHours(v); persist(STORAGE_KEYS.hours, v); };
+  const uSetSettings = (val) => { const v = typeof val === "function" ? val(settings) : val; setSettings(v); persist(STORAGE_KEYS.settings, v); };
+  const uSetPending = (val) => { const v = typeof val === "function" ? val(pending) : val; setPending(v); persist(STORAGE_KEYS.pending, v); };
+  const uSetExpenses = (val) => { const v = typeof val === "function" ? val(expenses) : val; setExpenses(v); persist(STORAGE_KEYS.expenses, v); };
+  const uSetDeliveries = (val) => { const v = typeof val === "function" ? val(deliveries) : val; setDeliveries(v); persist(STORAGE_KEYS.deliveries, v); };
+  const uSetInventory = (val) => { const v = typeof val === "function" ? val(inventory) : val; setInventory(v); persist(STORAGE_KEYS.inventory, v); };
+  const uSetCashDeposits = (val) => { const v = typeof val === "function" ? val(cashDeposits) : val; setCashDeposits(v); persist(STORAGE_KEYS.cashDeposits, v); };
+  const uSetInventoryCategories = (val) => { const v = typeof val === "function" ? val(inventoryCategories) : val; setInventoryCategories(v); persist(STORAGE_KEYS.inventoryCategories, v); };
 
   useEffect(() => {
-    // Real-time listeners — כל שינוי ב-Firebase מתעדכן מיד בכל המכשירים
+    // טעינה חד-פעמית מ-Firebase בעת פתיחה — onSnapshot לעדכונים בזמן אמת
     const setters = {
       [STORAGE_KEYS.suppliers]: setSuppliers,
       [STORAGE_KEYS.products]: setProducts,
@@ -130,20 +158,6 @@ export default function App() {
     return () => unsubs.forEach(u => u());
   }, []);
 
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.suppliers, suppliers); }, [suppliers, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.products, products); }, [products, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.invoices, invoices); }, [invoices, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.sales, sales); }, [sales, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.employees, employees); }, [employees, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.hours, hours); }, [hours, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.settings, settings); }, [settings, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.pending, pending); }, [pending, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.expenses, expenses); }, [expenses, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.deliveries, deliveries); }, [deliveries, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.inventory, inventory); }, [inventory, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.cashDeposits, cashDeposits); }, [cashDeposits, loaded]);
-  useEffect(() => { if (loaded) save(STORAGE_KEYS.inventoryCategories, inventoryCategories); }, [inventoryCategories, loaded]);
-
   if (!loaded) return <div style={{ background: "#f1f5f9", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#1e293b" }}>טוען...</div>;
 
   return (
@@ -159,11 +173,11 @@ export default function App() {
         </div>
         {/* Save indicator */}
         <div style={{ fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6,
-          color: saving === "error" ? "#fca5a5" : saving === "ok" ? "#86efac" : saving ? "#fde68a" : "#ffffff66" }}>
-          {saving === "error" && <span>❌ שגיאת שמירה!</span>}
-          {saving === "ok" && <span>✅ נשמר</span>}
-          {saving === true && <span>💾 שומר...</span>}
-          {!saving && <span style={{ fontSize: 11 }}>☁️ מחובר</span>}
+          color: saveStatus === "error" ? "#fca5a5" : saveStatus === "ok" ? "#86efac" : saveStatus === "saving" ? "#fde68a" : "#ffffff66" }}>
+          {saveStatus === "error" && <span>❌ שגיאת שמירה!</span>}
+          {saveStatus === "ok" && <span>✅ נשמר</span>}
+          {saveStatus === "saving" && <span>💾 שומר...</span>}
+          {!saveStatus && <span style={{ fontSize: 11 }}>☁️ מחובר</span>}
         </div>
       </div>
 
@@ -188,17 +202,17 @@ export default function App() {
 
       <div style={{ padding: 24, background: "#f1f5f9", minHeight: "calc(100vh - 120px)" }}>
         {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} />}
-        {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} inventoryCategories={inventoryCategories} />}
-        {tab === "invoices" && <Invoices invoices={invoices} setInvoices={setInvoices} suppliers={suppliers} setSuppliers={setSuppliers} products={products} setProducts={setProducts} settings={settings} pending={pending} setPending={setPending} />}
-        {tab === "sales" && <Sales sales={sales} setSales={setSales} />}
-        {tab === "employees" && <Employees employees={employees} setEmployees={setEmployees} />}
-        {tab === "hours" && <Hours hours={hours} setHours={setHours} employees={employees} sales={sales} settings={settings} />}
-        {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={setDeliveries} suppliers={suppliers} products={products} setSuppliers={setSuppliers} setProducts={setProducts} pending={pending} setPending={setPending} invoices={invoices} setInvoices={setInvoices} />}
-        {tab === "inventory" && <Inventory inventory={inventory} setInventory={setInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} inventoryCategories={inventoryCategories} setSuppliers={setSuppliers} />}
-        {tab === "expenses" && <Expenses expenses={expenses} setExpenses={setExpenses} />}
-        {tab === "cash" && <CashDeposits cashDeposits={cashDeposits} setCashDeposits={setCashDeposits} sales={sales} />}
-        {tab === "notifications" && <Notifications pending={pending} setPending={setPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={setInvoices} setSuppliers={setSuppliers} setProducts={setProducts} />}
-        {tab === "settings" && <Settings settings={settings} setSettings={setSettings} inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />}
+        {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} inventoryCategories={inventoryCategories} />}
+        {tab === "invoices" && <Invoices invoices={invoices} setInvoices={uSetInvoices} suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} settings={settings} pending={pending} setPending={uSetPending} />}
+        {tab === "sales" && <Sales sales={sales} setSales={uSetSales} />}
+        {tab === "employees" && <Employees employees={employees} setEmployees={uSetEmployees} />}
+        {tab === "hours" && <Hours hours={hours} setHours={uSetHours} employees={employees} sales={sales} settings={settings} />}
+        {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={uSetDeliveries} suppliers={suppliers} products={products} setSuppliers={uSetSuppliers} setProducts={uSetProducts} pending={pending} setPending={uSetPending} invoices={invoices} setInvoices={uSetInvoices} />}
+        {tab === "inventory" && <Inventory inventory={inventory} setInventory={uSetInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} inventoryCategories={inventoryCategories} setSuppliers={uSetSuppliers} />}
+        {tab === "expenses" && <Expenses expenses={expenses} setExpenses={uSetExpenses} />}
+        {tab === "cash" && <CashDeposits cashDeposits={cashDeposits} setCashDeposits={uSetCashDeposits} sales={sales} />}
+        {tab === "notifications" && <Notifications pending={pending} setPending={uSetPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={uSetInvoices} setSuppliers={uSetSuppliers} setProducts={uSetProducts} />}
+        {tab === "settings" && <Settings settings={settings} setSettings={uSetSettings} inventoryCategories={inventoryCategories} setInventoryCategories={uSetInventoryCategories} suppliers={suppliers} setSuppliers={uSetSuppliers} />}
       </div>
     </div>
   );
@@ -3302,7 +3316,7 @@ function Settings({ settings, setSettings, inventoryCategories, setInventoryCate
         <Btn onClick={() => setSettings(form)} style={{ background: "#22c55e" }}>💾 שמור הגדרות</Btn>
       </div>
       </div>
-      <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />
+      <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={uSetInventoryCategories} suppliers={suppliers} setSuppliers={uSetSuppliers} />
     </div>
   );
 }
