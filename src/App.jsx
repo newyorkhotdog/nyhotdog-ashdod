@@ -553,6 +553,32 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
         <KpiCard label="התראות מחיר" value={alerts.length} accent={alerts.length > 0 ? "#f59e0b" : "#22c55e"} sub={alerts.length > 0 ? "דרוש טיפול" : "הכל תקין"} />
       </div>
 
+      {/* משימות פתוחות */}
+      {tasks.filter(t => !t.done).length > 0 && (
+        <Card title="✅ משימות פתוחות">
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {TASK_OWNERS.map(owner => {
+              const ownerTasks = tasks.filter(t => !t.done && t.owner === owner);
+              if (ownerTasks.length === 0) return null;
+              const color = TASK_OWNER_COLORS[owner];
+              return (
+                <div key={owner}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color, marginBottom: 4 }}>{owner}</div>
+                  {ownerTasks.map(t => (
+                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 8, background: `${color}08`, border: `1px solid ${color}22`, marginBottom: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 13, color: "#1e293b", fontWeight: 500 }}>{t.title}</span>
+                      {t.note && <span style={{ fontSize: 11, color: "#94a3b8" }}>{t.note}</span>}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+
       {/* Food cost bar */}
       <Card title="פוד קוסט חודשי">
         <div style={{ marginBottom: 8, color: "#64748b", fontSize: 13 }}>
@@ -697,31 +723,6 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
           </Card>
         );
       })()}
-
-      {/* משימות פתוחות */}
-      {tasks.filter(t => !t.done).length > 0 && (
-        <Card title="✅ משימות פתוחות">
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {TASK_OWNERS.map(owner => {
-              const ownerTasks = tasks.filter(t => !t.done && t.owner === owner);
-              if (ownerTasks.length === 0) return null;
-              const color = TASK_OWNER_COLORS[owner];
-              return (
-                <div key={owner}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color, marginBottom: 4 }}>{owner}</div>
-                  {ownerTasks.map(t => (
-                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 8, background: `${color}08`, border: `1px solid ${color}22`, marginBottom: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                      <span style={{ flex: 1, fontSize: 13, color: "#1e293b", fontWeight: 500 }}>{t.title}</span>
-                      {t.note && <span style={{ fontSize: 11, color: "#94a3b8" }}>{t.note}</span>}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
 
       {/* AI Agent */}
       <div style={{ border: "2px solid #cc0000", borderRadius: 14, overflow: "hidden", background: "#fff" }}>
