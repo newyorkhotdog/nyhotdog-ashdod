@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
   inventory: "nyh_inventory",
   inventoryCategories: "nyh_inv_categories",
   cashDeposits: "nyh_cash_deposits",
+  tasks: "nyh_tasks",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
@@ -68,11 +69,11 @@ const TABS = [
   { id: "invoices", label: "🧾 חשבוניות" },
   { id: "deliveries", label: "🚚 תעודות משלוח" },
   { id: "sales", label: "💰 מכירות" },
-  { id: "employees", label: "👷 עובדים" },
-  { id: "hours", label: "⏱️ שעות" },
+  { id: "hours", label: "👷 עובדים ושעות" },
   { id: "inventory", label: "📦 מלאי" },
   { id: "expenses", label: "🏢 הוצאות תפעול" },
   { id: "cash", label: "💵 הפקדת מזומן" },
+  { id: "tasks", label: "✅ משימות" },
   { id: "notifications", label: "🔔 התראות" },
   { id: "settings", label: "⚙️ הגדרות" },
 ];
@@ -92,6 +93,7 @@ export default function App() {
   const [inventory, setInventory] = useState([]);
   const [inventoryCategories, setInventoryCategories] = useState([]);
   const [cashDeposits, setCashDeposits] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
 
@@ -133,6 +135,7 @@ export default function App() {
   const uSetInventory = (val) => setInventory(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.inventory, v); return v; });
   const uSetCashDeposits = (val) => setCashDeposits(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.cashDeposits, v); return v; });
   const uSetInventoryCategories = (val) => setInventoryCategories(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.inventoryCategories, v); return v; });
+  const uSetTasks = (val) => setTasks(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.tasks, v); return v; });
 
   useEffect(() => {
     // טעינה מ-Firebase — onSnapshot לעדכונים בזמן אמת
@@ -150,6 +153,7 @@ export default function App() {
       [STORAGE_KEYS.inventory]: setInventory,
       [STORAGE_KEYS.cashDeposits]: setCashDeposits,
       [STORAGE_KEYS.inventoryCategories]: setInventoryCategories,
+      [STORAGE_KEYS.tasks]: setTasks,
     };
     const keys = Object.keys(setters);
     const loadedKeys = new Set();
@@ -211,12 +215,12 @@ export default function App() {
       </div>
 
       <div style={{ padding: 24, background: "#f1f5f9", minHeight: "calc(100vh - 120px)" }}>
-        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} />}
+        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} tasks={tasks} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} inventoryCategories={inventoryCategories} />}
         {tab === "invoices" && <Invoices invoices={invoices} setInvoices={uSetInvoices} suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} settings={settings} pending={pending} setPending={uSetPending} />}
         {tab === "sales" && <Sales sales={sales} setSales={uSetSales} />}
-        {tab === "employees" && <Employees employees={employees} setEmployees={uSetEmployees} />}
-        {tab === "hours" && <Hours hours={hours} setHours={uSetHours} employees={employees} sales={sales} settings={settings} />}
+        {tab === "hours" && <Hours hours={hours} setHours={uSetHours} employees={employees} setEmployees={uSetEmployees} sales={sales} settings={settings} />}
+        {tab === "tasks" && <Tasks tasks={tasks} setTasks={uSetTasks} />}
         {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={uSetDeliveries} suppliers={suppliers} products={products} setSuppliers={uSetSuppliers} setProducts={uSetProducts} pending={pending} setPending={uSetPending} invoices={invoices} setInvoices={uSetInvoices} />}
         {tab === "inventory" && <Inventory inventory={inventory} setInventory={uSetInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} inventoryCategories={inventoryCategories} setSuppliers={uSetSuppliers} />}
         {tab === "expenses" && <Expenses expenses={expenses} setExpenses={uSetExpenses} />}
@@ -228,7 +232,7 @@ export default function App() {
   );
 }
 
-function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [] }) {
+function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [], tasks = [] }) {
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -693,6 +697,31 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
           </Card>
         );
       })()}
+
+      {/* משימות פתוחות */}
+      {tasks.filter(t => !t.done).length > 0 && (
+        <Card title="✅ משימות פתוחות">
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {TASK_OWNERS.map(owner => {
+              const ownerTasks = tasks.filter(t => !t.done && t.owner === owner);
+              if (ownerTasks.length === 0) return null;
+              const color = TASK_OWNER_COLORS[owner];
+              return (
+                <div key={owner}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color, marginBottom: 4 }}>{owner}</div>
+                  {ownerTasks.map(t => (
+                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 8, background: `${color}08`, border: `1px solid ${color}22`, marginBottom: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 13, color: "#1e293b", fontWeight: 500 }}>{t.title}</span>
+                      {t.note && <span style={{ fontSize: 11, color: "#94a3b8" }}>{t.note}</span>}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* AI Agent */}
       <div style={{ border: "2px solid #cc0000", borderRadius: 14, overflow: "hidden", background: "#fff" }}>
@@ -1807,7 +1836,7 @@ function Employees({ employees, setEmployees }) {
   );
 }
 
-function Hours({ hours, setHours, employees, sales, settings }) {
+function Hours({ hours, setHours, employees, setEmployees, sales, settings }) {
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const [form, setForm] = useState({ date: today(), employeeId: "", hours: "" });
@@ -1815,6 +1844,10 @@ function Hours({ hours, setHours, employees, sales, settings }) {
   const [editHours, setEditHours] = useState("");
   const [importPreview, setImportPreview] = useState(null);
   const [importError, setImportError] = useState("");
+  const [activeSection, setActiveSection] = useState("hours"); // "hours" | "employees"
+  const [empForm, setEmpForm] = useState({ name: "", hourlyRate: "" });
+  const [empEditId, setEmpEditId] = useState(null);
+  const [empEditVals, setEmpEditVals] = useState({ name: "", hourlyRate: "" });
 
   const addHours = () => {
     if (!form.date || !form.employeeId || !form.hours) return;
@@ -1977,6 +2010,66 @@ function Hours({ hours, setHours, employees, sales, settings }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* Section switcher */}
+      <div style={{ display: "flex", gap: 8 }}>
+        {[["hours","⏱️ שעות"],["employees","👷 עובדים"]].map(([id, label]) => (
+          <button key={id} onClick={() => setActiveSection(id)} style={{ padding: "8px 20px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit", background: activeSection === id ? "#cc0000" : "#ffffff", color: activeSection === id ? "#fff" : "#475569", boxShadow: activeSection === id ? "0 2px 8px rgba(204,0,0,0.25)" : "0 1px 3px rgba(0,0,0,0.08)" }}>{label}</button>
+        ))}
+      </div>
+
+      {/* Employees section */}
+      {activeSection === "employees" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 600 }}>
+          <Card title="הוספת עובד חדש">
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div style={{ flex: 3 }}>
+                <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>שם עובד</label>
+                <input value={empForm.name} onChange={e => setEmpForm(f => ({ ...f, name: e.target.value }))} onKeyDown={e => e.key === "Enter" && empForm.name && empForm.hourlyRate && (setEmployees(p => [...p, { id: Date.now().toString(), name: empForm.name.trim(), hourlyRate: parseFloat(empForm.hourlyRate) }]), setEmpForm({ name: "", hourlyRate: "" }))} placeholder="שם מלא" style={inputStyle} />
+              </div>
+              <div style={{ flex: 2 }}>
+                <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>₪ לשעה</label>
+                <input value={empForm.hourlyRate} onChange={e => setEmpForm(f => ({ ...f, hourlyRate: e.target.value }))} placeholder="45" type="number" style={inputStyle} />
+              </div>
+              <Btn onClick={() => { if (!empForm.name.trim() || !empForm.hourlyRate) return; setEmployees(p => [...p, { id: Date.now().toString(), name: empForm.name.trim(), hourlyRate: parseFloat(empForm.hourlyRate) }]); setEmpForm({ name: "", hourlyRate: "" }); }}>+ הוסף</Btn>
+            </div>
+          </Card>
+          <Card title="רשימת עובדים">
+            {employees.length === 0 && <div style={{ color: "#64748b", fontSize: 13 }}>אין עובדים עדיין</div>}
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              {employees.length > 0 && <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>שם עובד</Th><Th>₪ לשעה</Th><Th></Th></tr></thead>}
+              <tbody>
+                {employees.map(e => (
+                  <tr key={e.id} style={{ borderBottom: "1px solid #e2e8f0", background: empEditId === e.id ? "#fff1f1" : "transparent" }}>
+                    {empEditId === e.id ? (
+                      <>
+                        <Td><input value={empEditVals.name} onChange={ev => setEmpEditVals(v => ({ ...v, name: ev.target.value }))} style={{ ...inputStyle, width: "100%" }} autoFocus /></Td>
+                        <Td><input type="number" value={empEditVals.hourlyRate} onChange={ev => setEmpEditVals(v => ({ ...v, hourlyRate: ev.target.value }))} style={{ ...inputStyle, width: 100 }} /></Td>
+                        <Td><div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={() => { setEmployees(p => p.map(x => x.id === e.id ? { ...x, name: empEditVals.name, hourlyRate: parseFloat(empEditVals.hourlyRate) } : x)); setEmpEditId(null); }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>שמור</button>
+                          <button onClick={() => setEmpEditId(null)} style={{ background: "#cbd5e1", color: "#64748b", border: "none", borderRadius: 5, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>ביטול</button>
+                        </div></Td>
+                      </>
+                    ) : (
+                      <>
+                        <Td style={{ fontWeight: 600 }}>{e.name}</Td>
+                        <Td style={{ color: "#fb923c" }}>₪{fmt(e.hourlyRate)}</Td>
+                        <Td><div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => { setEmpEditId(e.id); setEmpEditVals({ name: e.name, hourlyRate: String(e.hourlyRate) }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 14 }}>✏️</button>
+                          <button onClick={() => setEmployees(p => p.filter(x => x.id !== e.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button>
+                        </div></Td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </div>
+      )}
+
+      {/* Hours section */}
+      {activeSection === "hours" && (<>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
         <KpiCard label="שעות החודש" value={totalLaborHours.toFixed(1)} accent="#fb923c" sub={`${Object.keys(byDate).length} ימים`} />
         <KpiCard label="עלות עבודה" value={`₪${fmt(totalLaborCost)}`} accent="#f472b6" sub="החודש הנוכחי" />
@@ -1985,7 +2078,7 @@ function Hours({ hours, setHours, employees, sales, settings }) {
 
       <Card title="הכנסת שעות יומיות">
         {employees.length === 0
-          ? <div style={{ color: "#64748b", fontSize: 13 }}>יש להוסיף עובדים קודם בטאב 👷 עובדים</div>
+          ? <div style={{ color: "#64748b", fontSize: 13 }}>יש להוסיף עובדים קודם — לחץ על כפתור <strong>👷 עובדים</strong> למעלה</div>
           : (
             <>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 12 }}>
@@ -2140,6 +2233,7 @@ function Hours({ hours, setHours, employees, sales, settings }) {
           </div>
         )}
       </Card>
+      </>)}
     </div>
   );
 }
@@ -3327,6 +3421,111 @@ function Settings({ settings, setSettings, inventoryCategories, setInventoryCate
       </div>
       </div>
       <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />
+    </div>
+  );
+}
+
+const TASK_OWNERS = ["יניב", "אוהד", "עילי"];
+const TASK_OWNER_COLORS = { "יניב": "#cc0000", "אוהד": "#0284c7", "עילי": "#16a34a" };
+
+function Tasks({ tasks, setTasks }) {
+  const [form, setForm] = useState({ title: "", owner: "יניב", note: "" });
+  const [showForm, setShowForm] = useState(false);
+
+  const addTask = () => {
+    if (!form.title.trim()) return;
+    setTasks(p => [...p, { id: Date.now().toString(), title: form.title.trim(), owner: form.owner, note: form.note.trim(), done: false, createdAt: today() }]);
+    setForm({ title: "", owner: "יניב", note: "" });
+    setShowForm(false);
+  };
+
+  const toggle = (id) => setTasks(p => p.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const del = (id) => setTasks(p => p.filter(t => t.id !== id));
+
+  const open = tasks.filter(t => !t.done);
+  const done = tasks.filter(t => t.done);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 13, color: "#64748b" }}>{open.length} משימות פתוחות | {done.length} הושלמו</div>
+        <Btn onClick={() => setShowForm(!showForm)} style={showForm ? { background: "#666" } : {}}>{showForm ? "✕ סגור" : "+ משימה חדשה"}</Btn>
+      </div>
+
+      {showForm && (
+        <Card title="משימה חדשה">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="תיאור המשימה *" style={inputStyle} onKeyDown={e => e.key === "Enter" && addTask()} autoFocus />
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מיועד ל</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {TASK_OWNERS.map(o => (
+                    <button key={o} onClick={() => setForm(f => ({ ...f, owner: o }))}
+                      style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `2px solid ${form.owner === o ? TASK_OWNER_COLORS[o] : "#e2e8f0"}`, background: form.owner === o ? TASK_OWNER_COLORS[o] : "#fff", color: form.owner === o ? "#fff" : "#64748b", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>
+                      {o}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="הערה (אופציונלי)" style={inputStyle} />
+            <Btn onClick={addTask} style={{ background: "#22c55e" }}>➕ הוסף משימה</Btn>
+          </div>
+        </Card>
+      )}
+
+      {/* Open tasks */}
+      {TASK_OWNERS.map(owner => {
+        const ownerTasks = open.filter(t => t.owner === owner);
+        if (ownerTasks.length === 0) return null;
+        const color = TASK_OWNER_COLORS[owner];
+        return (
+          <div key={owner} style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${color}33`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <div style={{ background: `${color}15`, padding: "10px 16px", fontWeight: 800, color, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ background: color, color: "#fff", borderRadius: 20, padding: "2px 10px", fontSize: 13 }}>{owner}</span>
+              <span style={{ color: "#64748b", fontWeight: 400, fontSize: 12 }}>{ownerTasks.length} משימות</span>
+            </div>
+            <div style={{ background: "#fff", padding: "8px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+              {ownerTasks.map(t => (
+                <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", borderRadius: 8, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                  <input type="checkbox" checked={t.done} onChange={() => toggle(t.id)} style={{ marginTop: 2, width: 16, height: 16, cursor: "pointer", accentColor: color }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>{t.title}</div>
+                    {t.note && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{t.note}</div>}
+                    <div style={{ fontSize: 10, color: "#cbd5e1", marginTop: 2 }}>{t.createdAt}</div>
+                  </div>
+                  <button onClick={() => del(t.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15, padding: 0 }}>×</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Done tasks */}
+      {done.length > 0 && (
+        <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #e2e8f0", opacity: 0.7 }}>
+          <div style={{ background: "#f8fafc", padding: "10px 16px", fontWeight: 700, color: "#94a3b8", fontSize: 13 }}>✅ הושלמו ({done.length})</div>
+          <div style={{ background: "#fff", padding: "8px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+            {done.map(t => (
+              <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8 }}>
+                <input type="checkbox" checked={t.done} onChange={() => toggle(t.id)} style={{ width: 16, height: 16, cursor: "pointer" }} />
+                <span style={{ flex: 1, fontSize: 13, color: "#94a3b8", textDecoration: "line-through" }}>{t.title}</span>
+                <span style={{ fontSize: 11, background: `${TASK_OWNER_COLORS[t.owner]}22`, color: TASK_OWNER_COLORS[t.owner], borderRadius: 10, padding: "1px 8px", fontWeight: 700 }}>{t.owner}</span>
+                <button onClick={() => del(t.id)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14 }}>×</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tasks.length === 0 && (
+        <div style={{ textAlign: "center", color: "#94a3b8", padding: 40, fontSize: 14 }}>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+          אין משימות — הכל נקי!
+        </div>
+      )}
     </div>
   );
 }
