@@ -102,8 +102,16 @@ export default function App() {
   const saveTimer = useRef({});
 
   const persist = async (key, val) => {
-    // שמור את הערך האחרון בתור
-    saveQ.current[key] = val;
+    // נקה undefined — Firestore לא מקבל undefined
+    const clean = (obj) => {
+      if (Array.isArray(obj)) return obj.map(clean);
+      if (obj && typeof obj === "object") {
+        return Object.fromEntries(Object.entries(obj).filter(([,v]) => v !== undefined).map(([k,v]) => [k, clean(v)]));
+      }
+      return obj;
+    };
+    const cleanVal = clean(val);
+    saveQ.current[key] = cleanVal;
     // debounce: המתן 300ms לפני שמירה — תמיד שומר את הערך האחרון
     clearTimeout(saveTimer.current[key]);
     saveTimer.current[key] = setTimeout(async () => {
