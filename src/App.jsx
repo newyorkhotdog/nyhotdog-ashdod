@@ -17,6 +17,7 @@ const STORAGE_KEYS = {
   inventoryCategories: "nyh_inv_categories",
   cashDeposits: "nyh_cash_deposits",
   tasks: "nyh_tasks",
+  fixedExpenses: "nyh_fixed_expenses",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
@@ -73,6 +74,7 @@ const TABS = [
   { id: "inventory", label: "📦 מלאי" },
   { id: "expenses", label: "🏢 הוצאות תפעול" },
   { id: "cash", label: "💵 הפקדת מזומן" },
+  { id: "pnl", label: "📈 רווח והפסד" },
   { id: "tasks", label: "✅ משימות" },
   { id: "notifications", label: "🔔 התראות" },
   { id: "settings", label: "⚙️ הגדרות" },
@@ -94,6 +96,7 @@ export default function App() {
   const [inventoryCategories, setInventoryCategories] = useState([]);
   const [cashDeposits, setCashDeposits] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [fixedExpenses, setFixedExpenses] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
 
@@ -144,6 +147,7 @@ export default function App() {
   const uSetCashDeposits = (val) => setCashDeposits(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.cashDeposits, v); return v; });
   const uSetInventoryCategories = (val) => setInventoryCategories(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.inventoryCategories, v); return v; });
   const uSetTasks = (val) => setTasks(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.tasks, v); return v; });
+  const uSetFixedExpenses = (val) => setFixedExpenses(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.fixedExpenses, v); return v; });
 
   useEffect(() => {
     // טעינה מ-Firebase — onSnapshot לעדכונים בזמן אמת
@@ -162,6 +166,7 @@ export default function App() {
       [STORAGE_KEYS.cashDeposits]: setCashDeposits,
       [STORAGE_KEYS.inventoryCategories]: setInventoryCategories,
       [STORAGE_KEYS.tasks]: setTasks,
+      [STORAGE_KEYS.fixedExpenses]: setFixedExpenses,
     };
     const keys = Object.keys(setters);
     const loadedKeys = new Set();
@@ -228,6 +233,7 @@ export default function App() {
         {tab === "invoices" && <Invoices invoices={invoices} setInvoices={uSetInvoices} suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} settings={settings} pending={pending} setPending={uSetPending} />}
         {tab === "sales" && <Sales sales={sales} setSales={uSetSales} />}
         {tab === "hours" && <Hours hours={hours} setHours={uSetHours} employees={employees} setEmployees={uSetEmployees} sales={sales} settings={settings} />}
+        {tab === "pnl" && <PnL sales={sales} invoices={invoices} hours={hours} employees={employees} expenses={expenses} deliveries={deliveries} fixedExpenses={fixedExpenses} setFixedExpenses={uSetFixedExpenses} />}
         {tab === "tasks" && <Tasks tasks={tasks} setTasks={uSetTasks} />}
         {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={uSetDeliveries} suppliers={suppliers} products={products} setSuppliers={uSetSuppliers} setProducts={uSetProducts} pending={pending} setPending={uSetPending} invoices={invoices} setInvoices={uSetInvoices} />}
         {tab === "inventory" && <Inventory inventory={inventory} setInventory={uSetInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} inventoryCategories={inventoryCategories} setSuppliers={uSetSuppliers} />}
@@ -3430,6 +3436,221 @@ function Settings({ settings, setSettings, inventoryCategories, setInventoryCate
       </div>
       </div>
       <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />
+    </div>
+  );
+}
+
+const VAT = 1.18;
+const COMMISSION_WOLT = 0.27;
+const COMMISSION_TAPRIT = 0.10;
+const COMMISSION_MISHLOCHA = 0.10;
+
+const FIXED_EXPENSE_CATEGORIES = ["שכירות", "ארנונה", "חשמל", "מים", "גז", "טלפון/אינטרנט", "ביטוח", "דמי זכיינות", "שיווק/פרסום", "תחזוקה", "ניקיון", "הנהלת חשבונות", "אחר"];
+
+function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExpenses, setFixedExpenses }) {
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const [showFixedForm, setShowFixedForm] = useState(false);
+  const [fixedForm, setFixedForm] = useState({ category: "שכירות", description: "", amount: "" });
+  const [editFixedId, setEditFixedId] = useState(null);
+  const [editFixedVals, setEditFixedVals] = useState({});
+
+  // ── נתוני חודש ──
+  const monthSales = sales.filter(s => s.date?.startsWith(selectedMonth));
+  const monthInvoices = invoices.filter(i => i.date?.startsWith(selectedMonth));
+  const monthHours = hours.filter(h => h.date?.startsWith(selectedMonth));
+  const monthExpenses = expenses.filter(e => e.date?.startsWith(selectedMonth));
+  const monthDeliveries = deliveries.filter(d => d.date?.startsWith(selectedMonth));
+
+  // ── הכנסות נטו (ללא מע"מ, אחרי עמלות) ──
+  const grossKupa = monthSales.reduce((a, s) => a + parseFloat(s.kupa || 0), 0);
+  const grossWolt = monthSales.reduce((a, s) => a + parseFloat(s.wolt || 0), 0);
+  const grossTaprit = monthSales.reduce((a, s) => a + parseFloat(s.taprit || 0), 0);
+  const grossMishlocha = monthSales.reduce((a, s) => a + parseFloat(s.mishlocha || 0), 0);
+  const grossRegularKupa = grossKupa - grossTaprit - grossMishlocha;
+
+  const netRegularKupa = grossRegularKupa / VAT;
+  const netTaprit = (grossTaprit * (1 - COMMISSION_TAPRIT)) / VAT;
+  const netMishlocha = (grossMishlocha * (1 - COMMISSION_MISHLOCHA)) / VAT;
+  const netWolt = (grossWolt * (1 - COMMISSION_WOLT)) / VAT;
+  const totalRevenue = netRegularKupa + netTaprit + netMishlocha + netWolt;
+
+  const commissionWoltAmount = grossWolt * COMMISSION_WOLT / VAT;
+  const commissionTapritAmount = grossTaprit * COMMISSION_TAPRIT / VAT;
+  const commissionMishlochAmount = grossMishlocha * COMMISSION_MISHLOCHA / VAT;
+  const totalCommissions = commissionWoltAmount + commissionTapritAmount + commissionMishlochAmount;
+
+  // ── עלות מכר (פוד קוסט) ──
+  // חשבוניות + תעודות ספקים ללא חשבונית
+  const invoiceSupplierIds = new Set(monthInvoices.map(i => i.supplierId));
+  const deliveryCost = monthDeliveries
+    .filter(d => !invoiceSupplierIds.has(d.supplierId))
+    .reduce((a, d) => a + parseFloat(d.total || 0), 0);
+  const invoiceCost = monthInvoices.reduce((a, i) => a + parseFloat(i.total || 0), 0);
+  const totalCOGS = invoiceCost + deliveryCost;
+  const grossProfit = totalRevenue - totalCOGS;
+  const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue * 100).toFixed(1) : 0;
+
+  // ── הוצאות תפעול ──
+  const laborCost = monthHours.reduce((a, h) => {
+    const emp = employees.find(e => e.id === h.employeeId);
+    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0);
+  }, 0);
+
+  const variableExpenses = monthExpenses.reduce((a, e) => a + parseFloat(e.amount || 0), 0);
+  const totalFixed = fixedExpenses.reduce((a, e) => a + parseFloat(e.amount || 0), 0);
+  const totalOperating = laborCost + variableExpenses + totalFixed;
+
+  // ── רווח ──
+  const operatingProfit = grossProfit - totalOperating;
+  const operatingMargin = totalRevenue > 0 ? (operatingProfit / totalRevenue * 100).toFixed(1) : 0;
+
+  const addFixed = () => {
+    if (!fixedForm.amount) return;
+    setFixedExpenses(p => [...p, { id: Date.now().toString(), ...fixedForm, amount: parseFloat(fixedForm.amount) }]);
+    setFixedForm({ category: "שכירות", description: "", amount: "" });
+    setShowFixedForm(false);
+  };
+
+  const Row = ({ label, amount, sub, bold, color, indent, border }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${border ? "10px" : "6px"} 16px`, borderTop: border ? "2px solid #e2e8f0" : "none", marginTop: border ? 4 : 0, background: bold ? "#f8fafc" : "transparent", borderRadius: bold ? 8 : 0 }}>
+      <span style={{ fontSize: indent ? 12 : 13, color: indent ? "#64748b" : "#1e293b", fontWeight: bold ? 700 : 400, paddingRight: indent ? 16 : 0 }}>{label}{sub && <span style={{ fontSize: 11, color: "#94a3b8", marginRight: 6 }}>{sub}</span>}</span>
+      <span style={{ fontWeight: bold ? 800 : 500, fontSize: bold ? 15 : 13, color: color || (amount < 0 ? "#ef4444" : amount > 0 ? "#1e293b" : "#94a3b8") }}>
+        {amount !== null ? `₪${fmt(Math.abs(amount))}` : "—"}
+      </span>
+    </div>
+  );
+
+  const pColor = (v) => v > 0 ? "#16a34a" : v < 0 ? "#dc2626" : "#94a3b8";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* Month selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+        <span style={{ fontWeight: 700, color: "#1e293b" }}>📅 דו"ח לחודש:</span>
+        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
+        <span style={{ fontSize: 12, color: "#94a3b8" }}>נתונים כפי שהוזנו במערכת</span>
+      </div>
+
+      {/* Summary KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+        <KpiCard label="הכנסה נטו" value={`₪${fmt(totalRevenue)}`} accent="#0284c7" sub="ללא מע״מ ואחרי עמלות" />
+        <KpiCard label="רווח גולמי" value={`₪${fmt(grossProfit)}`} accent={grossProfit > 0 ? "#16a34a" : "#dc2626"} sub={`${grossMargin}% מהמחזור`} />
+        <KpiCard label="רווח תפעולי" value={`₪${fmt(operatingProfit)}`} accent={operatingProfit > 0 ? "#16a34a" : "#dc2626"} sub={`${operatingMargin}% מהמחזור`} />
+        <KpiCard label="פוד קוסט" value={`${totalRevenue > 0 ? (totalCOGS/totalRevenue*100).toFixed(1) : 0}%`} accent="#cc0000" sub={`₪${fmt(totalCOGS)}`} />
+      </div>
+
+      {/* P&L Statement */}
+      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+
+        {/* Revenue section */}
+        <div style={{ background: "linear-gradient(135deg, #0284c720, #0284c708)", padding: "12px 16px", fontWeight: 800, color: "#0284c7", fontSize: 14, borderBottom: "1px solid #e2e8f0" }}>💰 הכנסות</div>
+        <Row label="קופה רגילה" amount={netRegularKupa} indent sub={`₪${fmt(grossRegularKupa)} ברוטו`} />
+        <Row label={`תפריט (אחרי עמלה ${(COMMISSION_TAPRIT*100).toFixed(0)}%)`} amount={netTaprit} indent sub={`₪${fmt(grossTaprit)} ברוטו`} />
+        <Row label={`משלוחה (אחרי עמלה ${(COMMISSION_MISHLOCHA*100).toFixed(0)}%)`} amount={netMishlocha} indent sub={`₪${fmt(grossMishlocha)} ברוטו`} />
+        <Row label={`וולט (אחרי עמלה ${(COMMISSION_WOLT*100).toFixed(0)}%)`} amount={netWolt} indent sub={`₪${fmt(grossWolt)} ברוטו`} />
+        <Row label="סה״כ עמלות שהופחתו" amount={-totalCommissions} indent color="#ef4444" />
+        <div style={{ background: "#0284c710", padding: "8px 16px", display: "flex", justifyContent: "space-between", borderTop: "1px solid #0284c730" }}>
+          <span style={{ fontWeight: 800, color: "#0284c7" }}>סה״כ הכנסה נטו</span>
+          <span style={{ fontWeight: 900, color: "#0284c7", fontSize: 16 }}>₪{fmt(totalRevenue)}</span>
+        </div>
+
+        {/* COGS */}
+        <div style={{ background: "#cc000015", padding: "12px 16px", fontWeight: 800, color: "#cc0000", fontSize: 14, borderTop: "1px solid #e2e8f0" }}>🛒 עלות מכר (פוד קוסט)</div>
+        <Row label="חשבוניות ספקים" amount={invoiceCost} indent />
+        {deliveryCost > 0 && <Row label="תעודות משלוח (ללא חשבונית)" amount={deliveryCost} indent />}
+        <div style={{ background: "#cc000010", padding: "8px 16px", display: "flex", justifyContent: "space-between", borderTop: "1px solid #cc000030" }}>
+          <span style={{ fontWeight: 800, color: "#cc0000" }}>סה״כ עלות מכר</span>
+          <span style={{ fontWeight: 900, color: "#cc0000", fontSize: 16 }}>₪{fmt(totalCOGS)}</span>
+        </div>
+
+        {/* Gross profit */}
+        <div style={{ background: grossProfit > 0 ? "#f0fdf4" : "#fff5f5", padding: "12px 16px", display: "flex", justifyContent: "space-between", borderTop: "2px solid #e2e8f0" }}>
+          <span style={{ fontWeight: 800, fontSize: 15, color: pColor(grossProfit) }}>📊 רווח גולמי</span>
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontWeight: 900, fontSize: 20, color: pColor(grossProfit) }}>₪{fmt(grossProfit)}</div>
+            <div style={{ fontSize: 12, color: "#64748b" }}>{grossMargin}% מהמחזור</div>
+          </div>
+        </div>
+
+        {/* Operating expenses */}
+        <div style={{ background: "#f59e0b15", padding: "12px 16px", fontWeight: 800, color: "#d97706", fontSize: 14, borderTop: "1px solid #e2e8f0" }}>👷 הוצאות תפעול</div>
+        <Row label="עלות עבודה" amount={laborCost} indent sub={`${monthHours.reduce((a,h) => a+(parseFloat(h.hours)||0), 0).toFixed(1)} שעות`} />
+        {variableExpenses > 0 && <Row label="הוצאות משתנות (שהוזנו)" amount={variableExpenses} indent />}
+
+        {/* Fixed expenses */}
+        <div style={{ padding: "6px 16px", background: "#fffbeb", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #fde68a" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#d97706" }}>הוצאות קבועות</span>
+          <button onClick={() => setShowFixedForm(!showFixedForm)} style={{ background: "none", border: "1px solid #d97706", color: "#d97706", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit" }}>+ הוסף/ערוך</button>
+        </div>
+
+        {showFixedForm && (
+          <div style={{ padding: "10px 16px", background: "#fffbeb", borderTop: "1px solid #fde68a", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <select value={fixedForm.category} onChange={e => setFixedForm(f => ({ ...f, category: e.target.value }))} style={{ ...inputStyle, flex: 2, minWidth: 130 }}>
+              {FIXED_EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+            </select>
+            <input value={fixedForm.description} onChange={e => setFixedForm(f => ({ ...f, description: e.target.value }))} placeholder="פירוט (אופציונלי)" style={{ ...inputStyle, flex: 2 }} />
+            <input type="number" value={fixedForm.amount} onChange={e => setFixedForm(f => ({ ...f, amount: e.target.value }))} placeholder="סכום ₪" style={{ ...inputStyle, flex: 1, minWidth: 90 }} />
+            <Btn onClick={addFixed} style={{ background: "#22c55e" }}>+ הוסף</Btn>
+          </div>
+        )}
+
+        {fixedExpenses.map(e => (
+          <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 16px 5px 32px", borderTop: "1px solid #f1f5f9" }}>
+            {editFixedId === e.id ? (
+              <>
+                <div style={{ display: "flex", gap: 6, flex: 1 }}>
+                  <select value={editFixedVals.category} onChange={ev => setEditFixedVals(v => ({ ...v, category: ev.target.value }))} style={{ ...inputStyle, fontSize: 12, flex: 2 }}>
+                    {FIXED_EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                  <input value={editFixedVals.description || ""} onChange={ev => setEditFixedVals(v => ({ ...v, description: ev.target.value }))} style={{ ...inputStyle, fontSize: 12, flex: 2 }} />
+                  <input type="number" value={editFixedVals.amount} onChange={ev => setEditFixedVals(v => ({ ...v, amount: ev.target.value }))} style={{ ...inputStyle, fontSize: 12, width: 90 }} />
+                  <button onClick={() => { setFixedExpenses(p => p.map(x => x.id === e.id ? { ...x, ...editFixedVals, amount: parseFloat(editFixedVals.amount) } : x)); setEditFixedId(null); }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>✓</button>
+                  <button onClick={() => setEditFixedId(null)} style={{ background: "#e2e8f0", color: "#64748b", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 12 }}>✕</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: 12, color: "#64748b" }}>{e.category}{e.description ? ` — ${e.description}` : ""}</span>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>₪{fmt(e.amount)}</span>
+                  <button onClick={() => { setEditFixedId(e.id); setEditFixedVals({ category: e.category, description: e.description || "", amount: String(e.amount) }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 12 }}>✏️</button>
+                  <button onClick={() => setFixedExpenses(p => p.filter(x => x.id !== e.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14 }}>×</button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+        {fixedExpenses.length === 0 && <div style={{ padding: "6px 32px", fontSize: 11, color: "#cbd5e1" }}>לא הוזנו הוצאות קבועות — הוסף שכירות, ארנונה וכו׳</div>}
+
+        <div style={{ background: "#f59e0b10", padding: "8px 16px", display: "flex", justifyContent: "space-between", borderTop: "1px solid #fde68a" }}>
+          <span style={{ fontWeight: 800, color: "#d97706" }}>סה״כ הוצאות תפעול</span>
+          <span style={{ fontWeight: 900, color: "#d97706", fontSize: 16 }}>₪{fmt(totalOperating)}</span>
+        </div>
+
+        {/* Operating profit */}
+        <div style={{ background: operatingProfit > 0 ? "#f0fdf4" : "#fff5f5", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "2px solid #e2e8f0" }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 16, color: pColor(operatingProfit) }}>
+              {operatingProfit > 0 ? "✅ רווח נקי" : "❌ הפסד"}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{operatingMargin}% מהמחזור</div>
+          </div>
+          <div style={{ fontWeight: 900, fontSize: 28, color: pColor(operatingProfit) }}>
+            {operatingProfit < 0 ? "-" : ""}₪{fmt(Math.abs(operatingProfit))}
+          </div>
+        </div>
+      </div>
+
+      {/* Missing data warning */}
+      {(monthSales.length === 0 || (invoiceCost === 0 && deliveryCost === 0)) && (
+        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: "#92400e" }}>
+          ⚠️ {monthSales.length === 0 ? "אין נתוני מכירות לחודש זה. " : ""}
+          {invoiceCost === 0 && deliveryCost === 0 ? "אין נתוני עלויות לחודש זה. " : ""}
+          הדו"ח חלקי בלבד.
+        </div>
+      )}
     </div>
   );
 }
