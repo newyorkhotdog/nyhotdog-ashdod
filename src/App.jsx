@@ -3443,7 +3443,7 @@ function Settings({ settings, setSettings, inventoryCategories, setInventoryCate
 const VAT = 1.18;
 const COMMISSION_WOLT = 0.27;
 const COMMISSION_TAPRIT = 0.10;
-const COMMISSION_MISHLOCHA = 0.10;
+const COMMISSION_MISHLOCHA = 0.15;
 
 const FIXED_EXPENSE_CATEGORIES = ["שכירות", "ארנונה", "חשמל", "מים", "גז", "טלפון/אינטרנט", "ביטוח", "דמי זכיינות", "שיווק/פרסום", "תחזוקה", "ניקיון", "הנהלת חשבונות", "אחר"];
 
@@ -3454,6 +3454,8 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
   const [fixedForm, setFixedForm] = useState({ category: "שכירות", description: "", amount: "" });
   const [editFixedId, setEditFixedId] = useState(null);
   const [editFixedVals, setEditFixedVals] = useState({});
+  const [simMode, setSimMode] = useState(false);
+  const [sim, setSim] = useState({ revenue: "", cogs: "", labor: "", otherExpenses: "" });
 
   // ── נתוני חודש ──
   const monthSales = sales.filter(s => s.date?.startsWith(selectedMonth));
@@ -3505,6 +3507,17 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
   const operatingProfit = grossProfit - totalOperating;
   const operatingMargin = totalRevenue > 0 ? (operatingProfit / totalRevenue * 100).toFixed(1) : 0;
 
+  // ── סימולציה ──
+  const simRevenue = sim.revenue ? parseFloat(sim.revenue) : totalRevenue;
+  const simCOGS = sim.cogs ? parseFloat(sim.cogs) : totalCOGS;
+  const simLabor = sim.labor ? parseFloat(sim.labor) : laborCost;
+  const simOther = sim.otherExpenses ? parseFloat(sim.otherExpenses) : variableExpenses;
+  const simGrossProfit = simRevenue - simCOGS;
+  const simOperating = simLabor + simOther + totalFixed;
+  const simNetProfit = simGrossProfit - simOperating;
+  const simGrossMargin = simRevenue > 0 ? (simGrossProfit / simRevenue * 100).toFixed(1) : 0;
+  const simNetMargin = simRevenue > 0 ? (simNetProfit / simRevenue * 100).toFixed(1) : 0;
+
   const addFixed = () => {
     if (!fixedForm.amount) return;
     setFixedExpenses(p => [...p, { id: Date.now().toString(), ...fixedForm, amount: parseFloat(fixedForm.amount) }]);
@@ -3526,19 +3539,66 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* Month selector */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+      {/* Month selector + sim toggle */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", flexWrap: "wrap" }}>
         <span style={{ fontWeight: 700, color: "#1e293b" }}>📅 דו"ח לחודש:</span>
         <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
-        <span style={{ fontSize: 12, color: "#94a3b8" }}>נתונים כפי שהוזנו במערכת</span>
+        <span style={{ fontSize: 12, color: "#94a3b8" }}>נתונים כפי שהוזנו</span>
+        <div style={{ marginRight: "auto" }}>
+          <button onClick={() => setSimMode(!simMode)} style={{ padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit", background: simMode ? "#7c3aed" : "#f1f5f9", color: simMode ? "#fff" : "#475569", boxShadow: simMode ? "0 2px 8px rgba(124,58,237,0.3)" : "none" }}>
+            🔮 {simMode ? "סגור סימולציה" : "הפעל סימולציה"}
+          </button>
+        </div>
       </div>
+
+      {/* Simulation inputs */}
+      {simMode && (
+        <div style={{ background: "#faf5ff", border: "2px solid #7c3aed33", borderRadius: 12, padding: 16 }}>
+          <div style={{ fontWeight: 800, color: "#7c3aed", marginBottom: 12, fontSize: 14 }}>🔮 סימולציה — הזן צפי ידני</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+            {[
+              { key: "revenue", label: "💰 הכנסה נטו צפויה (₪)", placeholder: fmt(totalRevenue) },
+              { key: "cogs", label: "🛒 עלות מכר צפויה (₪)", placeholder: fmt(totalCOGS) },
+              { key: "labor", label: "👷 עלות עבודה צפויה (₪)", placeholder: fmt(laborCost) },
+              { key: "otherExpenses", label: "🏢 הוצאות אחרות צפויות (₪)", placeholder: fmt(variableExpenses) },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <div style={{ fontSize: 11, color: "#7c3aed", marginBottom: 4, fontWeight: 600 }}>{label}</div>
+                <input type="number" value={sim[key]} onChange={e => setSim(s => ({ ...s, [key]: e.target.value }))} placeholder={placeholder} style={{ ...inputStyle, borderColor: "#7c3aed44" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Summary KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
-        <KpiCard label="הכנסה נטו" value={`₪${fmt(totalRevenue)}`} accent="#0284c7" sub="ללא מע״מ ואחרי עמלות" />
-        <KpiCard label="רווח גולמי" value={`₪${fmt(grossProfit)}`} accent={grossProfit > 0 ? "#16a34a" : "#dc2626"} sub={`${grossMargin}% מהמחזור`} />
-        <KpiCard label="רווח תפעולי" value={`₪${fmt(operatingProfit)}`} accent={operatingProfit > 0 ? "#16a34a" : "#dc2626"} sub={`${operatingMargin}% מהמחזור`} />
-        <KpiCard label="פוד קוסט" value={`${totalRevenue > 0 ? (totalCOGS/totalRevenue*100).toFixed(1) : 0}%`} accent="#cc0000" sub={`₪${fmt(totalCOGS)}`} />
+        {[
+          { label: "הכנסה נטו", actual: totalRevenue, sim: simRevenue, accent: "#0284c7", sub: "ללא מע״מ ואחרי עמלות" },
+          { label: "רווח גולמי", actual: grossProfit, sim: simGrossProfit, accent: grossProfit > 0 ? "#16a34a" : "#dc2626", sub: `${grossMargin}% | צפי: ${simGrossMargin}%` },
+          { label: "רווח נקי", actual: operatingProfit, sim: simNetProfit, accent: operatingProfit > 0 ? "#16a34a" : "#dc2626", sub: `${operatingMargin}% | צפי: ${simNetMargin}%` },
+          { label: "פוד קוסט", actual: totalRevenue > 0 ? totalCOGS/totalRevenue*100 : 0, sim: simRevenue > 0 ? simCOGS/simRevenue*100 : 0, accent: "#cc0000", isPct: true },
+        ].map(({ label, actual, sim: sv, accent, sub, isPct }) => (
+          <div key={label} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, borderTop: `3px solid ${accent}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>{label}</div>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+              <div>
+                <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>אמת</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: accent }}>{isPct ? `${actual.toFixed(1)}%` : `₪${fmt(actual)}`}</div>
+              </div>
+              {simMode && (
+                <>
+                  <div style={{ color: "#e2e8f0", fontSize: 18, marginBottom: 2 }}>→</div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#7c3aed", marginBottom: 2 }}>צפי</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#7c3aed" }}>{isPct ? `${sv.toFixed(1)}%` : `₪${fmt(sv)}`}</div>
+                  </div>
+                </>
+              )}
+            </div>
+            {sub && !simMode && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{sub}</div>}
+          </div>
+        ))}
       </div>
 
       {/* P&L Statement */}
