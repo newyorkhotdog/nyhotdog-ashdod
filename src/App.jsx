@@ -564,6 +564,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
         <KpiCard label="פוד קוסט" value={<StatusBadge value={foodCostPct} settings={settings} />} accent="#f472b6" raw />
         <KpiCard label="עלות עבודה" value={`₪${fmt(totalLaborCost)}`} accent="#fb923c" sub={`${totalLaborHours.toFixed(1)} שעות`} />
         <KpiCard label="לייבור קוסט" value={<StatusBadge value={laborCostPct} settings={lcSettings} />} accent="#fb923c" raw />
+        <KpiCard label="רווח נקי" value={`₪${fmt(Math.abs(netProfit))}`} accent={netColor} sub={`${netProfit >= 0 ? "+" : "-"}${netProfitPct}% מהמכירות`} />
         <KpiCard label="התראות מחיר" value={alerts.length} accent={alerts.length > 0 ? "#f59e0b" : "#22c55e"} sub={alerts.length > 0 ? "דרוש טיפול" : "הכל תקין"} />
       </div>
 
