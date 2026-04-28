@@ -228,7 +228,7 @@ export default function App() {
       </div>
 
       <div style={{ padding: 24, background: "#f1f5f9", minHeight: "calc(100vh - 120px)" }}>
-        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} tasks={tasks} />}
+        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} tasks={tasks} fixedExpenses={fixedExpenses} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} inventoryCategories={inventoryCategories} />}
         {tab === "invoices" && <Invoices invoices={invoices} setInvoices={uSetInvoices} suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} settings={settings} pending={pending} setPending={uSetPending} />}
         {tab === "sales" && <Sales sales={sales} setSales={uSetSales} />}
@@ -246,7 +246,7 @@ export default function App() {
   );
 }
 
-function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [], tasks = [] }) {
+function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [], tasks = [], fixedExpenses = [] }) {
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -363,16 +363,16 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   const monthlyExpenses = (expenses || []).filter(e => e.date?.startsWith(monthKey));
   const totalExpenses = monthlyExpenses.reduce((a, e) => a + parseFloat(e.amount || 0), 0);
 
-  // חישוב הכנסה נטו אמיתית — ללא מע"מ ואחרי עמלות (כמו ב-P&L)
+  // חישוב רווח נקי — זהה ל-PnL (מע"מ + עמלות + הוצאות קבועות)
   const totalTaprit = monthlySales.reduce((a, s) => a + parseFloat(s.taprit || 0), 0);
   const totalMishlocha = monthlySales.reduce((a, s) => a + parseFloat(s.mishlocha || 0), 0);
   const totalRegularKupa = totalKupa - totalTaprit - totalMishlocha;
   const netRevenue = (totalRegularKupa / 1.18) + (totalTaprit * 0.90 / 1.18) + (totalMishlocha * 0.85 / 1.18) + (totalWolt * 0.73 / 1.18);
-
-  const netProfit = netRevenue - totalCost - totalLaborCost - totalExpenses;
+  const totalFixed = (fixedExpenses || []).reduce((a, e) => a + parseFloat(e.amount || 0), 0);
+  const netProfit = netRevenue - totalCost - totalLaborCost - totalExpenses - totalFixed;
   const netProfitPct = parseFloat(pct(netProfit, netRevenue));
   const netColor = netProfitPct >= 15 ? "#22c55e" : netProfitPct >= 5 ? "#f59e0b" : "#ef4444";
-  const expensePct = parseFloat(pct(totalExpenses, netRevenue));
+  const expensePct = parseFloat(pct(totalExpenses + totalFixed, netRevenue));
   const expenseColor = expensePct <= (settings.expenseGreenMax ?? 20) ? "#22c55e" : expensePct <= (settings.expenseYellowMax ?? 28) ? "#f59e0b" : "#ef4444";
 
   const lcColor = laborCostPct <= settings.laborGreenMax ? "#22c55e" : laborCostPct <= settings.laborYellowMax ? "#f59e0b" : "#ef4444";
