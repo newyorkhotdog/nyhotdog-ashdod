@@ -362,10 +362,17 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   // Operational expenses this month
   const monthlyExpenses = (expenses || []).filter(e => e.date?.startsWith(monthKey));
   const totalExpenses = monthlyExpenses.reduce((a, e) => a + parseFloat(e.amount || 0), 0);
-  const netProfit = totalSales - totalCost - totalLaborCost - totalExpenses;
-  const netProfitPct = parseFloat(pct(netProfit, totalSales));
+
+  // חישוב הכנסה נטו אמיתית — ללא מע"מ ואחרי עמלות (כמו ב-P&L)
+  const totalTaprit = monthlySales.reduce((a, s) => a + parseFloat(s.taprit || 0), 0);
+  const totalMishlocha = monthlySales.reduce((a, s) => a + parseFloat(s.mishlocha || 0), 0);
+  const totalRegularKupa = totalKupa - totalTaprit - totalMishlocha;
+  const netRevenue = (totalRegularKupa / 1.18) + (totalTaprit * 0.90 / 1.18) + (totalMishlocha * 0.85 / 1.18) + (totalWolt * 0.73 / 1.18);
+
+  const netProfit = netRevenue - totalCost - totalLaborCost - totalExpenses;
+  const netProfitPct = parseFloat(pct(netProfit, netRevenue));
   const netColor = netProfitPct >= 15 ? "#22c55e" : netProfitPct >= 5 ? "#f59e0b" : "#ef4444";
-  const expensePct = parseFloat(pct(totalExpenses, totalSales));
+  const expensePct = parseFloat(pct(totalExpenses, netRevenue));
   const expenseColor = expensePct <= (settings.expenseGreenMax ?? 20) ? "#22c55e" : expensePct <= (settings.expenseYellowMax ?? 28) ? "#f59e0b" : "#ef4444";
 
   const lcColor = laborCostPct <= settings.laborGreenMax ? "#22c55e" : laborCostPct <= settings.laborYellowMax ? "#f59e0b" : "#ef4444";
@@ -564,7 +571,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
         <KpiCard label="פוד קוסט" value={<StatusBadge value={foodCostPct} settings={settings} />} accent="#f472b6" raw />
         <KpiCard label="עלות עבודה" value={`₪${fmt(totalLaborCost)}`} accent="#fb923c" sub={`${totalLaborHours.toFixed(1)} שעות`} />
         <KpiCard label="לייבור קוסט" value={<StatusBadge value={laborCostPct} settings={lcSettings} />} accent="#fb923c" raw />
-        <KpiCard label="רווח נקי" value={`₪${fmt(Math.abs(netProfit))}`} accent={netColor} sub={`${netProfit >= 0 ? "+" : "-"}${netProfitPct}% מהמכירות`} />
+        <KpiCard label="רווח נקי" value={`${netProfit >= 0 ? "" : "-"}₪${fmt(Math.abs(netProfit))}`} accent={netColor} sub={`${netProfit >= 0 ? "+" : ""}${netProfitPct}% מהכנסה נטו`} />
         <KpiCard label="התראות מחיר" value={alerts.length} accent={alerts.length > 0 ? "#f59e0b" : "#22c55e"} sub={alerts.length > 0 ? "דרוש טיפול" : "הכל תקין"} />
       </div>
 
