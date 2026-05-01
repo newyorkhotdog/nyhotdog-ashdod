@@ -579,6 +579,14 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
       )}
 
       {/* KPIs */}
+      {/* Month selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <span style={{ fontSize: 13, color: "#64748b" }}>📅 חודש:</span>
+        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
+        {selectedMonth !== currentMonth && <button onClick={() => setSelectedMonth(currentMonth)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
+        {selectedMonth !== currentMonth && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
         <KpiCard label="מכירות החודש" value={`₪${fmt(totalSales)}`} accent="#0284c7" sub={`קופה ₪${fmt(totalKupa)} | וולט ₪${fmt(totalWolt)}`} />
         <KpiCard label="עלות ספקים" value={`₪${fmt(totalCost)}`} accent="#64748b" sub={`${monthlyInvoices.length} חשבוניות${deliveryCostNoInvoice > 0 ? ` + ₪${fmt(deliveryCostNoInvoice)} תעודות` : ""}`} />
@@ -1190,8 +1198,16 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Month selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <span style={{ fontSize: 13, color: "#64748b" }}>📅 חודש:</span>
+        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
+        {selectedMonth !== currentMonth && <button onClick={() => setSelectedMonth(currentMonth)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
+        {selectedMonth !== currentMonth && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
+      </div>
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <div style={{ color: "#888", fontSize: 13 }}>{invoices.length} חשבוניות במערכת</div>
+        <div style={{ color: "#888", fontSize: 13 }}>{invoices.filter(i => i.date?.startsWith(monthKey)).length} חשבוניות | {monthKey}</div>
         <div style={{ display: "flex", gap: 8 }}>
           <label style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", opacity: scanning ? 0.6 : 1 }}>
             {scanning ? "⏳ סורק..." : "📸 סרוק חשבונית"}
@@ -1371,7 +1387,7 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
       <Card title="חשבוניות קיימות">
         {invoices.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>אין חשבוניות עדיין</div>}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {[...invoices].reverse().map((inv) => {
+          {[...invoices].filter(inv => inv.date?.startsWith(monthKey)).reverse().map((inv) => {
             const sup = suppliers.find((s) => s.id === inv.supplierId);
             const itemAlerts = (inv.items || []).filter((item) => {
               const prod = products.find((p) => p.id === item.productId);
@@ -1623,8 +1639,10 @@ function Sales({ sales, setSales }) {
     alert(`✅ יובאו ${count} ימי מכירה בהצלחה!`);
   };
 
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const nowD = new Date();
+  const currentMonth = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const monthKey = selectedMonth;
   const monthSales = sales.filter((s) => s.date?.startsWith(monthKey));
   const totalKupa = monthSales.reduce((a, s) => a + (parseFloat(s.kupa) || 0), 0);
   const totalWolt = monthSales.reduce((a, s) => a + (parseFloat(s.wolt) || 0), 0);
@@ -1633,6 +1651,14 @@ function Sales({ sales, setSales }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Month selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <span style={{ fontSize: 13, color: "#64748b" }}>📅 חודש:</span>
+        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
+        {selectedMonth !== currentMonth && <button onClick={() => setSelectedMonth(currentMonth)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
+        {selectedMonth !== currentMonth && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 16 }}>
         <KpiCard label="🖥️ קופה (Caspit) — חודש נוכחי" value={`₪${fmt(totalKupa)}`}
           sub={<span>מזה: תפריט <strong style={{color:"#475569"}}>₪{fmt(totalTaprit)}</strong> | משלוחה <strong style={{color:"#f87171"}}>₪{fmt(totalMishlocha)}</strong></span>}
@@ -1874,8 +1900,10 @@ function Employees({ employees, setEmployees }) {
 }
 
 function Hours({ hours, setHours, employees, setEmployees, sales, settings }) {
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const nowD = new Date();
+  const currentMonth = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const monthKey = selectedMonth;
   const [form, setForm] = useState({ date: today(), employeeId: "", hours: "" });
   const [editId, setEditId] = useState(null);
   const [editHours, setEditHours] = useState("");
@@ -2106,6 +2134,14 @@ function Hours({ hours, setHours, employees, setEmployees, sales, settings }) {
       )}
 
       {/* Hours section */}
+      {/* Month selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <span style={{ fontSize: 13, color: "#64748b" }}>📅 חודש:</span>
+        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
+        {selectedMonth !== currentMonth && <button onClick={() => setSelectedMonth(currentMonth)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
+        {selectedMonth !== currentMonth && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
+      </div>
+
       {activeSection === "hours" && (<>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
         <KpiCard label="שעות החודש" value={totalLaborHours.toFixed(1)} accent="#fb923c" sub={`${Object.keys(byDate).length} ימים`} />
@@ -2656,8 +2692,10 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
   const [expandedDelivery, setExpandedDelivery] = useState(null);
   const [editDelivery, setEditDelivery] = useState(null);
 
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const nowD = new Date();
+  const currentMonth = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const monthKey = selectedMonth;
 
   const supProducts = products.filter(p => p.supplierId === form.supplierId);
 
@@ -2685,9 +2723,9 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
     return { ...sup, deliveryCount: supDeliveries.length, deliveryTotal: total, invoiceTotal: supInvoiceTotal };
   }).filter(s => s.deliveryCount > 0);
 
-  const filteredDeliveries = selectedSup
-    ? deliveries.filter(d => d.supplierId === selectedSup)
-    : deliveries;
+  const filteredDeliveries = deliveries
+    .filter(d => d.date?.startsWith(monthKey))
+    .filter(d => !selectedSup || d.supplierId === selectedSup);
 
   const scanDelivery = async (file) => {
     setScanning(true); setScanResult(null); setScanError("");
@@ -2769,6 +2807,14 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Month selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <span style={{ fontSize: 13, color: "#64748b" }}>📅 חודש:</span>
+        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
+        {selectedMonth !== currentMonth && <button onClick={() => setSelectedMonth(currentMonth)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
+        {selectedMonth !== currentMonth && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
+      </div>
+
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div style={{ color: "#888", fontSize: 13 }}>{deliveries.length} תעודות משלוח במערכת</div>
@@ -3071,8 +3117,10 @@ function Expenses({ expenses, setExpenses }) {
   const [form, setForm] = useState({ date: today(), category: "שכירות", description: "", amount: "" });
   const [showForm, setShowForm] = useState(false);
 
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const nowD = new Date();
+  const currentMonth = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const monthKey = selectedMonth;
   const monthExpenses = expenses.filter(e => e.date?.startsWith(monthKey));
   const totalMonth = monthExpenses.reduce((a, e) => a + parseFloat(e.amount || 0), 0);
 
@@ -3092,6 +3140,14 @@ function Expenses({ expenses, setExpenses }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Month selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        <span style={{ fontSize: 13, color: "#64748b" }}>📅 חודש:</span>
+        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
+        {selectedMonth !== currentMonth && <button onClick={() => setSelectedMonth(currentMonth)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
+        {selectedMonth !== currentMonth && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
+      </div>
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ color: "#888", fontSize: 13 }}>סה״כ הוצאות תפעול החודש: <span style={{ color: "#f87171", fontWeight: 700, fontSize: 16 }}>₪{fmt(totalMonth)}</span></div>
         <Btn onClick={() => setShowForm(!showForm)} style={showForm ? { background: "#666" } : {}}>{showForm ? "✕ סגור" : "+ הוצאה חדשה"}</Btn>
@@ -3247,8 +3303,10 @@ function CashDeposits({ cashDeposits, setCashDeposits, sales }) {
   const [editId, setEditId] = useState(null);
   const [editVals, setEditVals] = useState({});
 
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const nowD = new Date();
+  const currentMonth = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const monthKey = selectedMonth;
 
   const addDeposit = () => {
     if (!form.amount) return alert("נא להזין סכום");
