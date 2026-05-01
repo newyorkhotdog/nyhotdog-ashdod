@@ -583,8 +583,8 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
       <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
         <span style={{ fontSize: 13, color: "#64748b" }}>📅 חודש:</span>
         <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
-        {selectedMonth !== currentMonth && <button onClick={() => setSelectedMonth(currentMonth)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
-        {selectedMonth !== currentMonth && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
+        {selectedMonth !== currentMonthKey && <button onClick={() => setSelectedMonth(currentMonthKey)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
+        {selectedMonth !== currentMonthKey && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
@@ -1056,6 +1056,10 @@ async function compressImage(file, maxWidthPx = 1600, quality = 0.82) {
 
 
 function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, setProducts, settings, pending, setPending }) {
+  const nowInv = new Date();
+  const currentMonthKey = `${nowInv.getFullYear()}-${String(nowInv.getMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
+  const monthKey = selectedMonth;
   const [form, setForm] = useState({ supplierId: "", date: today(), invoiceNum: "", items: [] });
   const [newItem, setNewItem] = useState({ productId: "", price: "", qty: "1" });
   const [showForm, setShowForm] = useState(false);
@@ -1202,8 +1206,8 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
       <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
         <span style={{ fontSize: 13, color: "#64748b" }}>📅 חודש:</span>
         <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
-        {selectedMonth !== currentMonth && <button onClick={() => setSelectedMonth(currentMonth)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
-        {selectedMonth !== currentMonth && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
+        {selectedMonth !== currentMonthKey && <button onClick={() => setSelectedMonth(currentMonthKey)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
+        {selectedMonth !== currentMonthKey && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
