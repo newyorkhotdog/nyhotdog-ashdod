@@ -579,14 +579,6 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
       )}
 
       {/* KPIs */}
-      {/* Month selector */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 14px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-        <span style={{ fontSize: 13, color: "#64748b" }}>📅 חודש:</span>
-        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
-        {selectedMonth !== currentMonthKey && <button onClick={() => setSelectedMonth(currentMonthKey)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← נוכחי</button>}
-        {selectedMonth !== currentMonthKey && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>מציג {selectedMonth}</span>}
-      </div>
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
         <KpiCard label="מכירות החודש" value={`₪${fmt(totalSales)}`} accent="#0284c7" sub={`קופה ₪${fmt(totalKupa)} | וולט ₪${fmt(totalWolt)}`} />
         <KpiCard label="עלות ספקים" value={`₪${fmt(totalCost)}`} accent="#64748b" sub={`${monthlyInvoices.length} חשבוניות${deliveryCostNoInvoice > 0 ? ` + ₪${fmt(deliveryCostNoInvoice)} תעודות` : ""}`} />
