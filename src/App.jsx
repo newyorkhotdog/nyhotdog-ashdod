@@ -251,6 +251,9 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [showAI, setShowAI] = useState(false);
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const parseXlsxSales = async (file) => {
     setImporting(true);
     setImportError("");
@@ -330,8 +333,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
     alert(`✅ יובאו ${importPreview.length} ימי מכירה בהצלחה!`);
   };
 
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthKey = selectedMonth;
   const monthlySales = sales.filter((s) => s.date?.startsWith(monthKey));
   const totalSales = monthlySales.reduce((a, s) => a + (parseFloat(s.kupa) || 0) + (parseFloat(s.wolt) || 0), 0);
   const totalKupa = monthlySales.reduce((a, s) => a + (parseFloat(s.kupa) || 0), 0);
@@ -487,6 +489,18 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* Month selector */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+        <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 14 }}>📅 חודש:</span>
+        <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
+        {selectedMonth !== currentMonthKey && (
+          <button onClick={() => setSelectedMonth(currentMonthKey)} style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>← חודש נוכחי</button>
+        )}
+        {selectedMonth !== currentMonthKey && (
+          <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600 }}>⚠️ מציג נתוני {selectedMonth}</span>
+        )}
+      </div>
 
       {/* Prime Cost banner */}
       {totalSales > 0 && (
