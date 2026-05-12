@@ -3592,7 +3592,7 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
   const [editFixedId, setEditFixedId] = useState(null);
   const [editFixedVals, setEditFixedVals] = useState({});
   const [simMode, setSimMode] = useState(false);
-  const [sim, setSim] = useState({ revenue: "", cogs: "", labor: "", otherExpenses: "" });
+  const [sim, setSim] = useState({ kupa: "", wolt: "", cogs: "", labor: "", otherExpenses: "" });
 
   // ── נתוני חודש ──
   const monthSales = sales.filter(s => s.date?.startsWith(selectedMonth));
@@ -3646,8 +3646,16 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
   const operatingProfit = grossProfit - totalOperating;
   const operatingMargin = totalRevenue > 0 ? (operatingProfit / totalRevenue * 100).toFixed(1) : 0;
 
-  // ── סימולציה ──
-  const simRevenue = sim.revenue ? parseFloat(sim.revenue) : totalRevenue;
+  // ── סימולציה — חישוב הכנסה נטו לפי קופה/וולט עם עמלות ומע"מ ──
+  const simGrossKupa = sim.kupa ? parseFloat(sim.kupa) : grossKupa;
+  const simGrossWolt = sim.wolt ? parseFloat(sim.wolt) : grossWolt;
+  // בסימולציה — קופה ללא הפרדת תפריט/משלוחה (מחשב ממוצע)
+  const simTapritRatio = grossKupa > 0 ? grossTaprit / grossKupa : 0;
+  const simMishlochRatio = grossKupa > 0 ? grossMishlocha / grossKupa : 0;
+  const simTaprit = simGrossKupa * simTapritRatio;
+  const simMishlocha = simGrossKupa * simMishlochRatio;
+  const simRegularKupa = simGrossKupa - simTaprit - simMishlocha;
+  const simRevenue = (simRegularKupa / VAT) + (simTaprit * (1 - COMMISSION_TAPRIT) / VAT) + (simMishlocha * (1 - COMMISSION_MISHLOCHA) / VAT) + (simGrossWolt * (1 - COMMISSION_WOLT) / VAT);
   const simCOGS = sim.cogs ? parseFloat(sim.cogs) : totalCOGS;
   const simLabor = sim.labor ? parseFloat(sim.labor) : laborCost;
   const simOther = sim.otherExpenses ? parseFloat(sim.otherExpenses) : variableExpenses;
@@ -3696,13 +3704,15 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
           <div style={{ fontWeight: 800, color: "#7c3aed", marginBottom: 12, fontSize: 14 }}>🔮 סימולציה — הזן צפי ידני</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
             {[
-              { key: "revenue", label: "💰 הכנסה נטו צפויה (₪)", placeholder: fmt(totalRevenue) },
-              { key: "cogs", label: "🛒 עלות מכר צפויה (₪)", placeholder: fmt(totalCOGS) },
-              { key: "labor", label: "👷 עלות עבודה צפויה (₪)", placeholder: fmt(laborCost) },
-              { key: "otherExpenses", label: "🏢 הוצאות אחרות צפויות (₪)", placeholder: fmt(variableExpenses) },
-            ].map(({ key, label, placeholder }) => (
+              { key: "kupa", label: `💰 קופה צפויה ברוטו (₪)`, placeholder: fmt(grossKupa), hint: "כולל מע\"מ" },
+              { key: "wolt", label: `📱 וולט צפוי ברוטו (₪)`, placeholder: fmt(grossWolt), hint: `אחרי עמלה ${(COMMISSION_WOLT*100).toFixed(0)}%` },
+              { key: "cogs", label: "🛒 עלות מכר צפויה (₪)", placeholder: fmt(totalCOGS), hint: "לפני מע\"מ" },
+              { key: "labor", label: "👷 עלות עבודה צפויה (₪)", placeholder: fmt(laborCost), hint: "כולל עלות מעביד" },
+              { key: "otherExpenses", label: "🏢 הוצאות אחרות (₪)", placeholder: fmt(variableExpenses), hint: "משתנות" },
+            ].map(({ key, label, placeholder, hint }) => (
               <div key={key}>
-                <div style={{ fontSize: 11, color: "#7c3aed", marginBottom: 4, fontWeight: 600 }}>{label}</div>
+                <div style={{ fontSize: 11, color: "#7c3aed", marginBottom: 2, fontWeight: 600 }}>{label}</div>
+                {hint && <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 4 }}>{hint}</div>}
                 <input type="number" value={sim[key]} onChange={e => setSim(s => ({ ...s, [key]: e.target.value }))} placeholder={placeholder} style={{ ...inputStyle, borderColor: "#7c3aed44" }} />
               </div>
             ))}
