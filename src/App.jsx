@@ -428,7 +428,9 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
     const dayOfWeekStats = {};
     monthlySalesData.forEach(s => {
       const d = new Date(s.date);
-      const day = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][d.getDay()];
+      const dayNum = d.getDay();
+      if (dayNum === 5) return; // שישי — סגור, לא נכלל בניתוח
+      const day = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][dayNum];
       if (!dayOfWeekStats[day]) dayOfWeekStats[day] = { total: 0, count: 0 };
       dayOfWeekStats[day].total += (parseFloat(s.kupa)||0) + (parseFloat(s.wolt)||0);
       dayOfWeekStats[day].count++;
@@ -443,6 +445,8 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
 
 תפריט העסק: נקניקיות ניו-יורק (קלאסי ₪37, מנהטן ₪42, ברודווי ₪40, ברוקלין ₪40, הארלם ₪42), טוסט נקניק ₪37, נקניקיית נשנוש ₪13, ילדים ₪18, נאצ'וס ₪15. גם מכירות ב-Wolt.
 
+שעות פעילות: ראשון–חמישי בלבד. שישי — הסניף סגור. מכירות שמופיעות ביום שישי הן הזמנות Wolt שנכנסו אחרי חצות (מוצאי שישי/ליל שבת) ולא מייצגות פעילות עסקית של יום שישי. אל תנתח את שישי כיום עסקי.
+
 נתוני החודש הנוכחי (${monthKey}):
 - סה"כ מכירות: ₪${totalSales.toFixed(0)} (קופה: ₪${totalKupa.toFixed(0)} | וולט: ₪${totalWolt.toFixed(0)})
 - עלות מזון (פוד קוסט): ₪${totalCost.toFixed(0)} = ${foodCostPct}% | יעד: עד ${settings.greenMax}%
@@ -456,7 +460,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
 חריגות מחיר: ${priceAlerts || "אין חריגות"}
 עובדים פעילים: ${empData || "אין נתונים"}
 הוצאות תפעול החודש: ₪${expenseData.toFixed(0)}
-מכירות לפי יום בשבוע: ${dayStats || "אין מספיק נתונים"}
+מכירות לפי יום בשבוע (ללא שישי): ${dayStats || "אין מספיק נתונים"}
 
 ענה בעברית, תהיה ספציפי לנתונים האמיתיים, תזהה בעיות ותתן המלצות מעשיות. אל תאמר "אני לא יכול לדעת" — נתח את מה שיש. השתמש בנתונים המספריים הספציפיים בתשובתך.`;
   };
