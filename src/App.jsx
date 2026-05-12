@@ -598,27 +598,43 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
 
       {/* משימות פתוחות */}
       {tasks.filter(t => !t.done).length > 0 && (
-        <Card title="✅ משימות פתוחות">
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ borderRadius: 14, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.1)", border: "2px solid #e2e8f0" }}>
+          {/* Header */}
+          <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 22 }}>✅</span>
+              <span style={{ fontWeight: 800, color: "#fff", fontSize: 16 }}>משימות פתוחות</span>
+            </div>
+            <span style={{ background: "#cc0000", color: "#fff", borderRadius: 20, padding: "3px 12px", fontWeight: 800, fontSize: 14 }}>
+              {tasks.filter(t => !t.done).length}
+            </span>
+          </div>
+          {/* Tasks by owner */}
+          <div style={{ background: "#fff", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
             {TASK_OWNERS.map(owner => {
               const ownerTasks = tasks.filter(t => !t.done && t.owner === owner);
               if (ownerTasks.length === 0) return null;
               const color = TASK_OWNER_COLORS[owner];
               return (
                 <div key={owner}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color, marginBottom: 4 }}>{owner}</div>
-                  {ownerTasks.map(t => (
-                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 8, background: `${color}08`, border: `1px solid ${color}22`, marginBottom: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                      <span style={{ flex: 1, fontSize: 13, color: "#1e293b", fontWeight: 500 }}>{t.title}</span>
-                      {t.note && <span style={{ fontSize: 11, color: "#94a3b8" }}>{t.note}</span>}
-                    </div>
-                  ))}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <span style={{ background: color, color: "#fff", borderRadius: 20, padding: "2px 12px", fontWeight: 800, fontSize: 12 }}>{owner}</span>
+                    <span style={{ fontSize: 11, color: "#94a3b8" }}>{ownerTasks.length} משימות</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    {ownerTasks.map(t => (
+                      <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, background: `${color}0d`, border: `1.5px solid ${color}33` }}>
+                        <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 14, color: "#1e293b", fontWeight: 600 }}>{t.title}</span>
+                        {t.note && <span style={{ fontSize: 12, color: "#64748b", background: "#f1f5f9", borderRadius: 6, padding: "2px 8px" }}>{t.note}</span>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
           </div>
-        </Card>
+        </div>
       )}
 
 
