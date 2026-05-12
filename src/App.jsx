@@ -18,6 +18,7 @@ const STORAGE_KEYS = {
   cashDeposits: "nyh_cash_deposits",
   tasks: "nyh_tasks",
   fixedExpenses: "nyh_fixed_expenses",
+  pettyCash: "nyh_petty_cash",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
@@ -98,6 +99,7 @@ export default function App() {
   const [cashDeposits, setCashDeposits] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [fixedExpenses, setFixedExpenses] = useState([]);
+  const [pettyCash, setPettyCash] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
 
@@ -149,6 +151,7 @@ export default function App() {
   const uSetInventoryCategories = (val) => setInventoryCategories(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.inventoryCategories, v); return v; });
   const uSetTasks = (val) => setTasks(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.tasks, v); return v; });
   const uSetFixedExpenses = (val) => setFixedExpenses(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.fixedExpenses, v); return v; });
+  const uSetPettyCash = (val) => setPettyCash(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.pettyCash, v); return v; });
 
   useEffect(() => {
     // טעינה מ-Firebase — onSnapshot לעדכונים בזמן אמת
@@ -168,6 +171,7 @@ export default function App() {
       [STORAGE_KEYS.inventoryCategories]: setInventoryCategories,
       [STORAGE_KEYS.tasks]: setTasks,
       [STORAGE_KEYS.fixedExpenses]: setFixedExpenses,
+      [STORAGE_KEYS.pettyCash]: setPettyCash,
     };
     const keys = Object.keys(setters);
     const loadedKeys = new Set();
@@ -229,12 +233,12 @@ export default function App() {
       </div>
 
       <div style={{ padding: 24, background: "#f1f5f9", minHeight: "calc(100vh - 120px)" }}>
-        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} tasks={tasks} fixedExpenses={fixedExpenses} />}
+        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} tasks={tasks} fixedExpenses={fixedExpenses} pettyCash={pettyCash} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} inventoryCategories={inventoryCategories} />}
-        {tab === "invoices" && <Invoices invoices={invoices} setInvoices={uSetInvoices} suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} settings={settings} pending={pending} setPending={uSetPending} />}
+        {tab === "invoices" && <Invoices invoices={invoices} setInvoices={uSetInvoices} suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} settings={settings} pending={pending} setPending={uSetPending} pettyCash={pettyCash} setPettyCash={uSetPettyCash} />}
         {tab === "sales" && <Sales sales={sales} setSales={uSetSales} />}
         {tab === "hours" && <Hours hours={hours} setHours={uSetHours} employees={employees} setEmployees={uSetEmployees} sales={sales} settings={settings} />}
-        {tab === "pnl" && <PnL sales={sales} invoices={invoices} hours={hours} employees={employees} expenses={expenses} deliveries={deliveries} fixedExpenses={fixedExpenses} setFixedExpenses={uSetFixedExpenses} />}
+        {tab === "pnl" && <PnL sales={sales} invoices={invoices} hours={hours} employees={employees} expenses={expenses} deliveries={deliveries} fixedExpenses={fixedExpenses} setFixedExpenses={uSetFixedExpenses} pettyCash={pettyCash} />}
         {tab === "tasks" && <Tasks tasks={tasks} setTasks={uSetTasks} />}
         {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={uSetDeliveries} suppliers={suppliers} products={products} setSuppliers={uSetSuppliers} setProducts={uSetProducts} pending={pending} setPending={uSetPending} invoices={invoices} setInvoices={uSetInvoices} />}
         {tab === "inventory" && <Inventory inventory={inventory} setInventory={uSetInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} inventoryCategories={inventoryCategories} setSuppliers={uSetSuppliers} />}
@@ -247,7 +251,7 @@ export default function App() {
   );
 }
 
-function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [], tasks = [], fixedExpenses = [] }) {
+function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [], tasks = [], fixedExpenses = [], pettyCash = [] }) {
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -348,7 +352,8 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   const deliveryCostNoInvoice = monthlyDeliveries
     .filter(d => !suppliersWithInvoice.has(d.supplierId))
     .reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
-  const totalCost = invoiceCost + deliveryCostNoInvoice;
+  const pettyCashCost = (pettyCash || []).filter(p => p.date?.startsWith(monthKey)).reduce((a, p) => a + (p.amountNet || 0), 0);
+  const totalCost = invoiceCost + deliveryCostNoInvoice + pettyCashCost;
   const deliveryCovered = monthlyDeliveries.filter(d => suppliersWithInvoice.has(d.supplierId)).reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
   const totalSalesNetVAT = totalSales / 1.18; // מכירות ללא מע"מ לצורך חישוב פוד קוסט
   const foodCostPct = parseFloat(pct(totalCost, totalSalesNetVAT));
@@ -1049,11 +1054,13 @@ async function compressImage(file, maxWidthPx = 1600, quality = 0.82) {
 }
 
 
-function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, setProducts, settings, pending, setPending }) {
+function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, setProducts, settings, pending, setPending, pettyCash, setPettyCash }) {
   const nowInv = new Date();
   const currentMonthKey = `${nowInv.getFullYear()}-${String(nowInv.getMonth() + 1).padStart(2, "0")}`;
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const monthKey = selectedMonth;
+  const [pettyForm, setPettyForm] = useState({ date: today(), description: "", amount: "" });
+  const [showPetty, setShowPetty] = useState(false);
   const [form, setForm] = useState({ supplierId: "", date: today(), invoiceNum: "", items: [] });
   const [newItem, setNewItem] = useState({ productId: "", price: "", qty: "1" });
   const [showForm, setShowForm] = useState(false);
@@ -1381,6 +1388,58 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
           )}
         </Card>
       )}
+
+      {/* קופה קטנה */}
+      <Card title="🛒 קופה קטנה — רכישות יומיות">
+        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>בצל, פטרוזיליה וכו׳ — הזן סכום כולל מע"מ, המערכת מחשבת אוטומטית את הנטו (÷1.18)</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 3 }}>תאריך</div>
+            <input type="date" value={pettyForm.date} onChange={e => setPettyForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, minWidth: 150 }} />
+          </div>
+          <div style={{ flex: 2 }}>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 3 }}>תיאור (אופציונלי)</div>
+            <input value={pettyForm.description} onChange={e => setPettyForm(f => ({ ...f, description: e.target.value }))} placeholder="בצל, עגבניות..." style={inputStyle} />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 3 }}>סכום כולל מע"מ (₪)</div>
+            <input type="number" value={pettyForm.amount} onChange={e => setPettyForm(f => ({ ...f, amount: e.target.value }))} placeholder="0" style={{ ...inputStyle, minWidth: 110 }} />
+          </div>
+          <Btn onClick={() => {
+            if (!pettyForm.amount) return;
+            const net = parseFloat(pettyForm.amount) / 1.18;
+            setPettyCash(p => [...p, { id: Date.now().toString(), date: pettyForm.date, description: pettyForm.description, amountGross: parseFloat(pettyForm.amount), amountNet: Math.round(net * 100) / 100 }]);
+            setPettyForm({ date: today(), description: "", amount: "" });
+          }} style={{ background: "#f59e0b" }}>+ הוסף</Btn>
+        </div>
+
+        {/* רשימת קופה קטנה לחודש */}
+        {(pettyCash || []).filter(p => p.date?.startsWith(monthKey)).length > 0 && (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}><Th>תאריך</Th><Th>תיאור</Th><Th>כולל מע"מ</Th><Th>נטו (÷1.18)</Th><Th></Th></tr></thead>
+            <tbody>
+              {[...(pettyCash || [])].filter(p => p.date?.startsWith(monthKey)).reverse().map(p => (
+                <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <Td style={{ color: "#64748b" }}>{p.date}</Td>
+                  <Td>{p.description || "—"}</Td>
+                  <Td style={{ color: "#f59e0b", fontWeight: 600 }}>₪{fmt(p.amountGross)}</Td>
+                  <Td style={{ color: "#1e293b", fontWeight: 700 }}>₪{fmt(p.amountNet)}</Td>
+                  <Td><button onClick={() => setPettyCash(prev => prev.filter(x => x.id !== p.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button></Td>
+                </tr>
+              ))}
+              <tr style={{ borderTop: "2px solid #e2e8f0", fontWeight: 700 }}>
+                <Td colSpan={2} style={{ color: "#64748b" }}>סה״כ חודש</Td>
+                <Td style={{ color: "#f59e0b" }}>₪{fmt((pettyCash || []).filter(p => p.date?.startsWith(monthKey)).reduce((a, p) => a + p.amountGross, 0))}</Td>
+                <Td style={{ color: "#cc0000" }}>₪{fmt((pettyCash || []).filter(p => p.date?.startsWith(monthKey)).reduce((a, p) => a + p.amountNet, 0))}</Td>
+                <Td></Td>
+              </tr>
+            </tbody>
+          </table>
+        )}
+        {(pettyCash || []).filter(p => p.date?.startsWith(monthKey)).length === 0 && (
+          <div style={{ color: "#cbd5e1", fontSize: 12 }}>אין רכישות קופה קטנה לחודש זה</div>
+        )}
+      </Card>
 
       <Card title="חשבוניות קיימות">
         {invoices.length === 0 && <div style={{ color: "#aaa", fontSize: 13 }}>אין חשבוניות עדיין</div>}
@@ -3525,7 +3584,7 @@ const COMMISSION_MISHLOCHA = 0.15;
 
 const FIXED_EXPENSE_CATEGORIES = ["שכירות", "ארנונה", "חשמל", "מים", "גז", "טלפון/אינטרנט", "ביטוח", "דמי זכיינות", "שיווק/פרסום", "תחזוקה", "ניקיון", "הנהלת חשבונות", "אחר"];
 
-function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExpenses, setFixedExpenses }) {
+function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExpenses, setFixedExpenses, pettyCash = [] }) {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
   const [showFixedForm, setShowFixedForm] = useState(false);
@@ -3567,7 +3626,9 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
     .filter(d => !invoiceSupplierIds.has(d.supplierId))
     .reduce((a, d) => a + parseFloat(d.total || 0), 0);
   const invoiceCost = monthInvoices.reduce((a, i) => a + parseFloat(i.total || 0), 0);
-  const totalCOGS = invoiceCost + deliveryCost;
+  const pettyCashMonth = (pettyCash || []).filter(p => p.date?.startsWith(selectedMonth));
+  const pettyCashNet = pettyCashMonth.reduce((a, p) => a + (p.amountNet || 0), 0);
+  const totalCOGS = invoiceCost + deliveryCost + pettyCashNet;
   const grossProfit = totalRevenue - totalCOGS;
   const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue * 100).toFixed(1) : 0;
 
@@ -3698,6 +3759,7 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
         <div style={{ background: "#cc000015", padding: "12px 16px", fontWeight: 800, color: "#cc0000", fontSize: 14, borderTop: "1px solid #e2e8f0" }}>🛒 עלות מכר (פוד קוסט)</div>
         <Row label="חשבוניות ספקים" amount={invoiceCost} indent />
         {deliveryCost > 0 && <Row label="תעודות משלוח (ללא חשבונית)" amount={deliveryCost} indent />}
+        {pettyCashNet > 0 && <Row label={`קופה קטנה (${pettyCashMonth.length} רכישות)`} amount={pettyCashNet} indent />}
         <div style={{ background: "#cc000010", padding: "8px 16px", display: "flex", justifyContent: "space-between", borderTop: "1px solid #cc000030" }}>
           <span style={{ fontWeight: 800, color: "#cc0000" }}>סה״כ עלות מכר</span>
           <span style={{ fontWeight: 900, color: "#cc0000", fontSize: 16 }}>₪{fmt(totalCOGS)}</span>
