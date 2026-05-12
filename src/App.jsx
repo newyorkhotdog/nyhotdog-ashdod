@@ -243,7 +243,7 @@ export default function App() {
         {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={uSetDeliveries} suppliers={suppliers} products={products} setSuppliers={uSetSuppliers} setProducts={uSetProducts} pending={pending} setPending={uSetPending} invoices={invoices} setInvoices={uSetInvoices} />}
         {tab === "inventory" && <Inventory inventory={inventory} setInventory={uSetInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} inventoryCategories={inventoryCategories} setSuppliers={uSetSuppliers} />}
         {tab === "expenses" && <Expenses expenses={expenses} setExpenses={uSetExpenses} />}
-        {tab === "cash" && <CashDeposits cashDeposits={cashDeposits} setCashDeposits={uSetCashDeposits} sales={sales} />}
+        {tab === "cash" && <CashDeposits cashDeposits={cashDeposits} setCashDeposits={uSetCashDeposits} sales={sales} employees={employees} />}
         {tab === "notifications" && <Notifications pending={pending} setPending={uSetPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={uSetInvoices} setSuppliers={uSetSuppliers} setProducts={uSetProducts} />}
         {tab === "settings" && <Settings settings={settings} setSettings={uSetSettings} inventoryCategories={inventoryCategories} setInventoryCategories={uSetInventoryCategories} suppliers={suppliers} setSuppliers={uSetSuppliers} />}
       </div>
@@ -3355,10 +3355,12 @@ function Notifications({ pending, setPending, suppliers, products, invoices, set
   );
 }
 
-function CashDeposits({ cashDeposits, setCashDeposits, sales }) {
+function CashDeposits({ cashDeposits, setCashDeposits, sales, employees = [] }) {
   const [form, setForm] = useState({ date: today(), amount: "", bankAmount: "", note: "" });
   const [editId, setEditId] = useState(null);
   const [editVals, setEditVals] = useState({});
+  const [salaryForm, setSalaryForm] = useState({ date: today(), employeeId: "", amount: "", note: "" });
+  const [showSalary, setShowSalary] = useState(false);
 
   const nowD = new Date();
   const currentMonth = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}`;
@@ -3367,8 +3369,24 @@ function CashDeposits({ cashDeposits, setCashDeposits, sales }) {
 
   const addDeposit = () => {
     if (!form.amount) return alert("נא להזין סכום");
-    setCashDeposits(p => [...p, { id: Date.now().toString(), ...form }]);
+    setCashDeposits(p => [...p, { id: Date.now().toString(), type: "deposit", ...form }]);
     setForm({ date: today(), amount: "", bankAmount: "", note: "" });
+  };
+
+  const addSalary = () => {
+    if (!salaryForm.amount || !salaryForm.employeeId) return alert("נא לבחור עובד ולהזין סכום");
+    const emp = employees.find(e => e.id === salaryForm.employeeId);
+    setCashDeposits(p => [...p, {
+      id: Date.now().toString(),
+      type: "salary",
+      date: salaryForm.date,
+      amount: salaryForm.amount,
+      employeeId: salaryForm.employeeId,
+      employeeName: emp?.name || "",
+      note: salaryForm.note || `משכורת — ${emp?.name}`
+    }]);
+    setSalaryForm({ date: today(), employeeId: "", amount: "", note: "" });
+    setShowSalary(false);
   };
 
   const deleteDeposit = (id) => setCashDeposits(p => p.filter(d => d.id !== id));
@@ -3380,9 +3398,12 @@ function CashDeposits({ cashDeposits, setCashDeposits, sales }) {
 
   // Monthly stats
   const monthDeposits = cashDeposits.filter(d => d.date?.startsWith(monthKey));
-  const totalWithdrawn = monthDeposits.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
-  const totalDeposited = monthDeposits.reduce((a, d) => a + parseFloat(d.bankAmount || 0), 0);
-  const pendingDeposit = monthDeposits.filter(d => !d.bankAmount).reduce((a, d) => a + parseFloat(d.amount || 0), 0);
+  const monthSalaries = monthDeposits.filter(d => d.type === "salary");
+  const monthCashOps = monthDeposits.filter(d => d.type !== "salary");
+  const totalWithdrawn = monthCashOps.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
+  const totalDeposited = monthCashOps.reduce((a, d) => a + parseFloat(d.bankAmount || 0), 0);
+  const pendingDeposit = monthCashOps.filter(d => !d.bankAmount).reduce((a, d) => a + parseFloat(d.amount || 0), 0);
+  const totalSalaries = monthSalaries.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
 
   // הפרש: הופקד בבנק vs. הוצא מהקופה
   const gap = totalDeposited - totalWithdrawn;
@@ -3397,6 +3418,7 @@ function CashDeposits({ cashDeposits, setCashDeposits, sales }) {
         <KpiCard label="💵 סה״כ הוצא מהקופה החודש" value={`₪${fmt(totalWithdrawn)}`} accent="#cc0000" />
         <KpiCard label="🏦 סה״כ הופקד בבנק החודש" value={`₪${fmt(totalDeposited)}`} accent="#22c55e" />
         <KpiCard label="⏳ ממתין להפקדה" value={`₪${fmt(pendingDeposit)}`} accent={pendingDeposit > 0 ? "#f59e0b" : "#22c55e"} />
+        <KpiCard label="👷 משכורות ששולמו" value={`₪${fmt(totalSalaries)}`} accent="#7c3aed" sub={`${monthSalaries.length} תשלומים`} />
         <KpiCard
           label="📊 הפרש: הופקד vs. הוצא"
           accent={Math.abs(gap) < 5 ? "#22c55e" : gap < 0 ? "#ef4444" : "#f59e0b"}
@@ -3414,6 +3436,62 @@ function CashDeposits({ cashDeposits, setCashDeposits, sales }) {
         />
       </div>
 
+      {/* Salary form */}
+      <Card title="👷 תשלום משכורת במזומן">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showSalary ? 14 : 0 }}>
+          <div style={{ fontSize: 13, color: "#64748b" }}>רשום תשלום משכורת שניתן במזומן לעובד</div>
+          <Btn onClick={() => setShowSalary(!showSalary)} style={{ background: showSalary ? "#94a3b8" : "#7c3aed" }}>{showSalary ? "✕ סגור" : "+ תשלום משכורת"}</Btn>
+        </div>
+        {showSalary && (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ flex: 1, minWidth: 130 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>תאריך</div>
+              <input type="date" value={salaryForm.date} onChange={e => setSalaryForm(f => ({ ...f, date: e.target.value }))} style={inputStyle} />
+            </div>
+            <div style={{ flex: 2, minWidth: 150 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>עובד</div>
+              <select value={salaryForm.employeeId} onChange={e => setSalaryForm(f => ({ ...f, employeeId: e.target.value }))} style={inputStyle}>
+                <option value="">— בחר עובד —</option>
+                {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 110 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>סכום ₪</div>
+              <input type="number" value={salaryForm.amount} onChange={e => setSalaryForm(f => ({ ...f, amount: e.target.value }))} placeholder="5000" style={inputStyle} />
+            </div>
+            <div style={{ flex: 2, minWidth: 150 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>הערה (אופציונלי)</div>
+              <input value={salaryForm.note} onChange={e => setSalaryForm(f => ({ ...f, note: e.target.value }))} placeholder="משכורת אפריל..." style={inputStyle} />
+            </div>
+            <Btn onClick={addSalary} style={{ background: "#7c3aed" }}>💾 שמור</Btn>
+          </div>
+        )}
+        {/* Salary history */}
+        {monthSalaries.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 12, color: "#7c3aed", fontWeight: 700, marginBottom: 8 }}>תשלומי משכורת החודש</div>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead><tr style={{ borderBottom: "1px solid #e2e8f0", color: "#64748b" }}><Th>תאריך</Th><Th>עובד</Th><Th>סכום</Th><Th>הערה</Th><Th></Th></tr></thead>
+              <tbody>
+                {monthSalaries.map(d => (
+                  <tr key={d.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <Td style={{ color: "#64748b" }}>{d.date}</Td>
+                    <Td style={{ fontWeight: 700 }}>{d.employeeName || "—"}</Td>
+                    <Td style={{ color: "#7c3aed", fontWeight: 700 }}>₪{fmt(d.amount)}</Td>
+                    <Td style={{ color: "#64748b" }}>{d.note || "—"}</Td>
+                    <Td><button onClick={() => setCashDeposits(p => p.filter(x => x.id !== d.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 15 }}>×</button></Td>
+                  </tr>
+                ))}
+                <tr style={{ borderTop: "2px solid #e2e8f0", fontWeight: 700 }}>
+                  <Td colSpan={2} style={{ color: "#64748b" }}>סה״כ</Td>
+                  <Td style={{ color: "#7c3aed" }}>₪{fmt(totalSalaries)}</Td>
+                  <Td colSpan={2}></Td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
       {/* Add form */}
       <Card title="💵 רישום הוצאת מזומן מהקופה">
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
