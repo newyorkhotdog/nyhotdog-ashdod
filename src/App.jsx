@@ -25,6 +25,7 @@ const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, labor
 
 const BRANCH_ID = "ashdod"; // שנה ל-"yavne" עבור סניף יבנה
 const BRANCH_NAME = BRANCH_ID === "ashdod" ? "אשדוד" : BRANCH_ID === "yavne" ? "יבנה" : BRANCH_ID;
+const BRANCH_COLOR = BRANCH_ID === "yavne" ? { main: "#16a34a", dark: "#14532d", border: "#15803d", light: "#bbf7d0" } : { main: "#cc0000", dark: "#8b0000", border: "#b91c1c", light: "#fecaca" };
 
 async function load(key) {
   try {
@@ -195,12 +196,12 @@ export default function App() {
   return (
     <div dir="rtl" style={{ minHeight: "100vh", background: "#f5f5f5", fontFamily: "'Segoe UI', Tahoma, sans-serif", color: "#1e293b" }}>
       {/* HEADER */}
-      <div style={{ background: "linear-gradient(135deg, #cc0000 0%, #8b0000 100%)", borderBottom: "1px solid #b91c1c", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ background: `linear-gradient(135deg, ${BRANCH_COLOR.main} 0%, ${BRANCH_COLOR.dark} 100%)`, borderBottom: `1px solid ${BRANCH_COLOR.border}`, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 28 }}>🌭</span>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>New York Hotdog — מערכת ניהול פוד קוסט</div>
-            <div style={{ fontSize: 12, color: "#fecaca" }}>סניף {BRANCH_NAME}</div>
+            <div style={{ fontSize: 12, color: BRANCH_COLOR.light }}>סניף {BRANCH_NAME}</div>
           </div>
         </div>
         {/* Save indicator */}
