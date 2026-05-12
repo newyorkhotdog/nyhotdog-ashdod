@@ -1843,57 +1843,82 @@ function Sales({ sales, setSales }) {
 
       <Card title="מכירות חודש נוכחי">
         {monthSales.length === 0 && <div style={{ color: "#64748b", fontSize: 13 }}>אין נתוני מכירות לחודש זה</div>}
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>תאריך</Th><Th>קופה</Th><Th>וולט</Th><Th>סה״כ יומי</Th><Th></Th></tr></thead>
-          <tbody>
-            {[...monthSales].sort((a, b) => b.date?.localeCompare(a.date)).map((s) => (
-              <tr key={s.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === s.id ? "#fff1f1" : "transparent" }}>
-                <Td>{s.date}</Td>
-                {editId === s.id ? (
-                  <>
-                    <Td>
-                      <input type="number" value={editVals.kupa} onChange={(e) => setEditVals((v) => ({ ...v, kupa: e.target.value }))}
-                        style={{ ...inputStyle, width: 110 }} autoFocus />
-                    </Td>
-                    <Td>
-                      <input type="number" value={editVals.wolt} onChange={(e) => setEditVals((v) => ({ ...v, wolt: e.target.value }))}
-                        style={{ ...inputStyle, width: 110 }} />
-                    </Td>
-                    <Td style={{ color: "#1e293b", fontWeight: 700 }}>
-                      ₪{fmt((parseFloat(editVals.kupa) || 0) + (parseFloat(editVals.wolt) || 0))}
-                    </Td>
-                    <Td>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => saveEdit(s.id)} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>שמור</button>
-                        <button onClick={() => setEditId(null)} style={{ background: "#cbd5e1", color: "#64748b", border: "none", borderRadius: 5, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>ביטול</button>
-                      </div>
-                    </Td>
-                  </>
-                ) : (
-                  <>
-                    <Td style={{ color: "#1e293b" }}>₪{fmt(s.kupa || 0)}</Td>
-                    <Td style={{ color: "#1e293b" }}>₪{fmt(s.wolt || 0)}</Td>
-                    <Td style={{ fontWeight: 700 }}>₪{fmt((parseFloat(s.kupa) || 0) + (parseFloat(s.wolt) || 0))}</Td>
-                    <Td>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => startEdit(s)} style={{ background: "none", border: "none", color: "#cc0000", cursor: "pointer", fontSize: 14 }} title="עריכה">✏️</button>
-                        <button onClick={() => setSales((p) => p.filter((i) => i.id !== s.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14 }} title="מחיקה">×</button>
-                      </div>
-                    </Td>
-                  </>
-                )}
-              </tr>
-            ))}
-            {monthSales.length > 0 && (
-              <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
-                <Td style={{ color: "#64748b" }}>סה״כ חודש</Td>
-                <Td style={{ color: "#1e293b" }}>₪{fmt(totalKupa)}</Td>
-                <Td style={{ color: "#1e293b" }}>₪{fmt(totalWolt)}</Td>
-                <Td style={{ color: "#22c55e" }}>₪{fmt(totalKupa + totalWolt)}</Td><Td></Td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        {monthSales.length > 0 && (() => {
+          const sorted = [...monthSales].sort((a, b) => b.date?.localeCompare(a.date));
+          const totals = sorted.map(s => (parseFloat(s.kupa) || 0) + (parseFloat(s.wolt) || 0));
+          const maxTotal = Math.max(...totals);
+          const minTotal = Math.min(...totals.filter(t => t > 0));
+          const avgTotal = totals.reduce((a,b) => a+b, 0) / totals.length;
+          const DAY_NAMES = ["א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ש׳"];
+          const DAY_COLORS = { "א׳":"#0284c7","ב׳":"#7c3aed","ג׳":"#dc2626","ד׳":"#d97706","ה׳":"#16a34a","ו׳":"#94a3b8","ש׳":"#94a3b8" };
+          return (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}>
+                <Th>יום</Th><Th>תאריך</Th><Th>קופה</Th><Th>וולט</Th><Th>סה״כ יומי</Th><Th>מגמה</Th><Th></Th>
+              </tr></thead>
+              <tbody>
+                {sorted.map((s) => {
+                  const dayName = DAY_NAMES[new Date(s.date).getDay()];
+                  const dayColor = DAY_COLORS[dayName];
+                  const total = (parseFloat(s.kupa) || 0) + (parseFloat(s.wolt) || 0);
+                  const isStrong = total >= maxTotal * 0.85;
+                  const isWeak = total > 0 && total <= minTotal * 1.15;
+                  const barPct = maxTotal > 0 ? (total / maxTotal * 100) : 0;
+                  const barColor = isStrong ? "#22c55e" : isWeak ? "#ef4444" : "#f59e0b";
+                  return (
+                    <tr key={s.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === s.id ? "#fff1f1" : "transparent" }}>
+                      <Td>
+                        <span style={{ background: dayColor, color: "#fff", borderRadius: 6, padding: "2px 8px", fontWeight: 800, fontSize: 12 }}>{dayName}</span>
+                      </Td>
+                      <Td style={{ color: "#64748b" }}>{s.date}</Td>
+                      {editId === s.id ? (
+                        <>
+                          <Td><input type="number" value={editVals.kupa} onChange={(e) => setEditVals((v) => ({ ...v, kupa: e.target.value }))} style={{ ...inputStyle, width: 110 }} autoFocus /></Td>
+                          <Td><input type="number" value={editVals.wolt} onChange={(e) => setEditVals((v) => ({ ...v, wolt: e.target.value }))} style={{ ...inputStyle, width: 110 }} /></Td>
+                          <Td style={{ fontWeight: 700 }}>₪{fmt((parseFloat(editVals.kupa) || 0) + (parseFloat(editVals.wolt) || 0))}</Td>
+                          <Td></Td>
+                          <Td><div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => saveEdit(s.id)} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>שמור</button>
+                            <button onClick={() => setEditId(null)} style={{ background: "#cbd5e1", color: "#64748b", border: "none", borderRadius: 5, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>ביטול</button>
+                          </div></Td>
+                        </>
+                      ) : (
+                        <>
+                          <Td style={{ color: "#64748b" }}>₪{fmt(s.kupa || 0)}</Td>
+                          <Td style={{ color: "#64748b" }}>₪{fmt(s.wolt || 0)}</Td>
+                          <Td style={{ fontWeight: 800, color: isStrong ? "#16a34a" : isWeak ? "#dc2626" : "#1e293b" }}>
+                            ₪{fmt(total)}
+                            {isStrong && <span style={{ fontSize: 10, marginRight: 4 }}>🔥</span>}
+                            {isWeak && total > 0 && <span style={{ fontSize: 10, marginRight: 4 }}>❄️</span>}
+                          </Td>
+                          <Td>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 100 }}>
+                              <div style={{ flex: 1, background: "#f1f5f9", borderRadius: 4, height: 8, overflow: "hidden" }}>
+                                <div style={{ width: `${barPct}%`, height: "100%", background: barColor, borderRadius: 4, transition: "width 0.3s" }} />
+                              </div>
+                              <span style={{ fontSize: 10, color: "#94a3b8", minWidth: 30 }}>{barPct.toFixed(0)}%</span>
+                            </div>
+                          </Td>
+                          <Td><div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => startEdit(s)} style={{ background: "none", border: "none", color: "#cc0000", cursor: "pointer", fontSize: 14 }}>✏️</button>
+                            <button onClick={() => setSales((p) => p.filter((i) => i.id !== s.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14 }}>×</button>
+                          </div></Td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })}
+                <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700, background: "#f8fafc" }}>
+                  <Td colSpan={2} style={{ color: "#64748b" }}>סה״כ חודש</Td>
+                  <Td style={{ color: "#0284c7" }}>₪{fmt(totalKupa)}</Td>
+                  <Td style={{ color: "#7c3aed" }}>₪{fmt(totalWolt)}</Td>
+                  <Td style={{ color: "#22c55e", fontSize: 15 }}>₪{fmt(totalKupa + totalWolt)}</Td>
+                  <Td colSpan={2} style={{ fontSize: 11, color: "#94a3b8" }}>ממוצע יומי: ₪{fmt(avgTotal)}</Td>
+                </tr>
+              </tbody>
+            </table>
+          );
+        })()}
       </Card>
     </div>
   );
