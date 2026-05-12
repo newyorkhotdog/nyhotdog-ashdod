@@ -22,7 +22,8 @@ const STORAGE_KEYS = {
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
 
-const BRANCH_ID = "ashdod"; // כל סניף יכול לקבל ID שלו
+const BRANCH_ID = "ashdod"; // שנה ל-"yavne" עבור סניף יבנה
+const BRANCH_NAME = BRANCH_ID === "ashdod" ? "אשדוד" : BRANCH_ID === "yavne" ? "יבנה" : BRANCH_ID;
 
 async function load(key) {
   try {
@@ -195,7 +196,7 @@ export default function App() {
           <span style={{ fontSize: 28 }}>🌭</span>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#ffffff", letterSpacing: 0.5 }}>New York Hotdog — מערכת ניהול פוד קוסט</div>
-            <div style={{ fontSize: 12, color: "#fecaca" }}>סניף אשדוד</div>
+            <div style={{ fontSize: 12, color: "#fecaca" }}>סניף {BRANCH_NAME}</div>
           </div>
         </div>
         {/* Save indicator */}
@@ -349,16 +350,17 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
     .reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
   const totalCost = invoiceCost + deliveryCostNoInvoice;
   const deliveryCovered = monthlyDeliveries.filter(d => suppliersWithInvoice.has(d.supplierId)).reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
-  const foodCostPct = parseFloat(pct(totalCost, totalSales));
+  const totalSalesNetVAT = totalSales / 1.18; // מכירות ללא מע"מ לצורך חישוב פוד קוסט
+  const foodCostPct = parseFloat(pct(totalCost, totalSalesNetVAT));
 
   // Labor cost
   const monthlyHours = hours.filter((h) => h.date?.startsWith(monthKey));
   const totalLaborCost = monthlyHours.reduce((a, h) => {
     const emp = employees.find((e) => e.id === h.employeeId);
-    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0);
+    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0) * 1.125; // כולל 12.5% עלות מעביד
   }, 0);
   const totalLaborHours = monthlyHours.reduce((a, h) => a + (parseFloat(h.hours) || 0), 0);
-  const laborCostPct = parseFloat(pct(totalLaborCost, totalSales));
+  const laborCostPct = parseFloat(pct(totalLaborCost, totalSalesNetVAT));
   const primeCostPct = parseFloat((foodCostPct + laborCostPct).toFixed(1));
 
   // Operational expenses this month
@@ -400,7 +402,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
       .filter(d => d.supplierId === sup.id)
       .reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
     const cost = invoiceCostSup + deliveryCostSup;
-    return { ...sup, cost, pct: parseFloat(pct(cost, totalSales)), fromDelivery: !hasInvoice && deliveryCostSup > 0 };
+    return { ...sup, cost, pct: parseFloat(pct(cost, totalSalesNetVAT)), fromDelivery: !hasInvoice && deliveryCostSup > 0 };
   }).filter((s) => s.cost > 0);
 
   const fcColor = foodCostPct <= settings.greenMax ? "#22c55e" : foodCostPct <= settings.yellowMax ? "#f59e0b" : "#ef4444";
@@ -409,7 +411,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   const empStats = employees.map((emp) => {
     const empHours = monthlyHours.filter((h) => h.employeeId === emp.id);
     const hrs = empHours.reduce((a, h) => a + (parseFloat(h.hours) || 0), 0);
-    const cost = hrs * (parseFloat(emp.hourlyRate) || 0);
+    const cost = hrs * (parseFloat(emp.hourlyRate) || 0) * 1.125; // כולל 12.5% עלות מעביד
     return { ...emp, hrs, cost };
   }).filter((e) => e.hrs > 0);
 
@@ -432,7 +434,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
     const empData = empStats.map(e => `${e.name}: ${e.hrs}ש, ₪${e.cost.toFixed(0)}`).join(", ");
     const expenseData = (expenses||[]).filter(e=>e.date?.startsWith(monthKey)).reduce((a,e)=>a+parseFloat(e.amount||0),0);
 
-    return `אתה יועץ עסקי מומחה למסעדות מזון מהיר וניהול עלויות. אתה מנתח את עסק "New York Hotdog" בסניף אשדוד — רשת נקניקיות גורמה כשרה.
+    return `אתה יועץ עסקי מומחה למסעדות מזון מהיר וניהול עלויות. אתה מנתח את עסק "New York Hotdog" בסניף ${BRANCH_NAME} — רשת נקניקיות גורמה כשרה.
 
 תפריט העסק: נקניקיות ניו-יורק (קלאסי ₪37, מנהטן ₪42, ברודווי ₪40, ברוקלין ₪40, הארלם ₪42), טוסט נקניק ₪37, נקניקיית נשנוש ₪13, ילדים ₪18, נאצ'וס ₪15. גם מכירות ב-Wolt.
 
@@ -658,7 +660,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
                     <Td>{e.hrs.toFixed(1)}</Td>
                     <Td style={{ color: "#64748b" }}>₪{fmt(e.hourlyRate)}</Td>
                     <Td style={{ color: "#fb923c" }}>₪{fmt(e.cost)}</Td>
-                    <Td>{pct(e.cost, totalSales)}%</Td>
+                    <Td>{pct(e.cost, totalSalesNetVAT)}%</Td>
                   </tr>
                 ))}
                 <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
@@ -2056,7 +2058,7 @@ function Hours({ hours, setHours, employees, setEmployees, sales, settings }) {
   const totalSales = monthlySales.reduce((a, s) => a + (parseFloat(s.kupa) || 0) + (parseFloat(s.wolt) || 0), 0);
   const totalLaborCost = monthHours.reduce((a, h) => {
     const emp = employees.find((e) => e.id === h.employeeId);
-    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0);
+    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0) * 1.125; // כולל 12.5% עלות מעביד
   }, 0);
   const totalLaborHours = monthHours.reduce((a, h) => a + (parseFloat(h.hours) || 0), 0);
   const laborPct = parseFloat(pct(totalLaborCost, totalSales));
@@ -2228,7 +2230,7 @@ function Hours({ hours, setHours, employees, setEmployees, sales, settings }) {
           const dayTotal = entries.reduce((a, h) => a + (parseFloat(h.hours) || 0), 0);
           const dayCost = entries.reduce((a, h) => {
             const emp = employees.find((e) => e.id === h.employeeId);
-            return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0);
+            return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0) * 1.125; // כולל 12.5% עלות מעביד
           }, 0);
           return (
             <div key={date} style={{ marginBottom: 12 }}>
@@ -3572,7 +3574,7 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
   // ── הוצאות תפעול ──
   const laborCost = monthHours.reduce((a, h) => {
     const emp = employees.find(e => e.id === h.employeeId);
-    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0);
+    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0) * 1.125; // כולל 12.5% עלות מעביד
   }, 0);
 
   const variableExpenses = monthExpenses.reduce((a, e) => a + parseFloat(e.amount || 0), 0);
