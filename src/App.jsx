@@ -19,6 +19,8 @@ const STORAGE_KEYS = {
   tasks: "nyh_tasks",
   fixedExpenses: "nyh_fixed_expenses",
   pettyCash: "nyh_petty_cash",
+  valuSettings: "nyh_valu_settings",
+  lastUpdated: "nyh_last_updated",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
@@ -101,6 +103,8 @@ export default function App() {
   const [tasks, setTasks] = useState([]);
   const [fixedExpenses, setFixedExpenses] = useState([]);
   const [pettyCash, setPettyCash] = useState([]);
+  const [valuSettings, setValuSettings] = useState({ authToken: "", sessionToken: "" });
+  const [lastUpdated, setLastUpdated] = useState({});
   const [loaded, setLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
 
@@ -140,9 +144,9 @@ export default function App() {
   const uSetSuppliers = (val) => setSuppliers(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.suppliers, v); return v; });
   const uSetProducts = (val) => setProducts(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.products, v); return v; });
   const uSetInvoices = (val) => setInvoices(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.invoices, v); return v; });
-  const uSetSales = (val) => setSales(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.sales, v); return v; });
+  const uSetSales = (val) => setSales(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.sales, v); const ts = new Date().toISOString(); setLastUpdated(p => ({ ...p, sales: ts })); persist(STORAGE_KEYS.lastUpdated, { ...lastUpdated, sales: ts }); return v; });
   const uSetEmployees = (val) => setEmployees(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.employees, v); return v; });
-  const uSetHours = (val) => setHours(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.hours, v); return v; });
+  const uSetHours = (val) => setHours(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.hours, v); const ts = new Date().toISOString(); setLastUpdated(p => ({ ...p, hours: ts })); persist(STORAGE_KEYS.lastUpdated, { ...lastUpdated, hours: ts }); return v; });
   const uSetSettings = (val) => setSettings(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.settings, v); return v; });
   const uSetPending = (val) => setPending(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.pending, v); return v; });
   const uSetExpenses = (val) => setExpenses(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.expenses, v); return v; });
@@ -153,6 +157,7 @@ export default function App() {
   const uSetTasks = (val) => setTasks(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.tasks, v); return v; });
   const uSetFixedExpenses = (val) => setFixedExpenses(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.fixedExpenses, v); return v; });
   const uSetPettyCash = (val) => setPettyCash(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.pettyCash, v); return v; });
+  const uSetValuSettings = (val) => setValuSettings(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.valuSettings, v); return v; });
 
   useEffect(() => {
     // טעינה מ-Firebase — onSnapshot לעדכונים בזמן אמת
@@ -173,6 +178,8 @@ export default function App() {
       [STORAGE_KEYS.tasks]: setTasks,
       [STORAGE_KEYS.fixedExpenses]: setFixedExpenses,
       [STORAGE_KEYS.pettyCash]: setPettyCash,
+      [STORAGE_KEYS.valuSettings]: (v) => setValuSettings(v || { authToken: "", sessionToken: "" }),
+      [STORAGE_KEYS.lastUpdated]: (v) => setLastUpdated(v || {}),
     };
     const keys = Object.keys(setters);
     const loadedKeys = new Set();
@@ -234,10 +241,10 @@ export default function App() {
       </div>
 
       <div style={{ padding: 24, background: "#f1f5f9", minHeight: "calc(100vh - 120px)" }}>
-        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} tasks={tasks} fixedExpenses={fixedExpenses} pettyCash={pettyCash} />}
+        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} tasks={tasks} fixedExpenses={fixedExpenses} pettyCash={pettyCash} lastUpdated={lastUpdated} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} inventoryCategories={inventoryCategories} />}
         {tab === "invoices" && <Invoices invoices={invoices} setInvoices={uSetInvoices} suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} settings={settings} pending={pending} setPending={uSetPending} pettyCash={pettyCash} setPettyCash={uSetPettyCash} />}
-        {tab === "sales" && <Sales sales={sales} setSales={uSetSales} />}
+        {tab === "sales" && <Sales sales={sales} setSales={uSetSales} valuSettings={valuSettings} />}
         {tab === "hours" && <Hours hours={hours} setHours={uSetHours} employees={employees} setEmployees={uSetEmployees} sales={sales} settings={settings} />}
         {tab === "pnl" && <PnL sales={sales} invoices={invoices} hours={hours} employees={employees} expenses={expenses} deliveries={deliveries} fixedExpenses={fixedExpenses} setFixedExpenses={uSetFixedExpenses} pettyCash={pettyCash} />}
         {tab === "tasks" && <Tasks tasks={tasks} setTasks={uSetTasks} />}
@@ -246,13 +253,13 @@ export default function App() {
         {tab === "expenses" && <Expenses expenses={expenses} setExpenses={uSetExpenses} />}
         {tab === "cash" && <CashDeposits cashDeposits={cashDeposits} setCashDeposits={uSetCashDeposits} sales={sales} employees={employees} />}
         {tab === "notifications" && <Notifications pending={pending} setPending={uSetPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={uSetInvoices} setSuppliers={uSetSuppliers} setProducts={uSetProducts} />}
-        {tab === "settings" && <Settings settings={settings} setSettings={uSetSettings} inventoryCategories={inventoryCategories} setInventoryCategories={uSetInventoryCategories} suppliers={suppliers} setSuppliers={uSetSuppliers} />}
+        {tab === "settings" && <Settings settings={settings} setSettings={uSetSettings} inventoryCategories={inventoryCategories} setInventoryCategories={uSetInventoryCategories} suppliers={suppliers} setSuppliers={uSetSuppliers} valuSettings={valuSettings} setValuSettings={uSetValuSettings} />}
       </div>
     </div>
   );
 }
 
-function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [], tasks = [], fixedExpenses = [], pettyCash = [] }) {
+function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [], tasks = [], fixedExpenses = [], pettyCash = [], lastUpdated = {} }) {
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -503,7 +510,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
       {/* Month selector */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", flexWrap: "wrap" }}>
         <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 14 }}>📅 חודש:</span>
         <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
         {selectedMonth !== currentMonthKey && (
@@ -512,6 +519,15 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
         {selectedMonth !== currentMonthKey && (
           <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600 }}>⚠️ מציג נתוני {selectedMonth}</span>
         )}
+        {/* Last updated */}
+        <div style={{ marginRight: "auto", display: "flex", gap: 12, fontSize: 11, color: "#94a3b8" }}>
+          {lastUpdated.sales && (
+            <span>💰 מכירות עודכנו: <strong style={{ color: "#64748b" }}>{new Date(lastUpdated.sales).toLocaleDateString('he-IL')} {new Date(lastUpdated.sales).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</strong></span>
+          )}
+          {lastUpdated.hours && (
+            <span>⏱️ שעות עודכנו: <strong style={{ color: "#64748b" }}>{new Date(lastUpdated.hours).toLocaleDateString('he-IL')} {new Date(lastUpdated.hours).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</strong></span>
+          )}
+        </div>
       </div>
 
       {/* Prime Cost banner */}
@@ -1552,11 +1568,56 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
   );
 }
 
-function Sales({ sales, setSales }) {
+function Sales({ sales, setSales, valuSettings = {} }) {
   const [form, setForm] = useState({ date: today(), kupa: "", wolt: "" });
   const [editId, setEditId] = useState(null);
   const [editVals, setEditVals] = useState({ kupa: "", wolt: "" });
-  const [importing, setImporting] = useState(false);
+  const [valuImporting, setValuImporting] = useState(false);
+  const [valuError, setValuError] = useState("");
+
+  const importFromValu = async () => {
+    if (!valuSettings.authToken) {
+      return setValuError("❌ נא להגדיר Auth Token בהגדרות → חיבור Valu");
+    }
+    setValuImporting(true);
+    setValuError("");
+    try {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth(), 1).toString();
+      const to = now.toString();
+      const url = `/api/valu?type=sales&auth_token=${encodeURIComponent(valuSettings.authToken)}&session_token=${encodeURIComponent(valuSettings.sessionToken || "")}&from_date=${encodeURIComponent(from)}&to_date=${encodeURIComponent(to)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "שגיאת ייבוא");
+
+      // Parse Valu sales into our format
+      const byDate = {};
+      for (const sale of data.sales || []) {
+        const date = sale.created_at?.split('T')[0] || sale.date;
+        if (!date) continue;
+        if (!byDate[date]) byDate[date] = { kupa: 0, wolt: 0 };
+        const amount = parseFloat(sale.total || sale.amount || 0);
+        const channel = (sale.channel || sale.source || "").toLowerCase();
+        if (channel.includes('wolt')) byDate[date].wolt += amount;
+        else byDate[date].kupa += amount;
+      }
+
+      let added = 0, updated = 0;
+      setSales(prev => {
+        let updated_sales = [...prev];
+        for (const [date, vals] of Object.entries(byDate)) {
+          const idx = updated_sales.findIndex(s => s.date === date);
+          if (idx >= 0) { updated_sales[idx] = { ...updated_sales[idx], kupa: String(Math.round(vals.kupa*100)/100), wolt: String(Math.round(vals.wolt*100)/100) }; updated++; }
+          else { updated_sales.push({ id: Date.now().toString() + Math.random(), date, kupa: String(Math.round(vals.kupa*100)/100), wolt: String(Math.round(vals.wolt*100)/100) }); added++; }
+        }
+        return updated_sales;
+      });
+      alert(`✅ יובאו מ-Valu: ${added} ימים חדשים, ${updated} עודכנו`);
+    } catch(e) {
+      setValuError("❌ " + e.message);
+    }
+    setValuImporting(false);
+  };
   const [importPreview, setImportPreview] = useState(null);
   const [importError, setImportError] = useState("");
 
@@ -1751,6 +1812,13 @@ function Sales({ sales, setSales }) {
       {/* Import buttons */}
       <Card title="📥 ייבוא נתוני מכירות">
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+          {/* Valu direct import */}
+          <div>
+            <button onClick={importFromValu} disabled={valuImporting} style={{ background: valuImporting ? "#94a3b8" : "linear-gradient(135deg, #1e293b, #334155)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: valuImporting ? 0.7 : 1, fontFamily: "inherit" }}>
+              {valuImporting ? "⏳ מייבא מ-Valu..." : "⚡ ייבוא אוטומטי מ-Valu"}
+            </button>
+            <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>ישירות מהקופה — מכירות החודש</div>
+          </div>
           <div>
             <label style={{ background: "#cc0000", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1, display: "inline-block" }}>
               {importing ? "⏳ מעבד..." : "🖥️ ייבוא מ-Caspit (Excel)"}
@@ -1768,6 +1836,7 @@ function Sales({ sales, setSales }) {
             <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>קובץ purchases מ-Wolt — הזמנות delivered בלבד</div>
           </div>
         </div>
+        {valuError && <div style={{ color: "#f87171", fontSize: 13, background: "#fff5f5", borderRadius: 8, padding: "8px 12px", marginBottom: 8 }}>{valuError}</div>}
         {importError && <div style={{ color: "#f87171", fontSize: 13, background: "#fff5f5", borderRadius: 8, padding: "8px 12px" }}>❌ {importError}</div>}
         {importPreview && (
           <div style={{ marginTop: 14 }}>
@@ -3642,7 +3711,7 @@ function CashDeposits({ cashDeposits, setCashDeposits, sales, employees = [] }) 
   );
 }
 
-function Settings({ settings, setSettings, inventoryCategories, setInventoryCategories, suppliers, setSuppliers }) {
+function Settings({ settings, setSettings, inventoryCategories, setInventoryCategories, suppliers, setSuppliers, valuSettings = {}, setValuSettings }) {
   const [form, setForm] = useState(settings);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -3697,6 +3766,29 @@ function Settings({ settings, setSettings, inventoryCategories, setInventoryCate
       </div>
       </div>
       <InvSettings inventoryCategories={inventoryCategories} setInventoryCategories={setInventoryCategories} suppliers={suppliers} setSuppliers={setSuppliers} />
+
+      {/* Valu connection settings */}
+      <Card title="⚡ חיבור Valu — ייבוא אוטומטי">
+        <div style={{ fontSize: 13, color: "#64748b", marginBottom: 12 }}>
+          הזן את פרטי ה-session מדפדפן כספית Valu. ה-token פג תוקף כל כמה שעות — יש לרענן לפי הצורך.
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 600 }}>
+          <div>
+            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>Auth Token</div>
+            <input value={valuSettings.authToken || ""} onChange={e => setValuSettings(v => ({ ...v, authToken: e.target.value }))} placeholder="BAhJIkU..." style={{ ...inputStyle, fontFamily: "monospace", fontSize: 11 }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>Session Token (אופציונלי)</div>
+            <input value={valuSettings.sessionToken || ""} onChange={e => setValuSettings(v => ({ ...v, sessionToken: e.target.value }))} placeholder="BAh7Bk..." style={{ ...inputStyle, fontFamily: "monospace", fontSize: 11 }} />
+          </div>
+          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#64748b" }}>
+            <strong>איך לקבל את ה-Token:</strong><br />
+            1. פתח caspit.valu.co.il והתחבר<br />
+            2. F12 → Network → לחץ על כל בקשה → Cookies<br />
+            3. העתק את ערך <code>auth_token</code> לכאן
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }
