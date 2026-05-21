@@ -3047,7 +3047,7 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
             { type: isPdf ? "document" : "image", source: { type: "base64", media_type: mediaType, data: base64 } },
             { type: "text", text: `אתה מומחה בקריאת תעודות משלוח בעברית. קרא את כל הטקסט בתמונה בקפידה.
 
-ספקים קיימים במערכת — התאם לפי שם, אל תיצור ספק חדש אם קיים:
+ספקים ומוצרים קיימים במערכת:
 ${JSON.stringify(suppliersList, null, 2)}
 
 החזר JSON בלבד (ללא טקסט נוסף, ללא \`\`\`):
@@ -3057,17 +3057,16 @@ ${JSON.stringify(suppliersList, null, 2)}
   "date": "YYYY-MM-DD",
   "deliveryNum": "מספר התעודה",
   "items": [
-    {"name": "שם המוצר המדויק כפי שקיים אצל הספק", "unit": "יחידת מידה", "qty": 0.0, "price": 0.0}
+    {"name": "שם המוצר מהתעודה", "matchedProductName": "שם המוצר הקיים במערכת שהכי דומה", "unit": "יחידת מידה", "qty": 0.0, "price": 0.0}
   ],
   "total": 0.0
 }
 
 חוקי זיהוי קריטיים:
-1. מספר פריט/קטלוג (4-6 ספרות כמו 23030, 23029) — זה קוד מוצר, לא כמות ולא מחיר. התעלם ממנו.
-2. כמות (qty): מספר סביר של יחידות — 1 עד 500. מספר עם 5+ ספרות הוא כנראה קוד מוצר.
-3. מחיר (price): אם אין מחיר בתעודה — שים 0 והמערכת תמשוך מחיר אוטומטי מהמוצר הקיים.
-4. אם רואים רק כמות ללא מחיר — qty=הכמות, price=0.
-5. שם מוצר: התאם לשמות המוצרים הקיימים אצל הספק ברשימה למעלה.` }
+1. מספר פריט/קטלוג (4-6 ספרות כמו 23030, 23029) — קוד מוצר בלבד, אל תשים בכמות או מחיר.
+2. כמות (qty): מספר יחידות — 1 עד 500 בלבד.
+3. מחיר (price): אם אין מחיר בתעודה — שים 0.
+4. matchedProductName: חפש בין המוצרים הקיימים של הספק את המוצר הכי דומה לשם בתעודה. לדוגמה: "הוטדוג 130 גר׳" בתעודה → "לחמניות הוטדוג 130 גר׳" במערכת.` }
           ]}]
         })
       });
@@ -3100,18 +3099,20 @@ ${JSON.stringify(suppliersList, null, 2)}
     const items = [];
     for (const item of scanResult.items || []) {
       const itemName = item.name?.trim().toLowerCase() || "";
-      // חיפוש מדויק קודם, אחר כך חלקי
-      let prod = currentProducts.find(p => p.supplierId === sup.id && p.name.trim().toLowerCase() === itemName);
+      const matchedName = item.matchedProductName?.trim().toLowerCase() || itemName;
+      // חיפוש לפי matchedProductName קודם, אחר כך לפי שם מהתעודה
+      let prod = currentProducts.find(p => p.supplierId === sup.id && p.name.trim().toLowerCase() === matchedName);
+      if (!prod) prod = currentProducts.find(p => p.supplierId === sup.id && p.name.trim().toLowerCase() === itemName);
       if (!prod) {
         prod = currentProducts.find(p => p.supplierId === sup.id && (
-          p.name.toLowerCase().includes(itemName) || itemName.includes(p.name.toLowerCase())
+          p.name.toLowerCase().includes(itemName) || itemName.includes(p.name.toLowerCase()) ||
+          p.name.toLowerCase().includes(matchedName) || matchedName.includes(p.name.toLowerCase())
         ));
       }
       if (!prod) {
         prod = { id: (Date.now() + Math.random() * 1000).toString(), supplierId: sup.id, name: item.name, unit: item.unit || "יחידה", basePrice: parseFloat(item.price) || 0 };
         currentProducts = [...currentProducts, prod];
       }
-      // אם אין מחיר בתעודה — משוך מהמוצר הקיים
       const finalPrice = parseFloat(item.price) > 0 ? item.price : String(prod.basePrice || 0);
       items.push({ id: (Date.now() + Math.random() * 1000).toString(), productId: prod.id, price: finalPrice, qty: String(item.qty) });
     }
