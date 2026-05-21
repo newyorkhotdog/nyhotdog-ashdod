@@ -77,7 +77,6 @@ const TABS = [
   { id: "sales", label: "💰 מכירות" },
   { id: "hours", label: "👷 עובדים ושעות" },
   { id: "inventory", label: "📦 מלאי" },
-  { id: "expenses", label: "🏢 הוצאות תפעול" },
   { id: "cash", label: "💵 הפקדת מזומן" },
   { id: "pnl", label: "📈 רווח והפסד" },
   { id: "tasks", label: "✅ משימות" },
@@ -250,7 +249,6 @@ export default function App() {
         {tab === "tasks" && <Tasks tasks={tasks} setTasks={uSetTasks} />}
         {tab === "deliveries" && <Deliveries deliveries={deliveries} setDeliveries={uSetDeliveries} suppliers={suppliers} products={products} setSuppliers={uSetSuppliers} setProducts={uSetProducts} pending={pending} setPending={uSetPending} invoices={invoices} setInvoices={uSetInvoices} />}
         {tab === "inventory" && <Inventory inventory={inventory} setInventory={uSetInventory} products={products} invoices={invoices} deliveries={deliveries} suppliers={suppliers} inventoryCategories={inventoryCategories} setSuppliers={uSetSuppliers} />}
-        {tab === "expenses" && <Expenses expenses={expenses} setExpenses={uSetExpenses} />}
         {tab === "cash" && <CashDeposits cashDeposits={cashDeposits} setCashDeposits={uSetCashDeposits} sales={sales} employees={employees} />}
         {tab === "notifications" && <Notifications pending={pending} setPending={uSetPending} suppliers={suppliers} products={products} invoices={invoices} setInvoices={uSetInvoices} setSuppliers={uSetSuppliers} setProducts={uSetProducts} />}
         {tab === "settings" && <Settings settings={settings} setSettings={uSetSettings} inventoryCategories={inventoryCategories} setInventoryCategories={uSetInventoryCategories} suppliers={suppliers} setSuppliers={uSetSuppliers} valuSettings={valuSettings} setValuSettings={uSetValuSettings} />}
