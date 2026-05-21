@@ -144,9 +144,9 @@ export default function App() {
   const uSetSuppliers = (val) => setSuppliers(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.suppliers, v); return v; });
   const uSetProducts = (val) => setProducts(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.products, v); return v; });
   const uSetInvoices = (val) => setInvoices(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.invoices, v); return v; });
-  const uSetSales = (val) => setSales(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.sales, v); const ts = new Date().toISOString(); setLastUpdated(p => ({ ...p, sales: ts })); persist(STORAGE_KEYS.lastUpdated, { ...lastUpdated, sales: ts }); return v; });
+  const uSetSales = (val) => setSales(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.sales, v); const ts = new Date().toISOString(); setLastUpdated(p => { const nu = { ...p, sales: ts }; persist(STORAGE_KEYS.lastUpdated, nu); return nu; }); return v; });
   const uSetEmployees = (val) => setEmployees(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.employees, v); return v; });
-  const uSetHours = (val) => setHours(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.hours, v); const ts = new Date().toISOString(); setLastUpdated(p => ({ ...p, hours: ts })); persist(STORAGE_KEYS.lastUpdated, { ...lastUpdated, hours: ts }); return v; });
+  const uSetHours = (val) => setHours(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.hours, v); const ts = new Date().toISOString(); setLastUpdated(p => { const nu = { ...p, hours: ts }; persist(STORAGE_KEYS.lastUpdated, nu); return nu; }); return v; });
   const uSetSettings = (val) => setSettings(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.settings, v); return v; });
   const uSetPending = (val) => setPending(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.pending, v); return v; });
   const uSetExpenses = (val) => setExpenses(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.expenses, v); return v; });
