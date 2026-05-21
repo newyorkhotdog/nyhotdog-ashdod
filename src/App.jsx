@@ -3132,14 +3132,7 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div style={{ color: "#888", fontSize: 13 }}>{deliveries.length} תעודות משלוח במערכת</div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "4px 10px" }}>
-            <span style={{ fontSize: 12, color: "#64748b" }}>ספק לסריקה:</span>
-            <select value={scanSupplierFilter} onChange={e => setScanSupplierFilter(e.target.value)} style={{ border: "none", background: "transparent", fontSize: 13, color: "#1e293b", fontFamily: "inherit", cursor: "pointer" }}>
-              <option value="">— כל הספקים —</option>
-              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <label style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: scanning ? 0.6 : 1 }}>
             {scanning ? "⏳ סורק..." : "📸 סרוק תעודה"}
             <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={e => e.target.files[0] && scanDelivery(e.target.files[0])} disabled={scanning} />
