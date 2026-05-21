@@ -368,10 +368,13 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
 
   // Labor cost
   const monthlyHours = hours.filter((h) => h.date?.startsWith(monthKey));
+  const franchiseCost = employees.filter(e => e.type === "franchise").reduce((a, e) => a + parseFloat(e.monthlyFee || 0), 0);
   const totalLaborCost = monthlyHours.reduce((a, h) => {
     const emp = employees.find((e) => e.id === h.employeeId);
-    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0) * 1.125; // כולל 12.5% עלות מעביד
-  }, 0);
+    if (!emp) return a;
+    const rate = emp.type === "franchise" ? 0 : (parseFloat(emp.hourlyRate) || 0) * 1.125;
+    return a + (parseFloat(h.hours) || 0) * rate;
+  }, 0) + franchiseCost;
   const totalLaborHours = monthlyHours.reduce((a, h) => a + (parseFloat(h.hours) || 0), 0);
   const laborCostPct = parseFloat(pct(totalLaborCost, totalSalesNetVAT));
   const primeCostPct = parseFloat((foodCostPct + laborCostPct).toFixed(1));
@@ -421,12 +424,16 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
   const fcColor = foodCostPct <= settings.greenMax ? "#22c55e" : foodCostPct <= settings.yellowMax ? "#f59e0b" : "#ef4444";
 
   // Labor per employee this month
+  const franchiseEmployees = employees.filter(e => e.type === "franchise");
   const empStats = employees.map((emp) => {
+    if (emp.type === "franchise") {
+      return { ...emp, hrs: 0, cost: parseFloat(emp.monthlyFee || 0), isFranchise: true };
+    }
     const empHours = monthlyHours.filter((h) => h.employeeId === emp.id);
     const hrs = empHours.reduce((a, h) => a + (parseFloat(h.hours) || 0), 0);
-    const cost = hrs * (parseFloat(emp.hourlyRate) || 0) * 1.125; // כולל 12.5% עלות מעביד
-    return { ...emp, hrs, cost };
-  }).filter((e) => e.hrs > 0);
+    const cost = hrs * (parseFloat(emp.hourlyRate) || 0) * 1.125;
+    return { ...emp, hrs, cost, isFranchise: false };
+  }).filter((e) => e.hrs > 0 || e.isFranchise);
 
   const lcSettings = { greenMax: settings.laborGreenMax, yellowMax: settings.laborYellowMax };
 
@@ -694,14 +701,17 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
           </div>
           {empStats.length > 0 && (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 14 }}>
-              <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>עובד</Th><Th>שעות</Th><Th>₪/שעה</Th><Th>עלות</Th><Th>% ממכירות</Th></tr></thead>
+              <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>עובד</Th><Th>שעות</Th><Th>תעריף</Th><Th>עלות</Th><Th>% ממכירות</Th></tr></thead>
               <tbody>
                 {empStats.map((e) => (
-                  <tr key={e.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                    <Td>{e.name}</Td>
-                    <Td>{e.hrs.toFixed(1)}</Td>
-                    <Td style={{ color: "#64748b" }}>₪{fmt(e.hourlyRate)}</Td>
-                    <Td style={{ color: "#fb923c" }}>₪{fmt(e.cost)}</Td>
+                  <tr key={e.id} style={{ borderBottom: "1px solid #e2e8f0", background: e.isFranchise ? "#f0fdf4" : "transparent" }}>
+                    <Td>
+                      {e.name}
+                      {e.isFranchise && <span style={{ fontSize: 10, color: "#16a34a", marginRight: 6, background: "#dcfce7", borderRadius: 4, padding: "1px 5px" }}>זכיין</span>}
+                    </Td>
+                    <Td style={{ color: "#64748b" }}>{e.isFranchise ? "—" : e.hrs.toFixed(1)}</Td>
+                    <Td style={{ color: "#64748b" }}>{e.isFranchise ? "חודשי" : `₪${fmt(e.hourlyRate)}/שעה`}</Td>
+                    <Td style={{ color: e.isFranchise ? "#16a34a" : "#fb923c" }}>₪{fmt(e.cost)}</Td>
                     <Td>{pct(e.cost, totalSalesNetVAT)}%</Td>
                   </tr>
                 ))}
@@ -1996,18 +2006,20 @@ function Sales({ sales, setSales, valuSettings = {} }) {
 }
 
 function Employees({ employees, setEmployees }) {
-  const [form, setForm] = useState({ name: "", hourlyRate: "" });
+  const [form, setForm] = useState({ name: "", hourlyRate: "", type: "hourly", monthlyFee: "" });
   const [editId, setEditId] = useState(null);
-  const [editVals, setEditVals] = useState({ name: "", hourlyRate: "" });
+  const [editVals, setEditVals] = useState({ name: "", hourlyRate: "", type: "hourly", monthlyFee: "" });
 
   const addEmployee = () => {
-    if (!form.name.trim() || !form.hourlyRate) return;
-    setEmployees((p) => [...p, { id: Date.now().toString(), name: form.name.trim(), hourlyRate: parseFloat(form.hourlyRate) }]);
-    setForm({ name: "", hourlyRate: "" });
+    if (!form.name.trim()) return;
+    if (form.type === "hourly" && !form.hourlyRate) return;
+    if (form.type === "franchise" && !form.monthlyFee) return;
+    setEmployees((p) => [...p, { id: Date.now().toString(), name: form.name.trim(), type: form.type, hourlyRate: parseFloat(form.hourlyRate) || 0, monthlyFee: parseFloat(form.monthlyFee) || 0 }]);
+    setForm({ name: "", hourlyRate: "", type: "hourly", monthlyFee: "" });
   };
 
   const saveEdit = (id) => {
-    setEmployees((p) => p.map((e) => e.id === id ? { ...e, name: editVals.name, hourlyRate: parseFloat(editVals.hourlyRate) } : e));
+    setEmployees((p) => p.map((e) => e.id === id ? { ...e, name: editVals.name, type: editVals.type, hourlyRate: parseFloat(editVals.hourlyRate) || 0, monthlyFee: parseFloat(editVals.monthlyFee) || 0 } : e));
     setEditId(null);
   };
 
@@ -2017,31 +2029,52 @@ function Employees({ employees, setEmployees }) {
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div style={{ flex: 3 }}>
             <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>שם עובד</label>
-            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              onKeyDown={(e) => e.key === "Enter" && addEmployee()}
-              placeholder="שם מלא" style={inputStyle} />
+            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} onKeyDown={(e) => e.key === "Enter" && addEmployee()} placeholder="שם מלא" style={inputStyle} />
           </div>
           <div style={{ flex: 2 }}>
-            <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>₪ לשעה</label>
-            <input value={form.hourlyRate} onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
-              onKeyDown={(e) => e.key === "Enter" && addEmployee()}
-              placeholder="45" type="number" style={inputStyle} />
+            <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>סוג</label>
+            <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={inputStyle}>
+              <option value="hourly">👷 שכיר שעתי</option>
+              <option value="franchise">🤝 זכיין/חשבונית</option>
+            </select>
           </div>
+          {form.type === "hourly" ? (
+            <div style={{ flex: 2 }}>
+              <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>₪ לשעה</label>
+              <input value={form.hourlyRate} onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))} placeholder="45" type="number" style={inputStyle} />
+            </div>
+          ) : (
+            <div style={{ flex: 2 }}>
+              <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>₪ לחודש (לפני מע"מ)</label>
+              <input value={form.monthlyFee || ""} onChange={(e) => setForm((f) => ({ ...f, monthlyFee: e.target.value }))} placeholder="9000" type="number" style={inputStyle} />
+            </div>
+          )}
           <Btn onClick={addEmployee}>+ הוסף</Btn>
         </div>
       </Card>
 
       <Card title="רשימת עובדים">
-        {employees.length === 0 && <div style={{ color: "#64748b", fontSize: 13 }}>אין עובדים — הוסף עובדים כדי לעקוב אחר לייבור קוסט</div>}
+        {employees.length === 0 && <div style={{ color: "#64748b", fontSize: 13 }}>אין עובדים עדיין</div>}
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          {employees.length > 0 && <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>שם עובד</Th><Th>₪ לשעה</Th><Th></Th></tr></thead>}
+          {employees.length > 0 && <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>שם עובד</Th><Th>סוג</Th><Th>תעריף</Th><Th></Th></tr></thead>}
           <tbody>
             {employees.map((e) => (
               <tr key={e.id} style={{ borderBottom: "1px solid #e2e8f0", background: editId === e.id ? "#fff1f1" : "transparent" }}>
                 {editId === e.id ? (
                   <>
                     <Td><input value={editVals.name} onChange={(ev) => setEditVals((v) => ({ ...v, name: ev.target.value }))} style={{ ...inputStyle, width: "100%" }} autoFocus /></Td>
-                    <Td><input type="number" value={editVals.hourlyRate} onChange={(ev) => setEditVals((v) => ({ ...v, hourlyRate: ev.target.value }))} style={{ ...inputStyle, width: 100 }} /></Td>
+                    <Td>
+                      <select value={editVals.type || "hourly"} onChange={ev => setEditVals(v => ({ ...v, type: ev.target.value }))} style={inputStyle}>
+                        <option value="hourly">👷 שכיר שעתי</option>
+                        <option value="franchise">🤝 זכיין/חשבונית</option>
+                      </select>
+                    </Td>
+                    <Td>
+                      {(editVals.type || "hourly") === "franchise"
+                        ? <input type="number" value={editVals.monthlyFee || ""} onChange={ev => setEditVals(v => ({ ...v, monthlyFee: ev.target.value }))} placeholder="9000" style={{ ...inputStyle, width: 100 }} />
+                        : <input type="number" value={editVals.hourlyRate} onChange={(ev) => setEditVals((v) => ({ ...v, hourlyRate: ev.target.value }))} style={{ ...inputStyle, width: 100 }} />
+                      }
+                    </Td>
                     <Td>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button onClick={() => saveEdit(e.id)} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>שמור</button>
@@ -2052,10 +2085,11 @@ function Employees({ employees, setEmployees }) {
                 ) : (
                   <>
                     <Td style={{ fontWeight: 600 }}>{e.name}</Td>
-                    <Td style={{ color: "#fb923c" }}>₪{fmt(e.hourlyRate)}</Td>
+                    <Td><span style={{ fontSize: 11, background: e.type === "franchise" ? "#f0fdf4" : "#fff7ed", color: e.type === "franchise" ? "#16a34a" : "#fb923c", borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>{e.type === "franchise" ? "🤝 זכיין" : "👷 שעתי"}</span></Td>
+                    <Td style={{ color: e.type === "franchise" ? "#16a34a" : "#fb923c", fontWeight: 700 }}>{e.type === "franchise" ? `₪${fmt(e.monthlyFee || 0)}/חודש` : `₪${fmt(e.hourlyRate)}/שעה`}</Td>
                     <Td>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => { setEditId(e.id); setEditVals({ name: e.name, hourlyRate: String(e.hourlyRate) }); }}
+                        <button onClick={() => { setEditId(e.id); setEditVals({ name: e.name, type: e.type || "hourly", hourlyRate: String(e.hourlyRate || ""), monthlyFee: String(e.monthlyFee || "") }); }}
                           style={{ background: "none", border: "none", color: "#cc0000", cursor: "pointer", fontSize: 14 }}>✏️</button>
                         <button onClick={() => setEmployees((p) => p.filter((x) => x.id !== e.id))}
                           style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button>
@@ -2071,6 +2105,7 @@ function Employees({ employees, setEmployees }) {
     </div>
   );
 }
+
 
 function Hours({ hours, setHours, employees, setEmployees, sales, settings }) {
   const nowD = new Date();
@@ -2231,10 +2266,12 @@ function Hours({ hours, setHours, employees, setEmployees, sales, settings }) {
   const monthHours = hours.filter((h) => h.date?.startsWith(monthKey));
   const monthlySales = sales.filter((s) => s.date?.startsWith(monthKey));
   const totalSales = monthlySales.reduce((a, s) => a + (parseFloat(s.kupa) || 0) + (parseFloat(s.wolt) || 0), 0);
+  const franchiseCostH = employees.filter(e => e.type === "franchise").reduce((a, e) => a + parseFloat(e.monthlyFee || 0), 0);
   const totalLaborCost = monthHours.reduce((a, h) => {
     const emp = employees.find((e) => e.id === h.employeeId);
-    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0) * 1.125; // כולל 12.5% עלות מעביד
-  }, 0);
+    if (!emp || emp.type === "franchise") return a;
+    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp.hourlyRate) || 0) * 1.125;
+  }, 0) + franchiseCostH;
   const totalLaborHours = monthHours.reduce((a, h) => a + (parseFloat(h.hours) || 0), 0);
   const laborPct = parseFloat(pct(totalLaborCost, totalSales));
   const lcSettings = { greenMax: settings.laborGreenMax, yellowMax: settings.laborYellowMax };
@@ -3850,10 +3887,12 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
   const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue * 100).toFixed(1) : 0;
 
   // ── הוצאות תפעול ──
+  const franchiseCostPnL = employees.filter(e => e.type === "franchise").reduce((a, e) => a + parseFloat(e.monthlyFee || 0), 0);
   const laborCost = monthHours.reduce((a, h) => {
     const emp = employees.find(e => e.id === h.employeeId);
-    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp?.hourlyRate) || 0) * 1.125; // כולל 12.5% עלות מעביד
-  }, 0);
+    if (!emp || emp.type === "franchise") return a;
+    return a + (parseFloat(h.hours) || 0) * (parseFloat(emp.hourlyRate) || 0) * 1.125;
+  }, 0) + franchiseCostPnL;
 
   const variableExpenses = monthExpenses.reduce((a, e) => a + parseFloat(e.amount || 0), 0);
   const totalFixed = fixedExpenses.reduce((a, e) => a + parseFloat(e.amount || 0), 0);
