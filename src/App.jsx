@@ -2979,6 +2979,7 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
   const [newItem, setNewItem] = useState({ productId: "", qty: "1", price: "" });
   const [showForm, setShowForm] = useState(false);
   const [selectedSup, setSelectedSup] = useState("");
+  const [scanSupplierFilter, setScanSupplierFilter] = useState("");
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState("");
@@ -3033,9 +3034,12 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
         base64 = compressed.base64;
         mediaType = compressed.mediaType;
       }
-      const suppliersList = suppliers.map(s => ({
+      const relevantSuppliers = scanSupplierFilter
+        ? suppliers.filter(s => s.id === scanSupplierFilter)
+        : suppliers;
+      const suppliersList = relevantSuppliers.map(s => ({
         id: s.id, name: s.name,
-        products: products.filter(p => p.supplierId === s.id).map(p => ({ name: p.name, unit: p.unit }))
+        products: products.filter(p => p.supplierId === s.id).map(p => ({ name: p.name, unit: p.unit, price: p.basePrice }))
       }));
       const response = await fetch("/api/scan", {
         method: "POST",
@@ -3047,26 +3051,28 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
             { type: isPdf ? "document" : "image", source: { type: "base64", media_type: mediaType, data: base64 } },
             { type: "text", text: `אתה מומחה בקריאת תעודות משלוח בעברית. קרא את כל הטקסט בתמונה בקפידה.
 
-ספקים ומוצרים קיימים במערכת:
+${scanSupplierFilter ? `הספק הוא: ${suppliers.find(s=>s.id===scanSupplierFilter)?.name || ""}` : ""}
+
+רשימת הספקים והמוצרים הקיימים במערכת — חובה להשתמש בשמות המדויקים:
 ${JSON.stringify(suppliersList, null, 2)}
 
-החזר JSON בלבד (ללא טקסט נוסף, ללא \`\`\`):
+חוקים מחייבים:
+1. supplierId: חובה להחזיר את ה-id של הספק מהרשימה${scanSupplierFilter ? ` (הספק הנבחר: ${scanSupplierFilter})` : ""}.
+2. שם מוצר: חובה להשתמש בשם המדויק מרשימת המוצרים — אל תמציא שמות חדשים.
+3. אם מוצר בתעודה דומה למוצר ברשימה — השתמש בשם מהרשימה בדיוק.
+4. מחיר (price): אם אין מחיר בתעודה — שים 0 (המערכת תמשוך אוטומטית).
+5. כמות (qty): מספר יחידות בלבד (1-500). מספר קטלוג (4-6 ספרות) אינו כמות.
+6. מספר קטלוג/פריט (כמו 23030) — התעלם ממנו לחלוטין.
+
+החזר JSON בלבד:
 {
-  "supplierName": "שם הספק כפי שמופיע בתעודה",
-  "supplierId": "id של ספק קיים אם זוהה, אחרת ריק",
+  "supplierName": "שם הספק",
+  "supplierId": "id מהרשימה",
   "date": "YYYY-MM-DD",
   "deliveryNum": "מספר התעודה",
-  "items": [
-    {"name": "שם המוצר מהתעודה", "matchedProductName": "שם המוצר הקיים במערכת שהכי דומה", "unit": "יחידת מידה", "qty": 0.0, "price": 0.0}
-  ],
+  "items": [{"name": "שם מדויק מהרשימה", "unit": "יחידת מידה", "qty": 0.0, "price": 0.0}],
   "total": 0.0
-}
-
-חוקי זיהוי קריטיים:
-1. מספר פריט/קטלוג (4-6 ספרות כמו 23030, 23029) — קוד מוצר בלבד, אל תשים בכמות או מחיר.
-2. כמות (qty): מספר יחידות — 1 עד 500 בלבד.
-3. מחיר (price): אם אין מחיר בתעודה — שים 0.
-4. matchedProductName: חפש בין המוצרים הקיימים של הספק את המוצר הכי דומה לשם בתעודה. לדוגמה: "הוטדוג 130 גר׳" בתעודה → "לחמניות הוטדוג 130 גר׳" במערכת.` }
+}` }
           ]}]
         })
       });
@@ -3136,7 +3142,14 @@ ${JSON.stringify(suppliersList, null, 2)}
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div style={{ color: "#888", fontSize: 13 }}>{deliveries.length} תעודות משלוח במערכת</div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "4px 10px" }}>
+            <span style={{ fontSize: 12, color: "#64748b" }}>ספק לסריקה:</span>
+            <select value={scanSupplierFilter} onChange={e => setScanSupplierFilter(e.target.value)} style={{ border: "none", background: "transparent", fontSize: 13, color: "#1e293b", fontFamily: "inherit", cursor: "pointer" }}>
+              <option value="">— כל הספקים —</option>
+              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
           <label style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: scanning ? 0.6 : 1 }}>
             {scanning ? "⏳ סורק..." : "📸 סרוק תעודה"}
             <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={e => e.target.files[0] && scanDelivery(e.target.files[0])} disabled={scanning} />
