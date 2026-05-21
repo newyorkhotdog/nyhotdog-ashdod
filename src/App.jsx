@@ -1136,7 +1136,6 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
     setScanning(true);
     setScanResult(null);
     setScanError("");
-    // Save original image for viewing
     if (file.type !== "application/pdf") {
       setOriginalImageUrl(URL.createObjectURL(file));
     } else {
@@ -1145,6 +1144,14 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
     try {
       const { base64, mediaType } = await compressImage(file);
       const isPdf = mediaType === "application/pdf";
+
+      // בנה רשימת ספקים ומוצרים קיימים לעזר לAI
+      const suppliersList = suppliers.map(s => ({
+        id: s.id,
+        name: s.name,
+        products: products.filter(p => p.supplierId === s.id).map(p => ({ name: p.name, price: p.basePrice, unit: p.unit }))
+      }));
+
       const response = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1157,23 +1164,28 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
               { type: isPdf ? "document" : "image", source: { type: "base64", media_type: mediaType, data: base64 } },
               { type: "text", text: `אתה מומחה בקריאת חשבוניות ישראליות. קרא את החשבונית בקפידה.
 
-הכלל הקריטי לזיהוי כמות מול מחיר:
-- כמות (qty): מספר שלם קטן — 1, 2, 3, 5, 10, 24, 48. לעולם לא יהיה מספר גדול עם נקודה עשרונית.
-- מחיר (price): מספר עם אגורות — 12.50, 45.90, 120.00, 8.40. לרוב גדול מ-5.
-- סה"כ שורה = qty × price. השתמש בזה לאימות: אם qty=2 ו-price=45.90 אז סה"כ שורה=91.80.
-- אם רואים שתי עמודות מספרים ואחת קטנה (1-50) ואחת גדולה — הקטנה היא qty, הגדולה היא price.
-- לעולם אל תשים מחיר בשדה qty!
+ספקים קיימים במערכת (התאם לפי שם — אל תיצור ספק חדש אם הספק כבר קיים):
+${JSON.stringify(suppliersList, null, 2)}
 
-החזר JSON בלבד, ללא markdown, ללא backticks:
+כללי התאמה:
+1. אם שם הספק בחשבונית דומה לספק קיים (גם אם לא זהה בדיוק) — החזר את ה-id שלו ב-supplierId
+2. אם פריט בחשבונית דומה למוצר קיים של הספק — השתמש בשם המוצר הקיים בדיוק
+3. רק אם ספק/מוצר לא קיים בכלל — צור חדש (השאר supplierId ריק)
+
+הכלל הקריטי לזיהוי כמות מול מחיר:
+- כמות (qty): מספר שלם קטן — 1, 2, 3, 5, 10, 24, 48
+- מחיר (price): מספר עם אגורות — 12.50, 45.90, 120.00
+- סה"כ שורה = qty × price. בדוק כל פריט לפני החזרה.
+
+החזר JSON בלבד, ללא markdown:
 {
-  "supplierName": "שם הספק/חברה כפי שמופיע בראש החשבונית",
+  "supplierName": "שם הספק כפי שמופיע בחשבונית",
+  "supplierId": "id של ספק קיים אם זוהה, אחרת ריק",
   "date": "YYYY-MM-DD",
   "invoiceNum": "מספר החשבונית",
   "items": [{ "name": "שם פריט", "unit": "יחידת מידה", "qty": 1.0, "price": 0.0 }],
   "total": 0.0
-}
-
-לפני שליחה — בדוק כל פריט: האם qty × price = סה"כ שורה? אם לא, תקן.` }
+}` }
             ]
           }]
         })
@@ -1192,14 +1204,35 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
 
   const applyScanResult = () => {
     if (!scanResult) return;
-    const existingSupplier = suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
+    // AI מחזיר supplierId אם זיהה ספק קיים — אחרת מחפשים לפי שם
+    let existingSupplier = scanResult.supplierId
+      ? suppliers.find(s => s.id === scanResult.supplierId)
+      : suppliers.find(s => s.name.trim().replace(/\s+/g, ' ') === scanResult.supplierName?.trim().replace(/\s+/g, ' '));
+
+    // fallback — חיפוש חלקי אם עדיין לא נמצא
+    if (!existingSupplier && scanResult.supplierName) {
+      const scanName = scanResult.supplierName.trim().toLowerCase();
+      existingSupplier = suppliers.find(s =>
+        s.name.toLowerCase().includes(scanName) || scanName.includes(s.name.toLowerCase())
+      );
+    }
+
     const isNewSupplier = !existingSupplier;
     const supId = existingSupplier?.id || Date.now().toString();
     const supName = scanResult.supplierName;
 
     // Check for new products and price alerts
     const itemsAnalysis = (scanResult.items || []).map(item => {
-      const existingProd = products.find(p => p.supplierId === supId && p.name.trim() === item.name?.trim());
+      const itemName = item.name?.trim().toLowerCase() || "";
+      // חיפוש מדויק קודם, אחר כך חלקי
+      let existingProd = products.find(p => p.supplierId === supId && p.name.trim().toLowerCase() === itemName);
+      if (!existingProd) {
+        existingProd = products.find(p => p.supplierId === supId && (
+          p.name.toLowerCase().includes(itemName) || itemName.includes(p.name.toLowerCase())
+        ));
+      }
+      // אם מצאנו — השתמש בשם המוצר הקיים
+      if (existingProd) item = { ...item, name: existingProd.name };
       const isNew = !existingProd;
       const priceDiff = existingProd ? ((parseFloat(item.price) - existingProd.basePrice) / existingProd.basePrice) * 100 : 0;
       const hasAlert = !isNew && priceDiff > 5;
@@ -3000,6 +3033,10 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
         base64 = compressed.base64;
         mediaType = compressed.mediaType;
       }
+      const suppliersList = suppliers.map(s => ({
+        id: s.id, name: s.name,
+        products: products.filter(p => p.supplierId === s.id).map(p => ({ name: p.name, unit: p.unit }))
+      }));
       const response = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -3010,21 +3047,23 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
             { type: isPdf ? "document" : "image", source: { type: "base64", media_type: mediaType, data: base64 } },
             { type: "text", text: `אתה מומחה בקריאת תעודות משלוח בעברית. קרא את כל הטקסט בתמונה בקפידה.
 
-חלץ את המידע הבא והחזר JSON בלבד (ללא טקסט נוסף, ללא \`\`\`):
+ספקים קיימים במערכת — התאם לפי שם, אל תיצור ספק חדש אם קיים:
+${JSON.stringify(suppliersList, null, 2)}
+
+החזר JSON בלבד (ללא טקסט נוסף, ללא \`\`\`):
 {
-  "supplierName": "שם הספק/ספק המוצר כפי שמופיע בתעודה",
+  "supplierName": "שם הספק כפי שמופיע בתעודה",
+  "supplierId": "id של ספק קיים אם זוהה, אחרת ריק",
   "date": "YYYY-MM-DD",
   "deliveryNum": "מספר התעודה",
   "items": [
-    {"name": "שם המוצר המדויק", "unit": "יחידת מידה (ק\"ג/יחידה/ליטר/קרטון)", "qty": 0.0, "price": 0.0}
+    {"name": "שם המוצר המדויק כפי שקיים אצל הספק", "unit": "יחידת מידה", "qty": 0.0, "price": 0.0}
   ],
   "total": 0.0
 }
 
 הנחיות:
-- שם הספק: חפש בראש התעודה — שם חברה, לוגו, או "מוכר"/"ספק"
-- תאריך: המר לפורמט YYYY-MM-DD
-- פריטים: כל שורת מוצר עם כמות ומחיר
+- שם הספק: חפש בראש התעודה — התאם לספק קיים אם אפשר
 - מחיר: מחיר ליחידה (לא סה"כ שורה)
 - אם לא בטוח — כתוב את מה שרואים ישירות` }
           ]}]
@@ -3043,7 +3082,14 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
     if (!scanResult) return;
     let currentSuppliers = [...suppliers];
     let currentProducts = [...products];
-    let sup = currentSuppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
+    // התאמה לפי ID שחזר מה-AI, אחר כך לפי שם מדויק, אחר כך חיפוש חלקי
+    let sup = scanResult.supplierId
+      ? currentSuppliers.find(s => s.id === scanResult.supplierId)
+      : currentSuppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
+    if (!sup && scanResult.supplierName) {
+      const scanName = scanResult.supplierName.trim().toLowerCase();
+      sup = currentSuppliers.find(s => s.name.toLowerCase().includes(scanName) || scanName.includes(s.name.toLowerCase()));
+    }
     if (!sup) {
       sup = { id: Date.now().toString(), name: scanResult.supplierName };
       currentSuppliers = [...currentSuppliers, sup];
@@ -3051,7 +3097,14 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
     }
     const items = [];
     for (const item of scanResult.items || []) {
-      let prod = currentProducts.find(p => p.supplierId === sup.id && p.name.trim() === item.name?.trim());
+      const itemName = item.name?.trim().toLowerCase() || "";
+      // חיפוש מדויק קודם, אחר כך חלקי
+      let prod = currentProducts.find(p => p.supplierId === sup.id && p.name.trim().toLowerCase() === itemName);
+      if (!prod) {
+        prod = currentProducts.find(p => p.supplierId === sup.id && (
+          p.name.toLowerCase().includes(itemName) || itemName.includes(p.name.toLowerCase())
+        ));
+      }
       if (!prod) {
         prod = { id: (Date.now() + Math.random() * 1000).toString(), supplierId: sup.id, name: item.name, unit: item.unit || "יחידה", basePrice: parseFloat(item.price) || 0 };
         currentProducts = [...currentProducts, prod];
