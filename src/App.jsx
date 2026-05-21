@@ -3046,33 +3046,23 @@ function Deliveries({ deliveries, setDeliveries, suppliers, products, setSupplie
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 1500,
+          max_tokens: 1000,
           messages: [{ role: "user", content: [
             { type: isPdf ? "document" : "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-            { type: "text", text: `אתה מומחה בקריאת תעודות משלוח בעברית. קרא את כל הטקסט בתמונה בקפידה.
-
-${scanSupplierFilter ? `הספק הוא: ${suppliers.find(s=>s.id===scanSupplierFilter)?.name || ""}` : ""}
-
-רשימת הספקים והמוצרים הקיימים במערכת — חובה להשתמש בשמות המדויקים:
-${JSON.stringify(suppliersList, null, 2)}
-
-חוקים מחייבים:
-1. supplierId: חובה להחזיר את ה-id של הספק מהרשימה${scanSupplierFilter ? ` (הספק הנבחר: ${scanSupplierFilter})` : ""}.
-2. שם מוצר: חובה להשתמש בשם המדויק מרשימת המוצרים — אל תמציא שמות חדשים.
-3. אם מוצר בתעודה דומה למוצר ברשימה — השתמש בשם מהרשימה בדיוק.
-4. מחיר (price): אם אין מחיר בתעודה — שים 0 (המערכת תמשוך אוטומטית).
-5. כמות (qty): מספר יחידות בלבד (1-500). מספר קטלוג (4-6 ספרות) אינו כמות.
-6. מספר קטלוג/פריט (כמו 23030) — התעלם ממנו לחלוטין.
-
-החזר JSON בלבד:
+            { type: "text", text: `קרא את תעודת המשלוח והחזר JSON בלבד (ללא backticks):
 {
-  "supplierName": "שם הספק",
-  "supplierId": "id מהרשימה",
+  "supplierName": "שם הספק/חברה בראש התעודה",
+  "supplierId": "",
   "date": "YYYY-MM-DD",
   "deliveryNum": "מספר התעודה",
-  "items": [{"name": "שם מדויק מהרשימה", "unit": "יחידת מידה", "qty": 0.0, "price": 0.0}],
-  "total": 0.0
-}` }
+  "items": [{"name": "שם המוצר כפי שכתוב", "unit": "יחידה", "qty": 0, "price": 0}],
+  "total": 0
+}
+
+חוקים:
+- כמות (qty): מספרים קטנים בעמודת כמות (1-500). מספר קטלוג 5 ספרות (כמו 23030) - התעלם ממנו.
+- מחיר: אם אין מחיר בתעודה - שים 0.
+- שם מוצר: כפי שכתוב בדיוק בתעודה.` }
           ]}]
         })
       });
@@ -3224,60 +3214,74 @@ ${JSON.stringify(suppliersList, null, 2)}
 
       {scanResult && (
         <Card title="📋 תעודת משלוח — בדוק ואשר">
+          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 12, color: "#92400e" }}>
+            ⚠️ בדוק כל שורה: בחר מוצר מהרשימה, תקן כמות ומחיר אם צריך, אחר כך לחץ שמור.
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ספק</div>
-              <input value={scanResult.supplierName || ""} onChange={e => setScanResult(p => ({ ...p, supplierName: e.target.value }))} style={{ ...inputStyle, color: "#1e293b", fontWeight: 700 }} />
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4, fontWeight: 600 }}>ספק <span style={{ color: "#cc0000" }}>*</span></div>
               <select
-                value={suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim())?.id || ""}
-                onChange={e => { const s = suppliers.find(x => x.id === e.target.value); if (s) setScanResult(p => ({ ...p, supplierName: s.name })); }}
-                style={{ ...inputStyle, marginTop: 4, fontSize: 12, color: "#64748b" }}
+                value={suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim())?.id || scanResult.supplierId || ""}
+                onChange={e => { const s = suppliers.find(x => x.id === e.target.value); if (s) setScanResult(p => ({ ...p, supplierName: s.name, supplierId: s.id })); }}
+                style={{ ...inputStyle, fontWeight: 700, borderColor: suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim()) ? "#22c55e" : "#f59e0b" }}
               >
-                <option value="">— בחר מהרשימה —</option>
+                <option value="">— בחר ספק —</option>
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
+              <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>זיהוי AI: {scanResult.supplierName}</div>
             </div>
-            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div><input type="date" value={scanResult.date || ""} onChange={e => setScanResult(p => ({ ...p, date: e.target.value }))} style={inputStyle} /></div>
-            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מס׳ תעודה</div><input value={scanResult.deliveryNum || ""} onChange={e => setScanResult(p => ({ ...p, deliveryNum: e.target.value }))} style={inputStyle} /></div>
+            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4, fontWeight: 600 }}>תאריך</div><input type="date" value={scanResult.date || ""} onChange={e => setScanResult(p => ({ ...p, date: e.target.value }))} style={inputStyle} /></div>
+            <div><div style={{ fontSize: 11, color: "#64748b", marginBottom: 4, fontWeight: 600 }}>מס׳ תעודה</div><input value={scanResult.deliveryNum || ""} onChange={e => setScanResult(p => ({ ...p, deliveryNum: e.target.value }))} style={inputStyle} /></div>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 14 }}>
-            <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>פריט</Th><Th>כמות</Th><Th>יחידה</Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th></tr></thead>
+            <thead><tr style={{ background: "#f8fafc", color: "#64748b", borderBottom: "2px solid #cbd5e1" }}>
+              <Th>AI קרא</Th><Th>מוצר במערכת <span style={{ color: "#cc0000" }}>*</span></Th><Th>כמות <span style={{ color: "#cc0000" }}>*</span></Th><Th>מחיר</Th><Th>סה״כ</Th><Th></Th>
+            </tr></thead>
             <tbody>
               {(scanResult.items || []).map((item, i) => {
-                const sup = suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim());
+                const sup = suppliers.find(s => s.name.trim() === scanResult.supplierName?.trim() || s.id === scanResult.supplierId);
                 const supProds = sup ? products.filter(p => p.supplierId === sup.id) : [];
+                const selectedProd = supProds.find(p => p.name.trim() === item.name?.trim());
+                const isLinked = !!selectedProd;
                 return (
-                <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                <tr key={i} style={{ borderBottom: "1px solid #e2e8f0", background: isLinked ? "#f0fdf4" : "#fff" }}>
+                  <Td style={{ color: "#94a3b8", fontSize: 11, maxWidth: 120 }}>{item.originalName || item.name}</Td>
                   <Td>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <input value={item.name || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: e.target.value } : it) }))} style={{ ...inputStyle, width: "100%" }} placeholder="שם פריט" />
-                      {supProds.length > 0 && (
-                        <select
-                          onChange={e => {
-                            if (!e.target.value) return;
-                            const prod = supProds.find(p => p.id === e.target.value);
-                            if (prod) setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: prod.name, unit: prod.unit, price: String(prod.basePrice) } : it) }));
-                            e.target.value = "";
-                          }}
-                          style={{ ...inputStyle, fontSize: 11, color: "#64748b" }}
-                        >
-                          <option value="">🔗 החלף לפריט מהמערכת...</option>
-                          {supProds.map(p => <option key={p.id} value={p.id}>{p.name} | {p.unit} | ₪{fmt(p.basePrice)}</option>)}
-                        </select>
-                      )}
-                    </div>
+                    <select
+                      value={selectedProd?.id || ""}
+                      onChange={e => {
+                        if (e.target.value === "__new__") {
+                          // הוסף מוצר חדש לספק
+                          if (!sup) return alert("בחר ספק קודם");
+                          const newProdName = item.name || "";
+                          const newProd = { id: Date.now().toString() + i, supplierId: sup.id, name: newProdName, unit: item.unit || "יחידה", basePrice: parseFloat(item.price) || 0 };
+                          setProducts(p => [...p, newProd]);
+                          setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: newProd.name, unit: newProd.unit } : it) }));
+                          return;
+                        }
+                        if (!e.target.value) return;
+                        const prod = supProds.find(p => p.id === e.target.value);
+                        if (prod) setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, name: prod.name, unit: prod.unit, price: String(prod.basePrice || it.price) } : it) }));
+                      }}
+                      style={{ ...inputStyle, fontSize: 12, borderColor: isLinked ? "#22c55e" : "#f59e0b", width: "100%" }}
+                    >
+                      <option value="">— בחר מוצר —</option>
+                      {supProds.map(p => <option key={p.id} value={p.id}>{p.name} | ₪{fmt(p.basePrice)}</option>)}
+                      <option value="__new__">➕ הוסף כמוצר חדש: "{item.name}"</option>
+                    </select>
+                    {isLinked && <div style={{ fontSize: 10, color: "#16a34a", marginTop: 2 }}>✓ מקושר</div>}
+                    {!isLinked && <div style={{ fontSize: 10, color: "#f59e0b", marginTop: 2 }}>⚠ בחר מוצר או הוסף חדש</div>}
                   </Td>
-                  <Td><input type="number" value={item.qty || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70 }} /></Td>
-                  <Td><select value={item.unit || "יחידה"} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, unit: e.target.value } : it) }))} style={inputStyle}>{['ק"ג', "יחידה", "ליטר", "קרטון", "שק", "קופסה", "100 גרם"].map(u => <option key={u}>{u}</option>)}</select></Td>
-                  <Td><input type="number" value={item.price || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90, color: "#1e293b" }} /></Td>
-                  <Td style={{ color: "#1e293b", fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
+                  <Td><input type="number" value={item.qty || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, qty: e.target.value } : it) }))} style={{ ...inputStyle, width: 70, borderColor: !item.qty || item.qty == 0 ? "#ef4444" : "#e2e8f0" }} /></Td>
+                  <Td><input type="number" value={item.price || ""} onChange={e => setScanResult(p => ({ ...p, items: p.items.map((it, idx) => idx === i ? { ...it, price: e.target.value } : it) }))} style={{ ...inputStyle, width: 90 }} placeholder="0" /></Td>
+                  <Td style={{ fontWeight: 700 }}>₪{fmt(parseFloat(item.price || 0) * parseFloat(item.qty || 0))}</Td>
                   <Td><button onClick={() => setScanResult(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button></Td>
                 </tr>
                 );
               })}
-              <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
+              <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700, background: "#f8fafc" }}>
                 <Td colSpan={4} style={{ color: "#64748b" }}>סה״כ</Td>
-                <Td style={{ color: "#22c55e" }}>₪{fmt((scanResult.items || []).reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0))}</Td>
+                <Td style={{ color: "#22c55e", fontSize: 15 }}>₪{fmt((scanResult.items || []).reduce((a, i) => a + parseFloat(i.price || 0) * parseFloat(i.qty || 0), 0))}</Td>
                 <Td></Td>
               </tr>
             </tbody>
