@@ -618,7 +618,8 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
         <KpiCard label="מכירות החודש" value={`₪${fmt(totalSales)}`} accent="#0284c7" sub={`קופה ₪${fmt(totalKupa)} | וולט ₪${fmt(totalWolt)}`} />
         <KpiCard label="עלות ספקים" value={`₪${fmt(totalCost)}`} accent="#64748b" sub={`${monthlyInvoices.length} חשבוניות${deliveryCostNoInvoice > 0 ? ` + ₪${fmt(deliveryCostNoInvoice)} תעודות` : ""}`} />
         <KpiCard label="פוד קוסט" value={<StatusBadge value={foodCostPct} settings={settings} />} accent="#f472b6" raw />
-        <KpiCard label="עלות עבודה" value={`₪${fmt(totalLaborCost)}`} accent="#fb923c" sub={`${totalLaborHours.toFixed(1)} שעות`} />
+        <KpiCard label="עלות עבודה — עובדים" value={`₪${fmt(totalLaborCost - franchiseCost)}`} accent="#fb923c" sub={`${totalLaborHours.toFixed(1)} שעות + 12.5%`} />
+        {franchiseCost > 0 && <KpiCard label="שכר זכיין" value={`₪${fmt(franchiseCost)}`} accent="#16a34a" sub="ללא עלות מעביד" />}
         <KpiCard label="לייבור קוסט" value={<StatusBadge value={laborCostPct} settings={lcSettings} />} accent="#fb923c" raw />
         <KpiCard label="רווח נקי" value={`${netProfit >= 0 ? "" : "-"}₪${fmt(Math.abs(netProfit))}`} accent={netColor} sub={`${netProfit >= 0 ? "+" : ""}${netProfitPct}% מהכנסה נטו`} />
         <KpiCard label="התראות מחיר" value={alerts.length} accent={alerts.length > 0 ? "#f59e0b" : "#22c55e"} sub={alerts.length > 0 ? "דרוש טיפול" : "הכל תקין"} />
@@ -784,18 +785,28 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
       {/* Cash Deposits summary */}
       {(() => {
         const monthCash = cashDeposits.filter(d => d.date?.startsWith(monthKey));
-        const totalWithdrawn = monthCash.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
-        const totalDeposited = monthCash.reduce((a, d) => a + parseFloat(d.bankAmount || 0), 0);
-        const pendingDeposit = monthCash.filter(d => !d.bankAmount).reduce((a, d) => a + parseFloat(d.amount || 0), 0);
-        const gap = totalDeposited - totalWithdrawn;
-        if (totalWithdrawn === 0) return null;
+        const monthSalaries = monthCash.filter(d => d.type === "salary");
+        const monthOps = monthCash.filter(d => d.type !== "salary");
+        const totalWithdrawn = monthOps.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
+        const totalDeposited = monthOps.reduce((a, d) => a + parseFloat(d.bankAmount || 0), 0);
+        const totalSalaries = monthSalaries.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
+        // ממתין להפקדה = יצא מהקופה - שולם משכורות - הופקד בבנק
+        const pendingDeposit = Math.max(0, totalWithdrawn - totalSalaries - totalDeposited);
+        const gap = totalDeposited - (totalWithdrawn - totalSalaries);
+        if (totalWithdrawn === 0 && totalSalaries === 0) return null;
         return (
           <Card title="💵 מזומן — בקרת הפקדות החודש">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
               <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>הוצא מהקופה</div>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>סה"כ הוצא מהקופה</div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: "#cc0000" }}>₪{fmt(totalWithdrawn)}</div>
               </div>
+              {totalSalaries > 0 && (
+                <div style={{ background: "#faf5ff", borderRadius: 8, padding: "10px 14px", border: "1px solid #7c3aed" }}>
+                  <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>משכורות ששולמו</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#7c3aed" }}>₪{fmt(totalSalaries)}</div>
+                </div>
+              )}
               <div style={{ background: "#f0fdf4", borderRadius: 8, padding: "10px 14px", border: "1px solid #22c55e" }}>
                 <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>הופקד בבנק</div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: "#22c55e" }}>₪{fmt(totalDeposited)}</div>
@@ -803,11 +814,12 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
               <div style={{ background: pendingDeposit > 0 ? "#fffbeb" : "#f0fdf4", borderRadius: 8, padding: "10px 14px", border: `1px solid ${pendingDeposit > 0 ? "#f59e0b" : "#22c55e"}` }}>
                 <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ממתין להפקדה</div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: pendingDeposit > 0 ? "#f59e0b" : "#22c55e" }}>₪{fmt(pendingDeposit)}</div>
+                {totalSalaries > 0 && <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>אחרי הורדת משכורות</div>}
               </div>
               <div style={{ background: Math.abs(gap) < 5 ? "#f0fdf4" : gap < 0 ? "#fff5f5" : "#fffbeb", borderRadius: 8, padding: "10px 14px", border: `1px solid ${Math.abs(gap) < 5 ? "#22c55e" : gap < 0 ? "#ef4444" : "#f59e0b"}` }}>
-                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>הפרש: הופקד vs. הוצא</div>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>הפרש: הופקד vs. נטו לבנק</div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: Math.abs(gap) < 5 ? "#22c55e" : gap < 0 ? "#ef4444" : "#f59e0b" }}>{gap >= 0 ? "+" : ""}₪{fmt(gap)}</div>
-                <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{Math.abs(gap) < 5 ? "✓ תקין" : gap < 0 ? "⚠ חסר" : "⚠ עודף"}</div>
+                <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{Math.abs(gap) < 5 ? "✓ תקין" : gap < 0 ? "⚠ חסר בבנק" : "⚠ עודף"}</div>
               </div>
             </div>
           </Card>
