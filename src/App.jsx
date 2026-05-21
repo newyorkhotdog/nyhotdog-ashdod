@@ -3603,11 +3603,9 @@ function CashDeposits({ cashDeposits, setCashDeposits, sales, employees = [] }) 
   const monthCashOps = monthDeposits.filter(d => d.type !== "salary");
   const totalWithdrawn = monthCashOps.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
   const totalDeposited = monthCashOps.reduce((a, d) => a + parseFloat(d.bankAmount || 0), 0);
-  const pendingDeposit = monthCashOps.filter(d => !d.bankAmount).reduce((a, d) => a + parseFloat(d.amount || 0), 0);
   const totalSalaries = monthSalaries.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
-
-  // הפרש: הופקד בבנק vs. הוצא מהקופה
-  const gap = totalDeposited - totalWithdrawn;
+  const pendingDeposit = Math.max(0, totalWithdrawn - totalSalaries - totalDeposited);
+  const gap = totalDeposited - (totalWithdrawn - totalSalaries);
 
   const sortedDeposits = [...cashDeposits].sort((a, b) => b.date?.localeCompare(a.date));
 
