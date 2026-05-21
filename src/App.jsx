@@ -790,10 +790,14 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
         const totalWithdrawn = monthOps.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
         const totalDeposited = monthOps.reduce((a, d) => a + parseFloat(d.bankAmount || 0), 0);
         const totalSalaries = monthSalaries.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
-        // ממתין להפקדה = יצא מהקופה - שולם משכורות - הופקד בבנק
-        const pendingDeposit = Math.max(0, totalWithdrawn - totalSalaries - totalDeposited);
         const gap = totalDeposited - (totalWithdrawn - totalSalaries);
-        if (totalWithdrawn === 0 && totalSalaries === 0) return null;
+        // צבר כולל — לא רק החודש
+        const allOps = cashDeposits.filter(d => d.type !== "salary");
+        const allSalaries = cashDeposits.filter(d => d.type === "salary").reduce((a, d) => a + parseFloat(d.amount || 0), 0);
+        const allWithdrawn = allOps.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
+        const allDeposited = allOps.reduce((a, d) => a + parseFloat(d.bankAmount || 0), 0);
+        const cumulativePending = Math.max(0, allWithdrawn - allSalaries - allDeposited);
+        if (totalWithdrawn === 0 && totalSalaries === 0 && cumulativePending === 0) return null;
         return (
           <Card title="💵 מזומן — בקרת הפקדות החודש">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
@@ -811,10 +815,10 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
                 <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>הופקד בבנק</div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: "#22c55e" }}>₪{fmt(totalDeposited)}</div>
               </div>
-              <div style={{ background: pendingDeposit > 0 ? "#fffbeb" : "#f0fdf4", borderRadius: 8, padding: "10px 14px", border: `1px solid ${pendingDeposit > 0 ? "#f59e0b" : "#22c55e"}` }}>
-                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ממתין להפקדה</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: pendingDeposit > 0 ? "#f59e0b" : "#22c55e" }}>₪{fmt(pendingDeposit)}</div>
-                {totalSalaries > 0 && <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>אחרי הורדת משכורות</div>}
+              <div style={{ background: cumulativePending > 0 ? "#fffbeb" : "#f0fdf4", borderRadius: 8, padding: "10px 14px", border: `1px solid ${cumulativePending > 0 ? "#f59e0b" : "#22c55e"}` }}>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>ממתין להפקדה (צבר)</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: cumulativePending > 0 ? "#f59e0b" : "#22c55e" }}>₪{fmt(cumulativePending)}</div>
+                <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>כולל חודשים קודמים</div>
               </div>
               <div style={{ background: Math.abs(gap) < 5 ? "#f0fdf4" : gap < 0 ? "#fff5f5" : "#fffbeb", borderRadius: 8, padding: "10px 14px", border: `1px solid ${Math.abs(gap) < 5 ? "#22c55e" : gap < 0 ? "#ef4444" : "#f59e0b"}` }}>
                 <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>הפרש: הופקד vs. נטו לבנק</div>
@@ -3597,7 +3601,7 @@ function CashDeposits({ cashDeposits, setCashDeposits, sales, employees = [] }) 
     setEditId(null);
   };
 
-  // Monthly stats
+  // Monthly stats — הוצא/הופקד רק החודש
   const monthDeposits = cashDeposits.filter(d => d.date?.startsWith(monthKey));
   const monthSalaries = monthDeposits.filter(d => d.type === "salary");
   const monthCashOps = monthDeposits.filter(d => d.type !== "salary");
@@ -3606,6 +3610,13 @@ function CashDeposits({ cashDeposits, setCashDeposits, sales, employees = [] }) 
   const totalSalaries = monthSalaries.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
   const pendingDeposit = Math.max(0, totalWithdrawn - totalSalaries - totalDeposited);
   const gap = totalDeposited - (totalWithdrawn - totalSalaries);
+
+  // צבר כולל — כל הזמנים (מה שלא הופקד מתגלגל)
+  const allOps = cashDeposits.filter(d => d.type !== "salary");
+  const allSalaries = cashDeposits.filter(d => d.type === "salary").reduce((a, d) => a + parseFloat(d.amount || 0), 0);
+  const allWithdrawn = allOps.reduce((a, d) => a + parseFloat(d.amount || 0), 0);
+  const allDeposited = allOps.reduce((a, d) => a + parseFloat(d.bankAmount || 0), 0);
+  const cumulativePending = Math.max(0, allWithdrawn - allSalaries - allDeposited);
 
   const sortedDeposits = [...cashDeposits].sort((a, b) => b.date?.localeCompare(a.date));
 
@@ -3616,7 +3627,7 @@ function CashDeposits({ cashDeposits, setCashDeposits, sales, employees = [] }) 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
         <KpiCard label="💵 סה״כ הוצא מהקופה החודש" value={`₪${fmt(totalWithdrawn)}`} accent="#cc0000" />
         <KpiCard label="🏦 סה״כ הופקד בבנק החודש" value={`₪${fmt(totalDeposited)}`} accent="#22c55e" />
-        <KpiCard label="⏳ ממתין להפקדה" value={`₪${fmt(pendingDeposit)}`} accent={pendingDeposit > 0 ? "#f59e0b" : "#22c55e"} />
+        <KpiCard label="⏳ ממתין להפקדה (צבר)" value={`₪${fmt(cumulativePending)}`} accent={cumulativePending > 0 ? "#f59e0b" : "#22c55e"} sub="כולל חודשים קודמים" />
         <KpiCard label="👷 משכורות ששולמו" value={`₪${fmt(totalSalaries)}`} accent="#7c3aed" sub={`${monthSalaries.length} תשלומים`} />
         <KpiCard
           label="📊 הפרש: הופקד vs. הוצא"
