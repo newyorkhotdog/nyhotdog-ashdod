@@ -2300,37 +2300,73 @@ function Hours({ hours, setHours, employees, setEmployees, sales, settings }) {
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div style={{ flex: 3 }}>
                 <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>שם עובד</label>
-                <input value={empForm.name} onChange={e => setEmpForm(f => ({ ...f, name: e.target.value }))} onKeyDown={e => e.key === "Enter" && empForm.name && empForm.hourlyRate && (setEmployees(p => [...p, { id: Date.now().toString(), name: empForm.name.trim(), hourlyRate: parseFloat(empForm.hourlyRate) }]), setEmpForm({ name: "", hourlyRate: "" }))} placeholder="שם מלא" style={inputStyle} />
+                <input value={empForm.name} onChange={e => setEmpForm(f => ({ ...f, name: e.target.value }))} placeholder="שם מלא" style={inputStyle} />
               </div>
               <div style={{ flex: 2 }}>
-                <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>₪ לשעה</label>
-                <input value={empForm.hourlyRate} onChange={e => setEmpForm(f => ({ ...f, hourlyRate: e.target.value }))} placeholder="45" type="number" style={inputStyle} />
+                <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>סוג</label>
+                <select value={empForm.type || "hourly"} onChange={e => setEmpForm(f => ({ ...f, type: e.target.value }))} style={inputStyle}>
+                  <option value="hourly">👷 שכיר שעתי</option>
+                  <option value="franchise">🤝 זכיין/חשבונית</option>
+                </select>
               </div>
-              <Btn onClick={() => { if (!empForm.name.trim() || !empForm.hourlyRate) return; setEmployees(p => [...p, { id: Date.now().toString(), name: empForm.name.trim(), hourlyRate: parseFloat(empForm.hourlyRate) }]); setEmpForm({ name: "", hourlyRate: "" }); }}>+ הוסף</Btn>
+              {(empForm.type || "hourly") === "hourly" ? (
+                <div style={{ flex: 2 }}>
+                  <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>₪ לשעה</label>
+                  <input value={empForm.hourlyRate} onChange={e => setEmpForm(f => ({ ...f, hourlyRate: e.target.value }))} placeholder="45" type="number" style={inputStyle} />
+                </div>
+              ) : (
+                <div style={{ flex: 2 }}>
+                  <label style={{ fontSize: 12, color: "#64748b", display: "block", marginBottom: 4 }}>₪ לחודש</label>
+                  <input value={empForm.monthlyFee || ""} onChange={e => setEmpForm(f => ({ ...f, monthlyFee: e.target.value }))} placeholder="9000" type="number" style={inputStyle} />
+                </div>
+              )}
+              <Btn onClick={() => {
+                if (!empForm.name.trim()) return;
+                const type = empForm.type || "hourly";
+                if (type === "hourly" && !empForm.hourlyRate) return;
+                if (type === "franchise" && !empForm.monthlyFee) return;
+                setEmployees(p => [...p, { id: Date.now().toString(), name: empForm.name.trim(), type, hourlyRate: parseFloat(empForm.hourlyRate) || 0, monthlyFee: parseFloat(empForm.monthlyFee) || 0 }]);
+                setEmpForm({ name: "", hourlyRate: "", type: "hourly", monthlyFee: "" });
+              }}>+ הוסף</Btn>
             </div>
           </Card>
           <Card title="רשימת עובדים">
             {employees.length === 0 && <div style={{ color: "#64748b", fontSize: 13 }}>אין עובדים עדיין</div>}
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              {employees.length > 0 && <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>שם עובד</Th><Th>₪ לשעה</Th><Th></Th></tr></thead>}
+              {employees.length > 0 && <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #cbd5e1" }}><Th>שם עובד</Th><Th>סוג</Th><Th>תעריף</Th><Th></Th></tr></thead>}
               <tbody>
                 {employees.map(e => (
                   <tr key={e.id} style={{ borderBottom: "1px solid #e2e8f0", background: empEditId === e.id ? "#fff1f1" : "transparent" }}>
                     {empEditId === e.id ? (
                       <>
                         <Td><input value={empEditVals.name} onChange={ev => setEmpEditVals(v => ({ ...v, name: ev.target.value }))} style={{ ...inputStyle, width: "100%" }} autoFocus /></Td>
-                        <Td><input type="number" value={empEditVals.hourlyRate} onChange={ev => setEmpEditVals(v => ({ ...v, hourlyRate: ev.target.value }))} style={{ ...inputStyle, width: 100 }} /></Td>
+                        <Td>
+                          <select value={empEditVals.type || "hourly"} onChange={ev => setEmpEditVals(v => ({ ...v, type: ev.target.value }))} style={inputStyle}>
+                            <option value="hourly">👷 שכיר שעתי</option>
+                            <option value="franchise">🤝 זכיין/חשבונית</option>
+                          </select>
+                        </Td>
+                        <Td>
+                          {(empEditVals.type || "hourly") === "franchise"
+                            ? <input type="number" value={empEditVals.monthlyFee || ""} onChange={ev => setEmpEditVals(v => ({ ...v, monthlyFee: ev.target.value }))} placeholder="9000" style={{ ...inputStyle, width: 100 }} />
+                            : <input type="number" value={empEditVals.hourlyRate} onChange={ev => setEmpEditVals(v => ({ ...v, hourlyRate: ev.target.value }))} style={{ ...inputStyle, width: 100 }} />
+                          }
+                        </Td>
                         <Td><div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => { setEmployees(p => p.map(x => x.id === e.id ? { ...x, name: empEditVals.name, hourlyRate: parseFloat(empEditVals.hourlyRate) } : x)); setEmpEditId(null); }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>שמור</button>
+                          <button onClick={() => {
+                            setEmployees(p => p.map(x => x.id === e.id ? { ...x, name: empEditVals.name, type: empEditVals.type || "hourly", hourlyRate: parseFloat(empEditVals.hourlyRate) || 0, monthlyFee: parseFloat(empEditVals.monthlyFee) || 0 } : x));
+                            setEmpEditId(null);
+                          }} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>שמור</button>
                           <button onClick={() => setEmpEditId(null)} style={{ background: "#cbd5e1", color: "#64748b", border: "none", borderRadius: 5, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>ביטול</button>
                         </div></Td>
                       </>
                     ) : (
                       <>
                         <Td style={{ fontWeight: 600 }}>{e.name}</Td>
-                        <Td style={{ color: "#fb923c" }}>₪{fmt(e.hourlyRate)}</Td>
+                        <Td><span style={{ fontSize: 11, background: e.type === "franchise" ? "#f0fdf4" : "#fff7ed", color: e.type === "franchise" ? "#16a34a" : "#fb923c", borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>{e.type === "franchise" ? "🤝 זכיין" : "👷 שעתי"}</span></Td>
+                        <Td style={{ color: e.type === "franchise" ? "#16a34a" : "#fb923c", fontWeight: 700 }}>{e.type === "franchise" ? `₪${fmt(e.monthlyFee || 0)}/חודש` : `₪${fmt(e.hourlyRate)}/שעה`}</Td>
                         <Td><div style={{ display: "flex", gap: 8 }}>
-                          <button onClick={() => { setEmpEditId(e.id); setEmpEditVals({ name: e.name, hourlyRate: String(e.hourlyRate) }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 14 }}>✏️</button>
+                          <button onClick={() => { setEmpEditId(e.id); setEmpEditVals({ name: e.name, type: e.type || "hourly", hourlyRate: String(e.hourlyRate || ""), monthlyFee: String(e.monthlyFee || "") }); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 14 }}>✏️</button>
                           <button onClick={() => setEmployees(p => p.filter(x => x.id !== e.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>×</button>
                         </div></Td>
                       </>
