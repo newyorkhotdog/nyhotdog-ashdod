@@ -3062,10 +3062,12 @@ ${JSON.stringify(suppliersList, null, 2)}
   "total": 0.0
 }
 
-הנחיות:
-- שם הספק: חפש בראש התעודה — התאם לספק קיים אם אפשר
-- מחיר: מחיר ליחידה (לא סה"כ שורה)
-- אם לא בטוח — כתוב את מה שרואים ישירות` }
+חוקי זיהוי קריטיים:
+1. מספר פריט/קטלוג (4-6 ספרות כמו 23030, 23029) — זה קוד מוצר, לא כמות ולא מחיר. התעלם ממנו.
+2. כמות (qty): מספר סביר של יחידות — 1 עד 500. מספר עם 5+ ספרות הוא כנראה קוד מוצר.
+3. מחיר (price): אם אין מחיר בתעודה — שים 0 והמערכת תמשוך מחיר אוטומטי מהמוצר הקיים.
+4. אם רואים רק כמות ללא מחיר — qty=הכמות, price=0.
+5. שם מוצר: התאם לשמות המוצרים הקיימים אצל הספק ברשימה למעלה.` }
           ]}]
         })
       });
@@ -3109,7 +3111,9 @@ ${JSON.stringify(suppliersList, null, 2)}
         prod = { id: (Date.now() + Math.random() * 1000).toString(), supplierId: sup.id, name: item.name, unit: item.unit || "יחידה", basePrice: parseFloat(item.price) || 0 };
         currentProducts = [...currentProducts, prod];
       }
-      items.push({ id: (Date.now() + Math.random() * 1000).toString(), productId: prod.id, price: String(item.price), qty: String(item.qty) });
+      // אם אין מחיר בתעודה — משוך מהמוצר הקיים
+      const finalPrice = parseFloat(item.price) > 0 ? item.price : String(prod.basePrice || 0);
+      items.push({ id: (Date.now() + Math.random() * 1000).toString(), productId: prod.id, price: finalPrice, qty: String(item.qty) });
     }
     setProducts(currentProducts);
     const total = items.reduce((a, i) => a + parseFloat(i.price) * parseFloat(i.qty), 0);
