@@ -1574,6 +1574,7 @@ function Sales({ sales, setSales, valuSettings = {} }) {
   const [editVals, setEditVals] = useState({ kupa: "", wolt: "" });
   const [valuImporting, setValuImporting] = useState(false);
   const [valuError, setValuError] = useState("");
+  const [importing, setImporting] = useState(false);
 
   const importFromValu = async () => {
     if (!valuSettings.authToken) {
