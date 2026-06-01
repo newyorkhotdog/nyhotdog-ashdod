@@ -1128,6 +1128,8 @@ function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, se
   const monthKey = selectedMonth;
   const [transferForm, setTransferForm] = useState({ date: today(), direction: "out", branch: "יבנה", productId: "", qty: "", pricePerUnit: "", note: "" });
   const [showTransferForm, setShowTransferForm] = useState(false);
+  const [pettyForm, setPettyForm] = useState({ date: today(), description: "", amount: "" });
+  const [showPetty, setShowPetty] = useState(false);
 
   const monthTransfers = (transfers || []).filter(t => t.date?.startsWith(monthKey));
   const transfersOut = monthTransfers.filter(t => t.direction === "out");
