@@ -21,6 +21,7 @@ const STORAGE_KEYS = {
   pettyCash: "nyh_petty_cash",
   valuSettings: "nyh_valu_settings",
   lastUpdated: "nyh_last_updated",
+  transfers: "nyh_transfers",
 };
 
 const DEFAULT_SETTINGS = { greenMax: 28, yellowMax: 32, laborGreenMax: 25, laborYellowMax: 30, expenseGreenMax: 20, expenseYellowMax: 28 };
@@ -104,6 +105,7 @@ export default function App() {
   const [pettyCash, setPettyCash] = useState([]);
   const [valuSettings, setValuSettings] = useState({ authToken: "", sessionToken: "" });
   const [lastUpdated, setLastUpdated] = useState({});
+  const [transfers, setTransfers] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
 
@@ -157,6 +159,7 @@ export default function App() {
   const uSetFixedExpenses = (val) => setFixedExpenses(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.fixedExpenses, v); return v; });
   const uSetPettyCash = (val) => setPettyCash(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.pettyCash, v); return v; });
   const uSetValuSettings = (val) => setValuSettings(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.valuSettings, v); return v; });
+  const uSetTransfers = (val) => setTransfers(prev => { const v = typeof val === "function" ? val(prev) : val; persist(STORAGE_KEYS.transfers, v); return v; });
 
   useEffect(() => {
     // טעינה מ-Firebase — onSnapshot לעדכונים בזמן אמת
@@ -179,6 +182,7 @@ export default function App() {
       [STORAGE_KEYS.pettyCash]: setPettyCash,
       [STORAGE_KEYS.valuSettings]: (v) => setValuSettings(v || { authToken: "", sessionToken: "" }),
       [STORAGE_KEYS.lastUpdated]: (v) => setLastUpdated(v || {}),
+      [STORAGE_KEYS.transfers]: (v) => setTransfers(v || []),
     };
     const keys = Object.keys(setters);
     const loadedKeys = new Set();
@@ -240,9 +244,9 @@ export default function App() {
       </div>
 
       <div style={{ padding: 24, background: "#f1f5f9", minHeight: "calc(100vh - 120px)" }}>
-        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} tasks={tasks} fixedExpenses={fixedExpenses} pettyCash={pettyCash} lastUpdated={lastUpdated} />}
+        {tab === "dashboard" && <Dashboard invoices={invoices} sales={sales} suppliers={suppliers} products={products} settings={settings} hours={hours} employees={employees} expenses={expenses} cashDeposits={cashDeposits} deliveries={deliveries} tasks={tasks} fixedExpenses={fixedExpenses} pettyCash={pettyCash} lastUpdated={lastUpdated} transfers={transfers} />}
         {tab === "suppliers" && <Suppliers suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} inventoryCategories={inventoryCategories} />}
-        {tab === "invoices" && <Invoices invoices={invoices} setInvoices={uSetInvoices} suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} settings={settings} pending={pending} setPending={uSetPending} pettyCash={pettyCash} setPettyCash={uSetPettyCash} />}
+        {tab === "invoices" && <Invoices invoices={invoices} setInvoices={uSetInvoices} suppliers={suppliers} setSuppliers={uSetSuppliers} products={products} setProducts={uSetProducts} settings={settings} pending={pending} setPending={uSetPending} pettyCash={pettyCash} setPettyCash={uSetPettyCash} transfers={transfers} setTransfers={uSetTransfers} />}
         {tab === "sales" && <Sales sales={sales} setSales={uSetSales} valuSettings={valuSettings} />}
         {tab === "hours" && <Hours hours={hours} setHours={uSetHours} employees={employees} setEmployees={uSetEmployees} sales={sales} settings={settings} />}
         {tab === "pnl" && <PnL sales={sales} invoices={invoices} hours={hours} employees={employees} expenses={expenses} deliveries={deliveries} fixedExpenses={fixedExpenses} setFixedExpenses={uSetFixedExpenses} pettyCash={pettyCash} />}
@@ -257,7 +261,7 @@ export default function App() {
   );
 }
 
-function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [], tasks = [], fixedExpenses = [], pettyCash = [], lastUpdated = {} }) {
+function Dashboard({ invoices, sales, suppliers, products, settings, hours, employees, expenses, cashDeposits = [], deliveries = [], tasks = [], fixedExpenses = [], pettyCash = [], lastUpdated = {}, transfers = [] }) {
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -359,7 +363,9 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
     .filter(d => !suppliersWithInvoice.has(d.supplierId))
     .reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
   const pettyCashCost = (pettyCash || []).filter(p => p.date?.startsWith(monthKey)).reduce((a, p) => a + (p.amountNet || 0), 0);
-  const totalCost = invoiceCost + deliveryCostNoInvoice + pettyCashCost;
+  const transfersOut = (transfers || []).filter(t => t.date?.startsWith(monthKey) && t.direction === "out").reduce((a, t) => a + parseFloat(t.total || 0), 0);
+  const transfersIn = (transfers || []).filter(t => t.date?.startsWith(monthKey) && t.direction === "in").reduce((a, t) => a + parseFloat(t.total || 0), 0);
+  const totalCost = invoiceCost + deliveryCostNoInvoice + pettyCashCost - transfersOut + transfersIn;
   const deliveryCovered = monthlyDeliveries.filter(d => suppliersWithInvoice.has(d.supplierId)).reduce((a, d) => a + (parseFloat(d.total) || 0), 0);
   const totalSalesNetVAT = totalSales / 1.18; // מכירות ללא מע"מ לצורך חישוב פוד קוסט
   const foodCostPct = parseFloat(pct(totalCost, totalSalesNetVAT));
@@ -1115,13 +1121,19 @@ async function compressImage(file, maxWidthPx = 1600, quality = 0.82) {
 }
 
 
-function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, setProducts, settings, pending, setPending, pettyCash, setPettyCash }) {
+function Invoices({ invoices, setInvoices, suppliers, products, setSuppliers, setProducts, settings, pending, setPending, pettyCash, setPettyCash, transfers = [], setTransfers }) {
   const nowInv = new Date();
   const currentMonthKey = `${nowInv.getFullYear()}-${String(nowInv.getMonth() + 1).padStart(2, "0")}`;
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const monthKey = selectedMonth;
-  const [pettyForm, setPettyForm] = useState({ date: today(), description: "", amount: "" });
-  const [showPetty, setShowPetty] = useState(false);
+  const [transferForm, setTransferForm] = useState({ date: today(), direction: "out", branch: "יבנה", productId: "", qty: "", pricePerUnit: "", note: "" });
+  const [showTransferForm, setShowTransferForm] = useState(false);
+
+  const monthTransfers = (transfers || []).filter(t => t.date?.startsWith(monthKey));
+  const transfersOut = monthTransfers.filter(t => t.direction === "out");
+  const transfersIn = monthTransfers.filter(t => t.direction === "in");
+  const transferOutCost = transfersOut.reduce((a, t) => a + parseFloat(t.total || 0), 0);
+  const transferInCost = transfersIn.reduce((a, t) => a + parseFloat(t.total || 0), 0);
   const [form, setForm] = useState({ supplierId: "", date: today(), invoiceNum: "", items: [] });
   const [newItem, setNewItem] = useState({ productId: "", price: "", qty: "1" });
   const [showForm, setShowForm] = useState(false);
@@ -1482,6 +1494,127 @@ ${JSON.stringify(suppliersList, null, 2)}
           )}
         </Card>
       )}
+
+      {/* העברות בין סניפים */}
+      <Card title="🔄 העברות בין סניפים">
+        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>
+          העברת מוצרים לסניף אחר — יוצאת מפחיתה מהפוד קוסט, נכנסת מוסיפה.
+        </div>
+
+        {/* Summary */}
+        {monthTransfers.length > 0 && (
+          <div style={{ display: "flex", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+            {transfersOut.length > 0 && <div style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 14px" }}>
+              <div style={{ fontSize: 11, color: "#64748b" }}>יצא מהסניף החודש</div>
+              <div style={{ fontWeight: 800, color: "#cc0000" }}>-₪{fmt(transferOutCost)}</div>
+              <div style={{ fontSize: 10, color: "#94a3b8" }}>{transfersOut.length} העברות</div>
+            </div>}
+            {transfersIn.length > 0 && <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "8px 14px" }}>
+              <div style={{ fontSize: 11, color: "#64748b" }}>נכנס לסניף החודש</div>
+              <div style={{ fontWeight: 800, color: "#16a34a" }}>+₪{fmt(transferInCost)}</div>
+              <div style={{ fontSize: 10, color: "#94a3b8" }}>{transfersIn.length} העברות</div>
+            </div>}
+          </div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showTransferForm ? 12 : 0 }}>
+          <div />
+          <Btn onClick={() => setShowTransferForm(!showTransferForm)} style={{ background: showTransferForm ? "#94a3b8" : "#0284c7" }}>
+            {showTransferForm ? "✕ סגור" : "+ רשום העברה"}
+          </Btn>
+        </div>
+
+        {showTransferForm && (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", background: "#f8fafc", borderRadius: 8, padding: 12, marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>תאריך</div>
+              <input type="date" value={transferForm.date} onChange={e => setTransferForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, minWidth: 140 }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>כיוון</div>
+              <select value={transferForm.direction} onChange={e => setTransferForm(f => ({ ...f, direction: e.target.value }))} style={inputStyle}>
+                <option value="out">📤 יצא מהסניף</option>
+                <option value="in">📥 נכנס לסניף</option>
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>סניף שני</div>
+              <select value={transferForm.branch} onChange={e => setTransferForm(f => ({ ...f, branch: e.target.value }))} style={inputStyle}>
+                <option value="יבנה">יבנה</option>
+                <option value="אשדוד">אשדוד</option>
+              </select>
+            </div>
+            <div style={{ flex: 2, minWidth: 140 }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מוצר</div>
+              <select value={transferForm.productId} onChange={e => {
+                const prod = products.find(p => p.id === e.target.value);
+                setTransferForm(f => ({ ...f, productId: e.target.value, pricePerUnit: prod ? String(prod.basePrice) : "" }));
+              }} style={inputStyle}>
+                <option value="">— בחר מוצר —</option>
+                {suppliers.map(s => (
+                  <optgroup key={s.id} label={s.name}>
+                    {products.filter(p => p.supplierId === s.id).map(p => (
+                      <option key={p.id} value={p.id}>{p.name} | ₪{fmt(p.basePrice)}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>כמות</div>
+              <input type="number" value={transferForm.qty} onChange={e => setTransferForm(f => ({ ...f, qty: e.target.value }))} placeholder="0" style={{ ...inputStyle, width: 80 }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>מחיר ליחידה</div>
+              <input type="number" value={transferForm.pricePerUnit} onChange={e => setTransferForm(f => ({ ...f, pricePerUnit: e.target.value }))} placeholder="0" style={{ ...inputStyle, width: 90 }} />
+            </div>
+            <div style={{ flex: 2 }}>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>הערה</div>
+              <input value={transferForm.note} onChange={e => setTransferForm(f => ({ ...f, note: e.target.value }))} placeholder="סיבה..." style={inputStyle} />
+            </div>
+            <Btn onClick={() => {
+              if (!transferForm.productId || !transferForm.qty) return alert("בחר מוצר וכמות");
+              const prod = products.find(p => p.id === transferForm.productId);
+              const total = parseFloat(transferForm.qty) * parseFloat(transferForm.pricePerUnit || 0);
+              setTransfers(p => [...p, {
+                id: Date.now().toString(),
+                date: transferForm.date,
+                direction: transferForm.direction,
+                branch: transferForm.branch,
+                productId: transferForm.productId,
+                productName: prod?.name || "",
+                qty: parseFloat(transferForm.qty),
+                pricePerUnit: parseFloat(transferForm.pricePerUnit || 0),
+                total,
+                note: transferForm.note,
+              }]);
+              setTransferForm(f => ({ ...f, qty: "", note: "", pricePerUnit: prod ? String(prod.basePrice) : "" }));
+            }} style={{ background: "#0284c7" }}>💾 שמור</Btn>
+          </div>
+        )}
+
+        {/* History */}
+        {monthTransfers.length > 0 && (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead><tr style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}><Th>תאריך</Th><Th>כיוון</Th><Th>סניף</Th><Th>מוצר</Th><Th>כמות</Th><Th>סה״כ</Th><Th>הערה</Th><Th></Th></tr></thead>
+            <tbody>
+              {[...monthTransfers].reverse().map(t => (
+                <tr key={t.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <Td style={{ color: "#64748b" }}>{t.date}</Td>
+                  <Td><span style={{ fontSize: 11, fontWeight: 700, color: t.direction === "out" ? "#cc0000" : "#16a34a", background: t.direction === "out" ? "#fff5f5" : "#f0fdf4", borderRadius: 6, padding: "2px 8px" }}>{t.direction === "out" ? "📤 יצא" : "📥 נכנס"}</span></Td>
+                  <Td style={{ color: "#64748b" }}>{t.branch}</Td>
+                  <Td style={{ fontWeight: 600 }}>{t.productName}</Td>
+                  <Td>{t.qty}</Td>
+                  <Td style={{ fontWeight: 700, color: t.direction === "out" ? "#cc0000" : "#16a34a" }}>{t.direction === "out" ? "-" : "+"}₪{fmt(t.total)}</Td>
+                  <Td style={{ color: "#94a3b8", fontSize: 11 }}>{t.note}</Td>
+                  <Td><button onClick={() => setTransfers(p => p.filter(x => x.id !== t.id))} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14 }}>×</button></Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {monthTransfers.length === 0 && <div style={{ color: "#cbd5e1", fontSize: 12 }}>אין העברות בין סניפים החודש</div>}
+      </Card>
 
       {/* קופה קטנה */}
       <Card title="🛒 קופה קטנה — רכישות יומיות">
