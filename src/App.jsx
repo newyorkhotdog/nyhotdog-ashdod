@@ -372,7 +372,18 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
 
   // Labor cost
   const monthlyHours = hours.filter((h) => h.date?.startsWith(monthKey));
-  const franchiseCost = employees.filter(e => e.type === "franchise").reduce((a, e) => a + parseFloat(e.monthlyFee || 0), 0);
+  // חישוב שכר זכיין יחסי לפי ימים שעברו בחודש
+  const isCurrentMonth = monthKey === currentMonthKey;
+  const franchiseCostProrated = (() => {
+    const now = new Date();
+    const year = parseInt(monthKey.split("-")[0]);
+    const month = parseInt(monthKey.split("-")[1]) - 1;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysPassed = isCurrentMonth ? now.getDate() : daysInMonth;
+    const ratio = daysPassed / daysInMonth;
+    return employees.filter(e => e.type === "franchise").reduce((a, e) => a + parseFloat(e.monthlyFee || 0) * ratio, 0);
+  })();
+  const franchiseCost = isCurrentMonth ? franchiseCostProrated : employees.filter(e => e.type === "franchise").reduce((a, e) => a + parseFloat(e.monthlyFee || 0), 0);
   const totalLaborCost = monthlyHours.reduce((a, h) => {
     const emp = employees.find((e) => e.id === h.employeeId);
     if (!emp) return a;
@@ -623,7 +634,7 @@ function Dashboard({ invoices, sales, suppliers, products, settings, hours, empl
         <KpiCard label="עלות ספקים" value={`₪${fmt(totalCost)}`} accent="#64748b" sub={`${monthlyInvoices.length} חשבוניות${deliveryCostNoInvoice > 0 ? ` + ₪${fmt(deliveryCostNoInvoice)} תעודות` : ""}`} />
         <KpiCard label="פוד קוסט" value={<StatusBadge value={foodCostPct} settings={settings} />} accent="#f472b6" raw />
         <KpiCard label="עלות עבודה — עובדים" value={`₪${fmt(totalLaborCost - franchiseCost)}`} accent="#fb923c" sub={`${totalLaborHours.toFixed(1)} שעות + 12.5%`} />
-        {franchiseCost > 0 && <KpiCard label="שכר זכיין" value={`₪${fmt(franchiseCost)}`} accent="#16a34a" sub="ללא עלות מעביד" />}
+        {franchiseCost > 0 && <KpiCard label="שכר זכיין" value={`₪${fmt(franchiseCost)}`} accent="#16a34a" sub={isCurrentMonth ? `יחסי ל-${new Date().getDate()} ימים` : "חודש מלא"} />}
         <KpiCard label="לייבור קוסט" value={<StatusBadge value={laborCostPct} settings={lcSettings} />} accent="#fb923c" raw />
         <KpiCard label="רווח נקי" value={`${netProfit >= 0 ? "" : "-"}₪${fmt(Math.abs(netProfit))}`} accent={netColor} sub={`${netProfit >= 0 ? "+" : ""}${netProfitPct}% מהכנסה נטו`} />
         <KpiCard label="התראות מחיר" value={alerts.length} accent={alerts.length > 0 ? "#f59e0b" : "#22c55e"} sub={alerts.length > 0 ? "דרוש טיפול" : "הכל תקין"} />
@@ -2448,7 +2459,16 @@ function Hours({ hours, setHours, employees, setEmployees, sales, settings }) {
   const monthHours = hours.filter((h) => h.date?.startsWith(monthKey));
   const monthlySales = sales.filter((s) => s.date?.startsWith(monthKey));
   const totalSales = monthlySales.reduce((a, s) => a + (parseFloat(s.kupa) || 0) + (parseFloat(s.wolt) || 0), 0);
-  const franchiseCostH = employees.filter(e => e.type === "franchise").reduce((a, e) => a + parseFloat(e.monthlyFee || 0), 0);
+  const isCurrentMonthH = monthKey === currentMonth;
+  const franchiseCostH = (() => {
+    const now = new Date();
+    const year = parseInt(monthKey.split("-")[0]);
+    const month = parseInt(monthKey.split("-")[1]) - 1;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysPassed = isCurrentMonthH ? now.getDate() : daysInMonth;
+    const ratio = daysPassed / daysInMonth;
+    return employees.filter(e => e.type === "franchise").reduce((a, e) => a + parseFloat(e.monthlyFee || 0) * (isCurrentMonthH ? ratio : 1), 0);
+  })();
   const totalLaborCost = monthHours.reduce((a, h) => {
     const emp = employees.find((e) => e.id === h.employeeId);
     if (!emp || emp.type === "franchise") return a;
@@ -4145,7 +4165,16 @@ function PnL({ sales, invoices, hours, employees, expenses, deliveries, fixedExp
   const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue * 100).toFixed(1) : 0;
 
   // ── הוצאות תפעול ──
-  const franchiseCostPnL = employees.filter(e => e.type === "franchise").reduce((a, e) => a + parseFloat(e.monthlyFee || 0), 0);
+  const isCurrentMonthPnL = selectedMonth === `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}`;
+  const franchiseCostPnL = (() => {
+    const now = new Date();
+    const year = parseInt(selectedMonth.split("-")[0]);
+    const month = parseInt(selectedMonth.split("-")[1]) - 1;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysPassed = isCurrentMonthPnL ? now.getDate() : daysInMonth;
+    const ratio = daysPassed / daysInMonth;
+    return employees.filter(e => e.type === "franchise").reduce((a, e) => a + parseFloat(e.monthlyFee || 0) * (isCurrentMonthPnL ? ratio : 1), 0);
+  })();
   const laborCost = monthHours.reduce((a, h) => {
     const emp = employees.find(e => e.id === h.employeeId);
     if (!emp || emp.type === "franchise") return a;
